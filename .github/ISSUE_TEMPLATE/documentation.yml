@@ -1,0 +1,85 @@
+name: Documentation Issue
+description: Report an issue with documentation or suggest improvements
+title: "[Docs]: "
+labels: ["documentation", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve our documentation! Please provide details about the documentation issue.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Documentation Issue Type
+      description: What type of documentation issue is this?
+      options:
+        - Missing documentation
+        - Incorrect information
+        - Unclear instructions
+        - Outdated content
+        - Typo or grammar issue
+        - Broken links
+        - Missing examples
+        - Accessibility issue
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: page
+    attributes:
+      label: Page or Section
+      description: Which page or section of the documentation has the issue?
+      placeholder: README.md, docs/getting-started.md, etc.
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Documentation
+      description: What does the current documentation say? (copy/paste or quote)
+      placeholder: Current text or description...
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What's Wrong?
+      description: Describe what's wrong or missing in the current documentation.
+      placeholder: The issue is that...
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Suggested Improvement
+      description: How should the documentation be improved?
+      placeholder: The documentation should...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: User Context
+      description: What were you trying to accomplish when you found this issue?
+      placeholder: I was trying to...
+
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution
+      description: Would you like to help fix this documentation issue?
+      options:
+        - label: I would like to submit a pull request to fix this
+        - label: I can help review the fix
+        - label: I prefer someone else handles this
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that would be helpful for improving the documentation.
+      placeholder: Additional information...
