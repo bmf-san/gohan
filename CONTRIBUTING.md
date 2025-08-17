@@ -253,7 +253,7 @@ Releases are managed by maintainers using semantic versioning:
 
 ## 🆘 Getting Help
 
-- **Discord**: [Join our community](https://discord.gg/gohan) (if applicable)
+- **Discord**: [Join our community](https://discord.gg/gohan)
 - **Discussions**: Use GitHub Discussions for questions
 - **Issues**: Create an issue for bugs or feature requests
 - **Email**: Contact maintainers directly for sensitive issues
