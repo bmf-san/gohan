@@ -2,25 +2,18 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/bmf-san/gohan)](https://goreportcard.com/report/github.com/bmf-san/gohan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Development Status](https://img.shields.io/badge/Status-In%20Development-orange)](https://github.com/users/bmf-san/projects/3)
 
 A simple, fast, and efficient static site generator built in Go, designed for personal blogs and small team documentation sites.
 
-## 🚀 Project Status
-
-**Current Phase**: Foundation Development
-**Target Release**: v1.0 (Q4 2025)
-**Project Board**: [Gohan v1.0 Development](https://github.com/users/bmf-san/projects/3)
-
 ## 📋 Features (Planned for v1.0)
 
-- ✅ **Simple Configuration**: Minimal YAML configuration
-- ✅ **CommonMark Support**: Full CommonMark compliance with Front Matter
-- ✅ **Flexible Templates**: Go html/template with custom functions
-- ✅ **Fast Builds**: Optimized for speed with parallel processing
-- ✅ **Code Highlighting**: Syntax highlighting for multiple languages
-- ✅ **RSS/Atom Feeds**: Automatic feed generation
-- ✅ **Cross-platform**: Single binary for Windows, macOS, Linux
+- **Simple Configuration**: Minimal YAML configuration
+- **CommonMark Support**: Full CommonMark compliance with Front Matter
+- **Flexible Templates**: Go html/template with custom functions
+- **Fast Builds**: Optimized for speed with parallel processing
+- **Code Highlighting**: Syntax highlighting for multiple languages
+- **RSS/Atom Feeds**: Automatic feed generation
+- **Cross-platform**: Single binary for Windows, macOS, Linux
 
 ## 🛠️ Development
 
@@ -61,20 +54,7 @@ gohan/
 ## 📖 Documentation
 
 - [Design Document](docs/design.md) - Comprehensive technical design
-- [Project Management](docs/project-management.md) - Development workflow and progress tracking
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute to the project
-
-## 🎯 Roadmap
-
-### v1.0 Milestones
-
-1. **Foundation** - Project structure and CLI framework
-2. **Core Features** - Markdown parsing, templates, site generation
-3. **Additional Features** - Syntax highlighting, feeds
-4. **Quality & Automation** - CI/CD, documentation
-5. **Release Preparation** - Testing, packaging, launch
-
-See our [Project Board](https://github.com/users/bmf-san/projects/3) for detailed progress and current sprint information.
 
 ## 🤝 Contributing
 
