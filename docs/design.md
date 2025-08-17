@@ -4,7 +4,7 @@
 
 ### Why Implement a Custom SSG?
 
-While the static site generator market offers many options like Hugo, Jekyll, Gatsby, and Next.js, we choose to implement our own for the following reasons:
+While the static site generator market offers many options like Hugo, Jekyll, Gatsby, and Next.js, we have chosen to implement our own for the following reasons:
 
 - **Pursuit of Simplicity**: Existing tools are often feature-rich but excessive for personal blogs
 - **Leveraging Go**: Utilize Go's concurrency performance and simplicity
