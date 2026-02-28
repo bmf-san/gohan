@@ -1,13 +1,13 @@
 package generator
 
 import (
+	htmltemplate "html/template"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-	htmltemplate "html/template"
 
 	"github.com/bmf-san/gohan/internal/model"
 )
