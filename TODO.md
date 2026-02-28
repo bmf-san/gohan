@@ -28,9 +28,9 @@ feat: {概要} (#{issue番号})
 
 ## PR チェーン（全フェーズ）
 
-> **現在のブランチ**: `feat/phase-6-1-html-generator`（PR #35 作成済み）
-> **次のタスク**: Phase 6-2 (Issue #15) から再開
-> **注意**: PR #26〜#35 はすべて OPEN。チェーン構成のため #26 から順番にマージすること。
+> **現在のブランチ**: `feat/phase-7-2-cache`（PR #38 作成済み）
+> **次のタスク**: Phase 8-1 (Issue #18) から再開
+> **注意**: PR #26〜#38 はすべて OPEN。チェーン構成のため #26 から順番にマージすること。
 
 | フェーズ | Issue | ブランチ | Base ブランチ | PR | 状態 |
 |---|---|---|---|---|---|
@@ -44,9 +44,9 @@ feat: {概要} (#{issue番号})
 | 5-1  | #12 | `feat/phase-5-1-build-processor`     | `feat/phase-4-template-engine`       | #33 | ✅ PR作成済み |
 | 5-2  | #13 | `feat/phase-5-2-taxonomy-system`     | `feat/phase-5-1-build-processor`     | #34 | ✅ PR作成済み |
 | 6-1  | #14 | `feat/phase-6-1-html-generator`      | `feat/phase-5-2-taxonomy-system`     | #35 | ✅ PR作成済み |
-| 6-2  | #15 | `feat/phase-6-2-sitemap-feed`        | `feat/phase-6-1-html-generator`      | -   | ⏳ 未着手 |
-| 7-1  | #16 | `feat/phase-7-1-git-diff`            | `feat/phase-6-2-sitemap-feed`        | -   | ⏳ 未着手 |
-| 7-2  | #17 | `feat/phase-7-2-cache`               | `feat/phase-7-1-git-diff`            | -   | ⏳ 未着手 |
+| 6-2  | #15 | `feat/phase-6-2-sitemap-feed`        | `feat/phase-6-1-html-generator`      | #36 | ✅ PR作成済み |
+| 7-1  | #16 | `feat/phase-7-1-git-diff`            | `feat/phase-6-2-sitemap-feed`        | #37 | ✅ PR作成済み |
+| 7-2  | #17 | `feat/phase-7-2-cache`               | `feat/phase-7-1-git-diff`            | #38 | ✅ PR作成済み |
 | 8-1  | #18 | `feat/phase-8-1-build-command`       | `feat/phase-7-2-cache`               | -   | ⏳ 未着手 |
 | 8-2  | #19 | `feat/phase-8-2-new-command`         | `feat/phase-8-1-build-command`       | -   | ⏳ 未着手 |
 | 8-3  | #20 | `feat/phase-8-3-serve-command`       | `feat/phase-8-2-new-command`         | -   | ⏳ 未着手 |
@@ -90,15 +90,15 @@ feat: {概要} (#{issue番号})
 
 ```bash
 cd /Users/bmf/localdev/gohan
-git checkout feat/phase-6-1-html-generator  # 現在の最新ブランチ
+git checkout feat/phase-7-2-cache  # 現在の最新ブランチ
 
-# Phase 6-2 から再開
-git checkout -b feat/phase-6-2-sitemap-feed
+# Phase 8-1 から再開
+git checkout -b feat/phase-8-1-build-command
 # 実装 → テスト → コミット
-git add -A && git commit -m "feat: implement sitemap and feed generator (#15)"
-git push -u origin feat/phase-6-2-sitemap-feed
-gh pr create --base feat/phase-6-1-html-generator --head feat/phase-6-2-sitemap-feed \
-  --title "feat: implement sitemap and feed generator" --body "Closes #15"
+git add -A && git commit -m "feat: implement gohan build command (#18)"
+git push -u origin feat/phase-8-1-build-command
+gh pr create --base feat/phase-7-2-cache --head feat/phase-8-1-build-command \
+  --title "feat: implement gohan build command (Phase 8-1, #18)" --body "Closes #18"
 gh api -X POST /repos/bmf-san/gohan/issues/<PR番号>/labels -f "labels[]=enhancement"
 gh api -X POST /repos/bmf-san/gohan/issues/<PR番号>/assignees -f "assignees[]=bmf-san"
 ```
@@ -118,6 +118,13 @@ internal/
   processor/taxonomy.go + _test.go        # タクソノミーシステム (94.7% coverage)
   generator/generator.go                  # OutputGenerator インターフェース
   generator/html.go + html_test.go        # HTMLGenerator (86.2% coverage)
+  generator/sitemap.go                    # GenerateSitemap() → sitemap.xml
+  generator/feed.go                       # GenerateFeeds() → feed.xml (RSS) + atom.xml (Atom)
+  generator/sitemap_feed_test.go          # 7テスト (86.4% coverage)
+  diff/git.go                             # GitDiffEngine: Detect/Hash/IsGitRepo/DetectChanges (78.8% coverage)
+  diff/git_test.go                        # 9テスト
+  diff/cache.go                           # ReadManifest/WriteManifest/ReadCachedHTML/WriteCachedHTML/ClearCache/CheckConfigChange (78.5% coverage)
+  diff/cache_test.go                      # 9テスト
 ```
 
 ## ファイル作成時の注意点
