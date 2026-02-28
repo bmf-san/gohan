@@ -1,109 +1,109 @@
-# Design Document: Gohan - GoベースのSSG
+# Design Document: Gohan - Go-based SSG
 
-## 1. 背景・動機
+## 1. Background & Motivation
 
-### なぜ独自のSSGを実装するのか？
+### Why Build a Custom SSG?
 
-HugoやJekyll、Gatsby、Next.jsなど多くの静的サイトジェネレーターが存在する中、以下の理由から独自実装を選択しました。
+Despite the existence of many static site generators such as Hugo, Jekyll, Gatsby, and Next.js, we chose to build our own for the following reasons:
 
-- **シンプルさの追求**: 既存ツールは機能豊富だが、個人ブログには過剰
-- **Goの活用**: Goの並行処理性能とシンプルさを活かす
-- **差分ビルドの最適化**: 大量記事を効率的に処理する差分ビルド機能
-- **学習コストの削減**: 既存ツールの複雑な設定やプラグインシステムを避け、直感的な操作性を実現
+- **Pursuit of simplicity**: Existing tools are feature-rich but excessive for personal blogs
+- **Leveraging Go**: Taking advantage of Go's concurrency performance and simplicity
+- **Optimized differential builds**: Efficient incremental builds for processing large numbers of articles
+- **Reduced learning curve**: Avoiding the complex configuration and plugin systems of existing tools to achieve intuitive usability
 
-### 既存ツールで満たせない要件
+### Requirements Not Met by Existing Tools
 
-- **Hugo**: 設定が複雑でカスタマイズの学習コストが高い
-- **Jekyll**: Ruby依存でビルドが遅い
-- **Gatsby / Next.js**: Node.jsエコシステムが重く、シンプルなブログには過剰
+- **Hugo**: Complex configuration with a high learning cost for customization
+- **Jekyll**: Ruby dependency results in slow builds
+- **Gatsby / Next.js**: The Node.js ecosystem is heavy and excessive for simple blogs
 
-### GitHubによる記事管理の設計意図
+### Design Intent for GitHub-based Content Management
 
-- MarkdownファイルのバージョンコントロールにGitHubを活用
-- ただしGitHub依存を避けるため、ローカルファイルシステムでも動作させる
-- 記事の履歴管理や共同レビューワークフローを自然に実現
+- Leveraging GitHub for version control of Markdown files
+- However, to avoid GitHub dependency, the tool also works with the local filesystem
+- Naturally enables article history management and collaborative review workflows
 
 ---
 
 ## 2. Goals
 
-### 主要目標
+### Primary Goals
 
-- **個人ブログ向けのシンプルで高速なSSGを提供**
-  - 最小限の設定ファイル
-  - ビルド時間の短縮（差分ビルドは30秒以内）
-  - 静的ファイル生成に特化
+- **Provide a simple, fast SSG for personal blogs**
+  - Minimal configuration files
+  - Reduced build times (differential builds within 30 seconds)
+  - Focused on static file generation
 
-### 技術目標
+### Technical Goals
 
-- **差分ビルドによる効率的な動作**
-  - 変更された記事のみ再生成
-  - 影響範囲の自動計算（タグページ、アーカイブページなど）
-  - ビルド時間の最小化
+- **Efficient operation through differential builds**
+  - Regenerate only changed articles
+  - Automatic impact calculation (tag pages, archive pages, etc.)
+  - Minimize build time
 
-- **Go実装による拡張性と保守性の確保**
-  - プラグインアーキテクチャ
-  - テスタブルなコード設計
-  - 責務の明確な分離
+- **Ensuring extensibility and maintainability through Go implementation**
+  - Plugin architecture
+  - Testable code design
+  - Clear separation of concerns
 
 ---
 
 ## 3. Non-goals
 
-以下はgohanのスコープ外とする。
+The following are out of scope for gohan:
 
-- **動的コンテンツ生成・サーバーサイドレンダリング**: gohanは純粋な静的ファイル生成に特化する
-- **Web管理UI（CMS機能）**: コンテンツ管理はテキストエディタとGitで行う
-- **JavaScriptバンドル・CSSミニファイ**: フロントエンドビルドツール（Vite等）の役割であり対象外
-- **画像の自動リサイズ・最適化**: CDNや別ツールで担う想定
-- **認証・会員機能・コメント機能のバックエンド**: 静的ファイルの範囲外
-- **プラグインマーケットプレイスの提供**: プラグインAPIは提供するが、配布基盤は作らない
-
----
-
-## 4. スコープ
-
-### 対象ユーザー
-
-- **個人ブロガー**: 技術ブログ、日記、ポートフォリオサイト
-- **小規模チーム**: 技術ブログ、プロジェクトドキュメント
-
-### 規模の前提
-
-- **記事数**: 500〜10,000件
-- **ビルド時間**: フルビルドは5分以内、差分ビルドは30秒以内
-- **記事サイズ**: 平均3,000〜5,000文字、最大15,000文字程度
+- **Dynamic content generation / Server-side rendering**: gohan is dedicated to pure static file generation
+- **Web admin UI (CMS features)**: Content management is done via text editor and Git
+- **JavaScript bundling / CSS minification**: This is the responsibility of frontend build tools (e.g., Vite)
+- **Automatic image resizing / optimization**: Intended to be handled by CDN or separate tools
+- **Authentication / membership / comment backend**: Outside the scope of static files
+- **Plugin marketplace**: A plugin API is provided, but no distribution platform will be built
 
 ---
 
-## 5. ディレクトリ構造
+## 4. Scope
 
-### 入力側
+### Target Users
+
+- **Individual bloggers**: Tech blogs, diaries, portfolio sites
+- **Small teams**: Tech blogs, project documentation
+
+### Scale Assumptions
+
+- **Article count**: 500–10,000
+- **Build time**: Full build within 5 minutes, differential build within 30 seconds
+- **Article size**: Average 3,000–5,000 characters, maximum ~15,000 characters
+
+---
+
+## 5. Directory Structure
+
+### Input Side
 
 ```
 .
-├── config.yaml           # サイト設定
+├── config.yaml           # Site configuration
 ├── content/
-│   ├── posts/            # ブログ記事（一覧・タグ・アーカイブ対象）
+│   ├── posts/            # Blog articles (subject to list/tag/archive processing)
 │   │   └── my-post.md
-│   └── pages/            # 静的ページ（About, Contact など）
+│   └── pages/            # Static pages (About, Contact, etc.)
 │       └── about.md
 ├── themes/
 │   └── default/
-│       └── layouts/      # テンプレートファイル
+│       └── layouts/      # Template files
 │           ├── base.html
 │           ├── post.html
 │           ├── list.html
 │           └── partials/
 │               ├── header.html
 │               └── footer.html
-├── assets/               # CSS・画像などの静的ファイル
+├── assets/               # Static files such as CSS and images
 └── taxonomies/
-    ├── tags.yaml         # タグマスター
-    └── categories.yaml   # カテゴリマスター
+    ├── tags.yaml         # Tag master
+    └── categories.yaml   # Category master
 ```
 
-### 出力側
+### Output Side
 
 ```
 public/
@@ -127,54 +127,54 @@ public/
 ├── feed.xml              # RSS 2.0
 ├── atom.xml              # Atom 1.0
 ├── sitemap.xml
-└── assets/               # 静的ファイルのコピー
+└── assets/               # Copy of static files
 ```
 
-### 補足
+### Notes
 
-- `themes/<name>/` 構成にすることで、将来的なテーマ切り替えを `config.yaml` の1行変更で対応できる
-- `content/posts/` と `content/pages/` を分離することで、記事一覧・タグ・アーカイブ処理の対象を明確に限定できる
-- 出力パスは `slug` Front Matterで上書き可能
+- The `themes/<name>/` structure allows future theme switching with a single line change in `config.yaml`
+- Separating `content/posts/` and `content/pages/` clearly limits the targets for list/tag/archive processing
+- Output paths can be overridden with the `slug` Front Matter field
 
 ---
 
-## 6. 機能要件
+## 6. Functional Requirements
 
-### 6.1 コア機能
+### 6.1 Core Features
 
-#### Markdown処理
-- **Markdownパース**: CommonMark準拠
-- **Front Matterサポート**: YAMLフォーマットのメタデータ
+#### Markdown Processing
+- **Markdown parsing**: CommonMark compliant
+- **Front Matter support**: YAML-formatted metadata
 
-#### テンプレート機能
-- **テンプレートエンジン**: Go標準の `html/template` を使用
-- **テンプレート探索**: ユーザー定義テンプレートの自動探索・読み込み
-- **柔軟なテンプレート構造**: 任意のファイル名・ディレクトリ構造で定義可
-- **テンプレート変数**: 記事データ・サイト設定・ナビゲーション情報を提供
-- **カスタム関数**: 日付フォーマット、タグリンク生成、Markdown変換などのヘルパー関数
-- **テンプレート選択**: テンプレートをFront Matterで個別指定
+#### Template Features
+- **Template engine**: Uses Go's standard `html/template`
+- **Template discovery**: Automatic discovery and loading of user-defined templates
+- **Flexible template structure**: Templates can be defined with arbitrary filenames and directory structures
+- **Template variables**: Provides article data, site configuration, and navigation information
+- **Custom functions**: Helper functions for date formatting, tag link generation, Markdown conversion, etc.
+- **Template selection**: Templates can be individually specified via Front Matter
 
-#### コンテンツ管理
-- **タグ・カテゴリ管理**: マスターファイルによる一覧管理とバリデーション
-- **記事リスト生成**: 日付・タグ・カテゴリ別
-- **アーカイブ生成**: 月別アーカイブ
-- **静的ページ**: About、Contactなどの静的ページ
+#### Content Management
+- **Tag / category management**: Master file-based list management and validation
+- **Article list generation**: By date, tag, and category
+- **Archive generation**: Monthly archives
+- **Static pages**: Static pages such as About and Contact
 
-#### コードハイライト
-- **シンタックスハイライト**: コードブロックの言語別ハイライト
-- **行番号表示**: オプション設定
+#### Code Highlighting
+- **Syntax highlighting**: Language-specific highlighting for code blocks
+- **Line number display**: Optional setting
 
-#### ダイアグラムサポート
-- **Mermaidダイアグラム**: フローチャート、シーケンス図
+#### Diagram Support
+- **Mermaid diagrams**: Flowcharts, sequence diagrams
 
-#### フィード生成
-- **RSS 2.0**: 全記事フィード
-- **Atom 1.0**: 規格準拠フィード
-- **カテゴリ別フィード**: タグ・カテゴリ別フィード
+#### Feed Generation
+- **RSS 2.0**: Full article feed
+- **Atom 1.0**: Standards-compliant feed
+- **Category feeds**: Per-tag and per-category feeds
 
-### 6.2 CLIインターフェース
+### 6.2 CLI Interface
 
-詳細は Section 11 を参照。主要なコマンドは以下の通り。
+See Section 11 for details. The primary commands are:
 
 ```bash
 gohan build [--full] [--config=path] [--output=dir]
@@ -184,132 +184,132 @@ gohan serve
 
 ---
 
-## 7. 非機能要件
+## 7. Non-functional Requirements
 
-### 7.1 パフォーマンス要件
+### 7.1 Performance Requirements
 
-#### ビルド性能
-- **初回フルビルド**: 1,000記事を5分以内
-- **差分ビルド**: 10件の変更を30秒以内
-- **並行処理**: CPU数に応じた並行記事処理
+#### Build Performance
+- **Initial full build**: 1,000 articles within 5 minutes
+- **Differential build**: 10 changes within 30 seconds
+- **Parallelism**: Parallel article processing based on CPU count
 
-### 7.2 スケーラビリティ
+### 7.2 Scalability
 
-- **記事数**: 10,000件まで安定動作
+- **Article count**: Stable operation up to 10,000 articles
 
-### 7.3 再現性
+### 7.3 Reproducibility
 
-- **決定論的ビルド**: 同一入力に対して同一出力を保証
-- **キャッシュ無効化**: ファイル変更の正確な検出
-- **クロスプラットフォーム**: Windows / macOS / Linux で同一出力
+- **Deterministic builds**: Guarantees identical output for identical input
+- **Cache invalidation**: Accurate detection of file changes
+- **Cross-platform**: Identical output on Windows / macOS / Linux
 
-### 7.4 保守性・拡張性
+### 7.4 Maintainability & Extensibility
 
-#### コード品質
-- **テストカバレッジ**: 80%以上
-- **静的解析**: `golangci-lint`（`go vet`・`staticcheck`・`gosec` をカバー）
-- **依存関係**: 外部依存を最小化
-- **ドキュメント**: godoc準拠コメント
+#### Code Quality
+- **Test coverage**: 80% or higher
+- **Static analysis**: `golangci-lint` (covers `go vet`, `staticcheck`, and `gosec`)
+- **Dependencies**: Minimize external dependencies
+- **Documentation**: godoc-compliant comments
 
-#### アーキテクチャ
-- **関心の分離**: Parser、Generator、Renderer
-- **インターフェース設計**: テスタブルな抽象化
-- **設定の外部化**: YAML設定ファイル
-- **プラグインAPI**: 機能拡張用インターフェース
+#### Architecture
+- **Separation of concerns**: Parser, Generator, Renderer
+- **Interface design**: Testable abstractions
+- **Externalized configuration**: YAML configuration file
+- **Plugin API**: Interfaces for feature extension
 
-### 7.5 運用性
+### 7.5 Operability
 
-#### ロギング・モニタリング
-- **ログ形式**: デフォルトは人間可読形式（`--log-format=json` オプションでJSONに切り替え可）
-- **ログレベル**: DEBUG、INFO、WARN、ERROR
-- **メトリクス**: ビルド完了時にビルド時間・生成記事数・エラー数を stdout にサマリーとして出力
-- **エラートラッキング**: スタックトレース付きエラー
+#### Logging & Monitoring
+- **Log format**: Human-readable by default (switchable to JSON with `--log-format=json` option)
+- **Log levels**: DEBUG, INFO, WARN, ERROR
+- **Metrics**: Build time, number of generated articles, and error count output as a summary to stdout upon build completion
+- **Error tracking**: Errors with stack traces
 
-#### 設定管理
-- **環境別設定**: development / production
-- **設定バリデーション**: 起動時の設定値チェック
-- **デフォルト値**: ゼロコンフィグで動作
+#### Configuration Management
+- **Environment-specific configuration**: development / production
+- **Configuration validation**: Configuration value checks at startup
+- **Default values**: Zero-config operation
 
-### 7.6 セキュリティ
+### 7.6 Security
 
-- **入力バリデーション**: Markdownおよび設定ファイルの検証
-- **パストラバーサル防止**: ファイルパスの正規化
-- **依存関係スキャン**: 脆弱性のある依存関係の検出
+- **Input validation**: Validation of Markdown and configuration files
+- **Path traversal prevention**: File path normalization
+- **Dependency scanning**: Detection of vulnerable dependencies
 
-### 7.7 ポータビリティ
+### 7.7 Portability
 
-- **クロスプラットフォーム**: Windows / macOS / Linux対応
-- **Go単体依存**: 外部ランタイム不要、シングルバイナリ
-- **バイナリ配布**: GoReleaserによる自動リリース・配布
-- **パッケージマネージャー対応**: Homebrew、Scoop、APTなど
-- **CI/CD統合**: GitHub Actionsによる自動テスト・リリース
+- **Cross-platform**: Windows / macOS / Linux support
+- **Go-only dependency**: No external runtime required, single binary
+- **Binary distribution**: Automated releases and distribution via GoReleaser
+- **Package manager support**: Homebrew, Scoop, APT, etc.
+- **CI/CD integration**: Automated testing and releases via GitHub Actions
 
 ---
 
-## 8. アーキテクチャ概要
+## 8. Architecture Overview
 
-### 8.1 システムアーキテクチャ
+### 8.1 System Architecture
 
 ```mermaid
 graph TB
-    A[コンテンツソース] --> B[パーサー層]
-    B --> C[処理層]
-    C --> D[テンプレートエンジン]
-    D --> E[出力ジェネレーター]
+    A[Content Sources] --> B[Parser Layer]
+    B --> C[Processing Layer]
+    C --> D[Template Engine]
+    D --> E[Output Generator]
 
-    B --> F[差分エンジン]
+    B --> F[Diff Engine]
     F --> C
 
-    G[設定] --> C
-    H[テンプレート] --> D
-    I[アセット] --> E
+    G[Configuration] --> C
+    H[Templates] --> D
+    I[Assets] --> E
 ```
 
-### 8.2 データフロー
+### 8.2 Data Flow
 
-#### 入力
-- **記事ファイル**: `content/posts/*.md`
-- **静的ページ**: `content/pages/*.md`
-- **設定**: `config.yaml`
-- **テンプレート**: `themes/default/layouts/`
-- **静的アセット**: `assets/`
+#### Input
+- **Article files**: `content/posts/*.md`
+- **Static pages**: `content/pages/*.md`
+- **Configuration**: `config.yaml`
+- **Templates**: `themes/default/layouts/`
+- **Static assets**: `assets/`
 
-#### 処理フロー
+#### Processing Flow
 
-1. **コンテンツ解析**
-   - Markdownファイルの読み込み
-   - Front Matterのパース
-   - 依存関係グラフの構築
+1. **Content Parsing**
+   - Reading Markdown files
+   - Parsing Front Matter
+   - Building the dependency graph
 
-2. **差分検出**
-   - Gitリポジトリの場合: Git diffによる変更ファイルの特定
-   - 非 Git環境の場合: ファイルハッシュベースで変更ファイルを特定（差分ビルドは行わずフルビルド）
-   - 影響範囲の計算
+2. **Diff Detection**
+   - For Git repositories: Identifying changed files via Git diff
+   - For non-Git environments: Identifying changed files via file hash comparison (no differential build; falls back to full build)
+   - Calculating the impact scope
 
-3. **ページ生成**
-   - MarkdownをHTMLへ変換
-   - テンプレートの適用
-   - 並行処理による最適化
+3. **Page Generation**
+   - Converting Markdown to HTML
+   - Applying templates
+   - Optimization through parallel processing
 
-4. **アセット処理**
-   - 静的ファイルのコピー
-   - ディレクトリ構造の保持
+4. **Asset Processing**
+   - Copying static files
+   - Preserving directory structure
 
-5. **出力配置**
-   - ディレクトリ構造の作成
-   - ファイルのコピー・生成
-   - サイトマップとフィードの生成
+5. **Output Placement**
+   - Creating directory structure
+   - Copying and generating files
+   - Generating sitemap and feeds
 
-#### 出力
-- **HTMLファイル**: 各記事・ページ
-- **一覧ページ**: インデックス、タグ、カテゴリ
-- **フィードファイル**: RSS、Atom
-- **サイトマップ**: `sitemap.xml`
-- **静的アセット**: CSS、画像
+#### Output
+- **HTML files**: Each article and page
+- **List pages**: Index, tags, categories
+- **Feed files**: RSS, Atom
+- **Sitemap**: `sitemap.xml`
+- **Static assets**: CSS, images
 
-### 8.3 コンポーネント設計
+### 8.3 Component Design
 
-#### パーサー層
+#### Parser Layer
 ```go
 type Parser interface {
     ParseMarkdown(content []byte) (*Article, error)
@@ -318,7 +318,7 @@ type Parser interface {
 }
 ```
 
-#### 処理層
+#### Processing Layer
 ```go
 type Processor interface {
     BuildDependencyGraph(articles []*Article) *DependencyGraph
@@ -327,10 +327,10 @@ type Processor interface {
 }
 ```
 
-#### テンプレートエンジン
+#### Template Engine
 ```go
 type TemplateEngine interface {
-    // LoadTemplates はテーマディレクトリ配下の全テンプレートを読み込む
+    // LoadTemplates loads all templates under the theme directory
     LoadTemplates(themePath string) error
     RegisterFunctions(funcMap template.FuncMap) error
     Render(templateName string, data interface{}) ([]byte, error)
@@ -338,7 +338,7 @@ type TemplateEngine interface {
 }
 ```
 
-#### 差分エンジン
+#### Diff Engine
 ```go
 type NodeType int
 
@@ -349,7 +349,7 @@ const (
     NodeTypeArchive
 )
 
-// ChangeSet は差分検出結果。変更・追加・削除ファイルのパス一覧を保持する。
+// ChangeSet holds the result of diff detection: lists of modified, added, and deleted file paths.
 type ChangeSet struct {
     ModifiedFiles []string
     AddedFiles    []string
@@ -357,19 +357,19 @@ type ChangeSet struct {
 }
 
 type DiffEngine interface {
-    // fromCommit/toCommitに空文字列を指定した場合は直前ビルドとの差分を返す
+    // Passing empty strings for fromCommit/toCommit returns the diff since the last build
     DetectChanges(fromCommit, toCommit string) (*ChangeSet, error)
     IsGitRepo() bool
 }
 ```
 
-#### 出力ジェネレーター
+#### Output Generator
 ```go
-// Site はテンプレートに渡すサイト全体情報。Configと記事一覧を保持する。
+// Site holds site-wide information passed to templates: Config and article list.
 type Site struct {
-    Config   Config
-    Articles []*ProcessedArticle
-    Tags     []Taxonomy
+    Config     Config
+    Articles   []*ProcessedArticle
+    Tags       []Taxonomy
     Categories []Taxonomy
 }
 
@@ -383,14 +383,14 @@ type OutputGenerator interface {
 
 ---
 
-## 9. データモデル設計
+## 9. Data Model Design
 
-### 9.1 記事データ構造
+### 9.1 Article Data Structure
 
-`Article` はファイルから読み込んだローデータ。`ProcessedArticle` はビルド時に生成される派生データを保持する。
+`Article` is the raw data read from a file. `ProcessedArticle` holds derived data generated at build time.
 
 ```go
-// Article: パーサーが生成する入力データ
+// Article: input data generated by the parser
 type Article struct {
     FrontMatter  FrontMatter `yaml:"frontmatter"`
     RawContent   string      `yaml:"raw_content"`
@@ -398,7 +398,7 @@ type Article struct {
     LastModified time.Time   `yaml:"last_modified"`
 }
 
-// ProcessedArticle: ビルド時にレンダラーが生成する派生データ
+// ProcessedArticle: derived data generated by the renderer at build time
 type ProcessedArticle struct {
     Article
     HTMLContent template.HTML
@@ -418,9 +418,9 @@ type FrontMatter struct {
 }
 ```
 
-### 9.2 タクソノミーシステム
+### 9.2 Taxonomy System
 
-`TaxonomyRegistry` は `tags.yaml` / `categories.yaml` から読み込むマスターデータ。`Type` フィールドはレジストリの構造から明確なため保持しない。
+`TaxonomyRegistry` is the master data loaded from `tags.yaml` / `categories.yaml`. The `Type` field is not held because it is clear from the structure of the registry.
 
 ```go
 type Taxonomy struct {
@@ -434,9 +434,9 @@ type TaxonomyRegistry struct {
 }
 ```
 
-### 9.3 サイト設定
+### 9.3 Site Configuration
 
-`config.yaml` のトップレベルの構造と一致するように `Config` 型を定義し、その中に `SiteConfig` などを内包する。
+Define the `Config` type to match the top-level structure of `config.yaml`, containing `SiteConfig` and other types within it.
 
 ```go
 type Config struct {
@@ -468,18 +468,18 @@ type ThemeConfig struct {
 }
 ```
 
-### 9.4 ビルドマニフェスト
+### 9.4 Build Manifest
 
-`.gohan/cache/manifest.json` に保存されるビルド履歴で、ハッシュベースの差分検出に使用する。
+The build history saved to `.gohan/cache/manifest.json`, used for hash-based diff detection.
 
 ```go
 type BuildManifest struct {
-    Version      string              `json:"version"`       // gohanのバージョン
-    BuildTime    time.Time           `json:"build_time"`    // 最終ビルド時刻
-    LastCommit   string              `json:"last_commit"`   // ビルド時のリポジトリ HEADコミットハッシュ
-    FileHashes   map[string]string   `json:"file_hashes"`   // 入力ファイルパス -> SHA-256
-    Dependencies map[string][]string `json:"dependencies"`  // ファイルパス -> 依存ファイルパス一覧
-    OutputFiles  []OutputFile        `json:"output_files"`  // 生成された出力ファイル一覧
+    Version      string              `json:"version"`       // gohan version
+    BuildTime    time.Time           `json:"build_time"`    // time of last build
+    LastCommit   string              `json:"last_commit"`   // repository HEAD commit hash at build time
+    FileHashes   map[string]string   `json:"file_hashes"`   // input file path -> SHA-256
+    Dependencies map[string][]string `json:"dependencies"`  // file path -> list of dependent file paths
+    OutputFiles  []OutputFile        `json:"output_files"`  // list of generated output files
 }
 
 type OutputFile struct {
@@ -493,21 +493,21 @@ type OutputFile struct {
 
 ---
 
-## 10. 差分ビルド戦略
+## 10. Differential Build Strategy
 
-### 10.1 差分検出メカニズム
+### 10.1 Diff Detection Mechanism
 
-#### 検出方式の選択ロジック
+#### Detection Method Selection Logic
 
-1. カレントディレクトリが Git リポジトリかどうかを `git rev-parse --is-inside-work-tree` で確認
-2. Git リポジトリであれば **Git diff ベースの差分検出** を使用
-3. Git リポジトリでなければ **ファイルハッシュベースのフルビルド** にフォールバック
+1. Check whether the current directory is a Git repository using `git rev-parse --is-inside-work-tree`
+2. If it is a Git repository, use **Git diff-based diff detection**
+3. If it is not a Git repository, fall back to **file hash-based full build**
 
-> **Note**: 差分ビルド機能は Git リポジトリであることが前提。非 Git 環境ではフルビルドのみ動作する。
+> **Note**: The differential build feature requires a Git repository. In non-Git environments, only full builds are supported.
 
-#### Gitベースの差分検出（`os/exec` 利用）
+#### Git-based Diff Detection (using `os/exec`)
 
-外部ライブラリを使用せず、`os/exec` で `git` コマンドを呼び出す。これにより外部依存を最小化しつつ、Git のすべての差分情報を活用できる。
+Calls the `git` command via `os/exec` without using external libraries. This minimizes external dependencies while leveraging all of Git's diff information.
 
 ```go
 type GitDiffDetector struct {
@@ -531,13 +531,13 @@ func IsGitRepo(dir string) bool {
 }
 ```
 
-#### フォールバック：ファイルハッシュベースのフルビルド
+#### Fallback: File Hash-based Full Build
 
-Git リポジトリでない場合、ビルドマニフェスト（`.gohan/cache/manifest.json`）に記録したファイルハッシュと現在のファイルハッシュを比較し、変更ファイルを特定する。ただし依存グラフが存在しないため差分ビルドは行わず、フルビルドを実行する。
+When not in a Git repository, changed files are identified by comparing file hashes recorded in the build manifest (`.gohan/cache/manifest.json`) with the current file hashes. However, since no dependency graph exists, a full build is performed instead of a differential build.
 
-### 10.2 影響範囲の計算
+### 10.2 Impact Scope Calculation
 
-#### 依存関係グラフ
+#### Dependency Graph
 ```go
 type DependencyGraph struct {
     nodes map[string]*Node
@@ -565,102 +565,102 @@ func (g *DependencyGraph) CalculateImpact(changedFiles []string) []string {
 }
 ```
 
-#### 影響範囲の例
-- **記事Aを更新** → 記事A・タグページ・カテゴリページ・アーカイブページ・RSS
-- **タグマスターを更新** → 全タグページ・関連記事ページ・ナビゲーション
-- **テンプレートを更新** → 全ページ（フルビルド）
+#### Impact Scope Examples
+- **Update Article A** → Article A, tag pages, category pages, archive pages, RSS
+- **Update tag master** → All tag pages, related article pages, navigation
+- **Update templates** → All pages (full build)
 
-### 10.3 キャッシュ戦略
+### 10.3 Cache Strategy
 
-#### キャッシュ保存場所
+#### Cache Storage Location
 
 ```
 .gohan/
 └── cache/
-    ├── manifest.json     # ファイルハッシュ・依存関係・出力ファイル一覧
-    ├── ast/              # パース済みMarkdown AST（gob形式）
-    └── html/             # レンダリング済みHTML
+    ├── manifest.json     # File hashes, dependencies, and output file list
+    ├── ast/              # Parsed Markdown AST (gob format)
+    └── html/             # Rendered HTML
 ```
 
-`.gohan/` はプロジェクトルートに自動生成する。初回 `gohan build` 実行時に `.gohan/` を作成する際、`.gitignore` への追加を推奨する旨をメッセージとして表示する。
+`.gohan/` is automatically generated in the project root. When `.gohan/` is created on the first `gohan build` run, a message is displayed recommending that it be added to `.gitignore`.
 
-#### ビルドキャッシュ
-- **パース済みMarkdown**: パース済みASTを gob 形式で `.gohan/cache/ast/` に保存
-- **レンダリング済みHTML**: テンプレート適用後のHTMLを `.gohan/cache/html/` に保存
+#### Build Cache
+- **Parsed Markdown**: Parsed AST saved in gob format to `.gohan/cache/ast/`
+- **Rendered HTML**: Template-applied HTML saved to `.gohan/cache/html/`
 
-#### キャッシュ無効化
-- **ファイル変更**: ファイルの SHA-256 ハッシュが変わった場合に該当キャッシュを無効化
-- **依存関係の変更**: 影響範囲のキャッシュを一括無効化
-- **設定変更**: `config.yaml` のハッシュが変わった場合はキャッシュ全クリア
+#### Cache Invalidation
+- **File changes**: Invalidate the corresponding cache when a file's SHA-256 hash changes
+- **Dependency changes**: Bulk-invalidate caches within the impact scope
+- **Configuration changes**: Clear all caches when the hash of `config.yaml` changes
 
 ---
 
-## 11. CLI仕様
+## 11. CLI Specification
 
-### 11.1 基本コマンド
+### 11.1 Basic Commands
 
-#### build - サイトビルド
+#### build - Site Build
 ```bash
-# 基本ビルド（差分）
+# Basic build (differential)
 gohan build
 
-# フルビルド
+# Full build
 gohan build --full
 
-# 設定ファイルを指定
+# Specify configuration file
 gohan build --config=config.production.yaml
 
-# 出力ディレクトリを指定
+# Specify output directory
 gohan build --output=dist
 
-# 並行数を指定
+# Specify parallelism
 gohan build --parallel=8
 
-# ドライラン
+# Dry run
 gohan build --dry-run
 ```
 
-#### new - 記事スケルトンの生成
+#### new - Article Skeleton Generation
 ```bash
-# 新しい記事を生成（content/posts/ 配下に作成）
+# Generate a new article (created under content/posts/)
 gohan new my-first-post
 
-# タイトルを指定
+# Specify a title
 gohan new --title="My First Post" my-first-post
 
-# 静的ページとして生成
+# Generate as a static page
 gohan new --type=page about
 ```
 
-#### serve - 開発用ローカルサーバー
+#### serve - Local Development Server
 ```bash
-# デフォルトポート（1313）で起動
+# Start on default port (1313)
 gohan serve
 
-# ポートを指定
+# Specify port
 gohan serve --port=8080
 
-# ホストを指定
+# Specify host
 gohan serve --host=0.0.0.0 --port=8080
 ```
 
-### 11.2 設定ファイル
+### 11.2 Configuration Files
 
-#### グローバル設定
+#### Global Configuration
 ```yaml
 # ~/.gohan/config.yaml
 defaults:
   theme: default
 ```
 
-#### プロジェクト設定
+#### Project Configuration
 ```yaml
 # config.yaml
 site:
   title: "My Blog"
   description: "A personal blog"
   base_url: "https://example.com"
-  language: "ja"
+  language: "en"
 
 build:
   content_dir: "content"
@@ -675,16 +675,16 @@ theme:
 
 ---
 
-## 12. 開発サーバー
+## 12. Development Server
 
-### 12.1 概要
+### 12.1 Overview
 
-`gohan serve` で起動するローカル開発用HTTPサーバー。ファイル配信には Go 標準の `net/http` を使用する。ファイル変更検知には外部ライブラリ `fsnotify` を使用する（開発サーバー限定の依存）。
+A local HTTP server for development launched by `gohan serve`. Uses Go's standard `net/http` for file serving. Uses the external library `fsnotify` for file change detection (a development server-only dependency).
 
-### 12.2 基本仕様
+### 12.2 Basic Specification
 
 ```go
-// FileWatcher はファイル変更検知インターフェース。実装には fsnotify を使用する。
+// FileWatcher is the file change detection interface. The implementation uses fsnotify.
 type FileWatcher interface {
     Add(path string) error
     Events() <-chan string
@@ -699,7 +699,7 @@ type DevServer struct {
 }
 
 func (s *DevServer) Start() error {
-    // public/ を静的ファイルとして配信
+    // Serve public/ as static files
     fs := http.FileServer(http.Dir(s.OutDir))
     mux := http.NewServeMux()
     mux.Handle("/", fs)
@@ -707,70 +707,70 @@ func (s *DevServer) Start() error {
 }
 ```
 
-### 12.3 ファイル変更検知とライブリロード
+### 12.3 File Change Detection and Live Reload
 
-- **変更検知**: `fsnotify` を使い `content/`・`themes/`・`assets/` を監視
-- **差分ビルド連携**: 変更検知時に差分ビルドを自動実行
-- **ライブリロード**: ビルド完了後にブラウザへ SSE（Server-Sent Events）で通知・自動リロード
-- **注入方式**: 各HTMLレスポンスに `<script>` スニペットを動的に付与（出力ファイルは汚染しない）
+- **Change detection**: Use `fsnotify` to watch `content/`, `themes/`, and `assets/`
+- **Differential build integration**: Automatically run a differential build upon change detection
+- **Live reload**: Notify the browser via SSE (Server-Sent Events) after build completion for automatic reload
+- **Injection method**: Dynamically append a `<script>` snippet to each HTML response (output files are not modified)
 
-### 12.4 動作フロー
+### 12.4 Operation Flow
 
 ```
-ファイル変更
-  → fsnotify で検知
-  → 差分ビルド実行
-  → SSE でブラウザに通知
-  → ブラウザがリロード
+File change
+  → Detected by fsnotify
+  → Run differential build
+  → Notify browser via SSE
+  → Browser reloads
 ```
 
 ---
 
-## 13. バイナリ配布・リリース戦略
+## 13. Binary Distribution & Release Strategy
 
-GoReleaserによる自動リリースを採用する。
+Automated releases using GoReleaser.
 
-### 13.1 配布チャンネル
-- **GitHub Releases**: 全プラットフォーム向けバイナリ
+### 13.1 Distribution Channels
+- **GitHub Releases**: Binaries for all platforms
 - **Go Install**: `go install github.com/bmf-san/gohan@latest`
 
-### 13.2 リリースワークフロー
-1. **リリースノート**: 自動生成・GitHub Release作成
-2. **自動ビルド**: GitHub ActionsによるGoReleaser実行
-3. **成果物生成**: 各プラットフォーム向けバイナリ
+### 13.2 Release Workflow
+1. **Release notes**: Automatically generated and GitHub Release created
+2. **Automated build**: GoReleaser executed via GitHub Actions
+3. **Artifact generation**: Binaries for each platform
 
 ---
 
-## 14. テスト戦略
+## 14. Testing Strategy
 
-### 14.1 ユニットテスト
+### 14.1 Unit Tests
 
-対象コンポーネントと観点：
+Target components and test perspectives:
 
-| コンポーネント | テスト観点 |
+| Component | Test Perspectives |
 |---|---|
-| Markdownパーサー | CommonMark準拠の変換・エッジケース |
-| Front Matterパーサー | YAML解析・必須フィールド欠落時のエラー |
-| 依存関係グラフ | ノード追加・エッジ追加・影響範囲計算の正確性 |
-| テンプレートエンジン | 変数展開・カスタム関数・エラーテンプレートの処理 |
-| 差分検出 | 変更/追加/削除ファイルの正確な検出 |
-| 設定ローダー | YAMLパース・バリデーション・デフォルト値の適用 |
+| Markdown parser | CommonMark-compliant conversion, edge cases |
+| Front Matter parser | YAML parsing, errors on missing required fields |
+| Dependency graph | Node addition, edge addition, accuracy of impact scope calculation |
+| Template engine | Variable expansion, custom functions, error template handling |
+| Diff detection | Accurate detection of modified/added/deleted files |
+| Configuration loader | YAML parsing, validation, default value application |
 
-### 14.2 インテグレーションテスト
+### 14.2 Integration Tests
 
-- **フルビルドテスト**: フィクスチャのコンテンツ・テンプレートを入力として `public/` の出力HTMLを検証
-- **差分ビルドテスト**: 一部ファイル変更後の再ビルドで影響範囲のファイルのみ更新されることを確認
-- **CLIテスト**: 各サブコマンドの終了コード・標準出力・エラー出力を検証
+- **Full build test**: Verify HTML output in `public/` using fixture content and templates as input
+- **Differential build test**: Confirm that only files within the impact scope are updated after rebuilding with partial file changes
+- **CLI test**: Verify exit codes, stdout, and stderr for each subcommand
 
-### 14.3 テストフィクスチャの構成
+### 14.3 Test Fixture Structure
 
 ```
 testdata/
 ├── content/
 │   ├── posts/
-│   │   ├── simple-post.md        # 基本的な記事
-│   │   ├── post-with-tags.md     # タグ付き記事
-│   │   └── draft-post.md         # draft: true の記事
+│   │   ├── simple-post.md        # Basic article
+│   │   ├── post-with-tags.md     # Article with tags
+│   │   └── draft-post.md         # Article with draft: true
 │   └── pages/
 │       └── about.md
 ├── themes/
@@ -778,32 +778,32 @@ testdata/
 │       └── layouts/
 │           └── base.html
 ├── config.yaml
-└── expected/                      # 期待出力HTMLのスナップショット
+└── expected/                      # Snapshot of expected HTML output
     └── public/
 ```
 
-### 14.4 カバレッジ目標
+### 14.4 Coverage Goals
 
-- **全体**: 80%以上
-- **パーサー・レンダラー層**: 90%以上（コアロジックのため重点テスト）
-- CI上で `go test -cover` を実行し、閾値未満の場合はビルド失敗とする
+- **Overall**: 80% or higher
+- **Parser / renderer layer**: 90% or higher (priority testing for core logic)
+- Run `go test -cover` in CI and fail the build if below the threshold
 
 ---
 
-## 15. 技術的負債の管理
+## 15. Technical Debt Management
 
-### 15.1 継続的品質管理
+### 15.1 Continuous Quality Management
 
-- **依存関係の更新**: dependabot により週次でPRを自動作成
-- **静的解析・テスト**: PRごとに `golangci-lint` および `go test -race -cover` を CI で実行
-- **カバレッジ閾値**: `go test -coverprofile` の結果をスクリプトで検証し、80%未満の場合はCIを失敗させる
+- **Dependency updates**: dependabot automatically creates PRs on a weekly basis
+- **Static analysis & testing**: Run `golangci-lint` and `go test -race -cover` in CI for every PR
+- **Coverage threshold**: Verify `go test -coverprofile` results with a script and fail CI if below 80%
 
-### 15.2 パフォーマンス監視
+### 15.2 Performance Monitoring
 
-- **ベンチマーク**: `go test -bench` でパーサー・レンダラー・差分ビルドの各処理時間を計測
-- **リグレッション検知**: ベンチマーク結果の前回比較を CI で記録し、大幅な悪化時にアラート
+- **Benchmarks**: Measure processing time for parser, renderer, and differential build using `go test -bench`
+- **Regression detection**: Record benchmark result comparisons against the previous run in CI and alert on significant degradation
 
-### 15.3 既知の制限事項
+### 15.3 Known Limitations
 
-- `gohan serve` のライブリロードは `fsnotify` に依存するため、一部のNFSやDockerボリューム環境でイベント検知が機能しない可能性がある
-- `os/exec` による Git 呼び出しは Git がインストールされていない環境では動作しない（差分ビルドのみ影響、フルビルドは動作する）
+- Live reload in `gohan serve` depends on `fsnotify`, so event detection may not work in some NFS or Docker volume environments
+- Git calls via `os/exec` do not work in environments where Git is not installed (only affects differential builds; full builds still work)
