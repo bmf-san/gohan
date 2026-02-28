@@ -28,5 +28,17 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+# gohan binary
+gohan
+
+# GoReleaser build output
+dist/
+
+# gohan build cache
+.gohan/
+
+# macOS
+.DS_Store
