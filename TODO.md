@@ -26,6 +26,8 @@ feat: {概要} (#{issue番号})
 
 ### Design Doc 照合ルール（Phase 8 以降）
 
+- Design Doc: [`docs/DESIGN_DOC.md`](docs/DESIGN_DOC.md) / [`docs/DESIGN_DOC.ja.md`](docs/DESIGN_DOC.ja.md)
+
 各フェーズの実装前に、対応する Issue の内容と Design Doc の記述を照合する。
 
 1. **照合**: Issue の Tasks / Reference セクションと Design Doc の該当箇所を比較し、ブレ（矛盾・未記載・実装上の問題）がないか確認する
