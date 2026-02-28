@@ -11,8 +11,8 @@ import (
 
 // urlSet is the root element of sitemap.xml.
 type urlSet struct {
-	XMLName xml.Name  `xml:"urlset"`
-	Xmlns   string    `xml:"xmlns,attr"`
+	XMLName xml.Name     `xml:"urlset"`
+	Xmlns   string       `xml:"xmlns,attr"`
 	URLs    []sitemapURL `xml:"url"`
 }
 
