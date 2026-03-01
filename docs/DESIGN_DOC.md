@@ -983,3 +983,239 @@ testdata/
 
 ---
 
+## 18. Pagination
+
+### 18.1 Overview
+
+gohan generates paginated listing pages using a path-based URL scheme, consistent with the conventions of major SSGs (Hugo, Jekyll, etc.) and compatible with static hosting (Cloudflare Pages, GitHub Pages).
+
+### 18.2 URL Scheme
+
+```
+/              → Page 1 (public/index.html)
+/page/2/       → Page 2 (public/page/2/index.html)
+/page/3/       → Page 3 (public/page/3/index.html)
+```
+
+- Page 1 is always served from the root `index.html`; no `/page/1/` alias is generated
+- Tag and category listing pages follow the same pattern:
+  - `/tags/go/` → Page 1
+  - `/tags/go/page/2/` → Page 2
+  - `/categories/architecture/` → Page 1
+  - `/categories/architecture/page/2/` → Page 2
+
+### 18.3 Configuration
+
+`per_page` is added to `BuildConfig` in `config.yaml`:
+
+```yaml
+build:
+  per_page: 10   # number of articles per page. 0 or omitted disables pagination
+```
+
+### 18.4 Data Model
+
+Add `Pagination` struct and `PerPage` field to `model.go`:
+
+```go
+// Pagination holds computed paging metadata for listing pages.
+type Pagination struct {
+    CurrentPage int
+    TotalPages  int
+    PerPage     int
+    TotalItems  int
+    PrevURL     string // empty string if no previous page
+    NextURL     string // empty string if no next page
+}
+```
+
+`Site` gains a `Pagination` field:
+
+```go
+type Site struct {
+    // ... existing fields ...
+    Pagination *Pagination // nil when pagination is disabled or page is not a listing page
+}
+```
+
+`BuildConfig` gains `PerPage`:
+
+```go
+type BuildConfig struct {
+    // ... existing fields ...
+    PerPage int `yaml:"per_page"`
+}
+```
+
+### 18.5 Implementation
+
+**`internal/model/model.go`**
+- Add `Pagination` struct
+- Add `Pagination *Pagination` to `Site`
+- Add `PerPage int` to `BuildConfig`
+
+**`internal/generator/html.go`**
+- `buildJobs()` splits articles into pages of size `cfg.Build.PerPage`
+- Page 1 → `{outDir}/index.html`
+- Page N (N ≥ 2) → `{outDir}/page/N/index.html`
+- Add `siteWithPagination(site, articles, pagination)` helper that returns a shallow copy of `Site` with the given article slice and `Pagination`
+- Apply the same split logic to tag and category listing pages
+
+**Template usage (user-side)**:
+
+```html
+{{if .Pagination}}
+  {{if .Pagination.PrevURL}}
+    <link rel="prev" href="{{.Pagination.PrevURL}}">
+  {{end}}
+  {{if .Pagination.NextURL}}
+    <link rel="next" href="{{.Pagination.NextURL}}">
+  {{end}}
+
+  {{if .Pagination.PrevURL}}
+    <a href="{{.Pagination.PrevURL}}">← Prev</a>
+  {{end}}
+  <span>{{.Pagination.CurrentPage}} / {{.Pagination.TotalPages}}</span>
+  {{if .Pagination.NextURL}}
+    <a href="{{.Pagination.NextURL}}">Next →</a>
+  {{end}}
+{{end}}
+```
+
+### 18.6 SEO Considerations
+
+- `<link rel="prev">` / `<link rel="next">` allows Google to discover and follow the pagination chain
+- Each paginated page has its own canonical URL (`/page/2/`, etc.)
+- No redirect is required when migrating from query-parameter pagination (`?page=2`), since paginated listing pages are rarely indexed or externally linked
+
+### 18.7 Scope
+
+| Target | Phase 1 | Future |
+|---|---|---|
+| Index listing page | ✅ | — |
+| Tag listing pages | ✅ | — |
+| Category listing pages | ✅ | — |
+| Archive listing pages | — | ✅ |
+
+---
+
+## 19. OGP Image Generation
+
+### 19.1 Overview
+
+gohan generates OGP (Open Graph Protocol) thumbnail images at build time using pure Go. Each article gets a unique `og:image` derived from its title, eliminating the need for manual image creation.
+
+### 19.2 Output
+
+```
+public/
+└── ogp/
+    └── {slug}.png    # 1200×630px OGP image per article
+```
+
+The `og:image` tag in each article page resolves to:
+
+```
+{{.Config.Site.BaseURL}}/ogp/{{.Article.FrontMatter.Slug}}.png
+```
+
+Listing pages (index, tag, category) fall back to a user-supplied default image:
+
+```
+{{.Config.Site.BaseURL}}/assets/images/ogp-default.png
+```
+
+### 19.3 Configuration
+
+Add an `ogp` block to `config.yaml`:
+
+```yaml
+ogp:
+  enabled: true
+  background_color: "#1e1e2e"
+  text_color: "#cdd6f4"
+  font_file: "assets/fonts/NotoSansJP-Bold.ttf"   # TTF/OTF, required for CJK
+  logo_file: "assets/images/logo.png"              # optional overlay
+  width: 1200
+  height: 630
+```
+
+The font file must be bundled by the user. Any TTF/OTF font is supported.
+
+### 19.4 Data Model
+
+Add `OGPConfig` to `model.go`:
+
+```go
+// OGPConfig holds settings for build-time OGP image generation.
+type OGPConfig struct {
+    Enabled         bool   `yaml:"enabled"`
+    BackgroundColor string `yaml:"background_color"`
+    TextColor       string `yaml:"text_color"`
+    FontFile        string `yaml:"font_file"`
+    LogoFile        string `yaml:"logo_file"` // empty means no logo
+    Width           int    `yaml:"width"`
+    Height          int    `yaml:"height"`
+}
+```
+
+Add to `Config`:
+
+```go
+type Config struct {
+    // ... existing fields ...
+    OGP OGPConfig `yaml:"ogp"`
+}
+```
+
+### 19.5 Implementation
+
+**`internal/generator/ogp.go`** (new file)
+- Implement `OGPGenerator` satisfying `OutputGenerator`
+- Use stdlib `image`, `image/color`, `image/png`, `image/draw`
+- Use `golang.org/x/image/font` and `golang.org/x/image/font/opentype` for TrueType rendering
+- Use `golang.org/x/image/math/fixed` for fixed-point arithmetic
+- Rendering pipeline: fill background → draw logo (if configured) → draw word-wrapped title text centered vertically and horizontally
+- Skip generation if `ogp.enabled: false`
+- Skip per-article generation if the output `.png` already exists and the source article is unchanged (cache-aware via `ChangeSet`)
+
+**`internal/generator/generator.go`**
+- Invoke `OGPGenerator.Generate()` as part of the build pipeline when `cfg.OGP.Enabled` is true
+
+**Template usage (user-side)**:
+
+```html
+<!-- article.html -->
+<meta property="og:image"
+  content="{{.Config.Site.BaseURL}}/ogp/{{.Article.FrontMatter.Slug}}.png">
+<meta name="twitter:image"
+  content="{{.Config.Site.BaseURL}}/ogp/{{.Article.FrontMatter.Slug}}.png">
+
+<!-- index.html, tag.html, category.html -->
+<meta property="og:image"
+  content="{{.Config.Site.BaseURL}}/assets/images/ogp-default.png">
+```
+
+### 19.6 Dependencies
+
+| Package | Purpose |
+|---|---|
+| `image`, `image/png`, `image/draw` | stdlib — canvas creation and PNG encoding |
+| `golang.org/x/image/font` | Font face interface and text drawing |
+| `golang.org/x/image/font/opentype` | Load TTF/OTF font files |
+| `golang.org/x/image/math/fixed` | Fixed-point arithmetic for font rendering |
+
+`golang.org/x/image` is already transitively pulled in by many Go projects and adds negligible build overhead.
+
+### 19.7 Scope
+
+| Feature | Phase 1 | Future |
+|---|---|---|
+| Per-article OGP image (title text on solid background) | ✅ | — |
+| Logo overlay | ✅ | — |
+| Site-level default image (user-supplied, no generation) | ✅ | — |
+| Custom OGP layout templates | — | ✅ |
+| Dynamic generation via Cloudflare Workers | — | ✅ |
+
+---
+
