@@ -74,18 +74,24 @@ func (g *HTMLGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) e
 			}
 		}
 	}
+
+	if g.cfg.OGP.Enabled {
+		ogpGen := NewOGPGenerator(g.outDir, g.cfg.OGP)
+		if err := ogpGen.Generate(site, changeSet); err != nil {
+			return fmt.Errorf("ogp generation: %w", err)
+		}
+	}
+
 	return nil
 }
 
 func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 	var jobs []writeJob
+	perPage := g.cfg.Build.PerPage
+	baseURL := g.cfg.Site.BaseURL
 
-	// Index page
-	jobs = append(jobs, writeJob{
-		path: filepath.Join(g.outDir, "index.html"),
-		tmpl: "index.html",
-		data: site,
-	})
+	// Index pages (paginated)
+	jobs = append(jobs, paginatedJobs(site, site.Articles, g.outDir, "index.html", "", baseURL, perPage)...)
 
 	// Article pages: public/posts/<slug>/index.html
 	for _, a := range site.Articles {
@@ -101,38 +107,36 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		})
 	}
 
-	// Tag pages: public/tags/<name>/index.html
+	// Tag pages (paginated)
 	for _, tag := range site.Tags {
 		t := tag
-		jobs = append(jobs, writeJob{
-			path: filepath.Join(g.outDir, "tags", t.Name, "index.html"),
-			tmpl: "tag.html",
-			data: filteredSite(site, func(a *model.ProcessedArticle) bool {
-				for _, tt := range a.FrontMatter.Tags {
-					if tt == t.Name {
-						return true
-					}
+		filtered := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
+			for _, tt := range a.FrontMatter.Tags {
+				if tt == t.Name {
+					return true
 				}
-				return false
-			}),
+			}
+			return false
 		})
+		basePath := filepath.Join("tags", t.Name)
+		baseURLPath := baseURL + "/tags/" + t.Name
+		jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage)...)
 	}
 
-	// Category pages: public/categories/<name>/index.html
+	// Category pages (paginated)
 	for _, cat := range site.Categories {
 		c := cat
-		jobs = append(jobs, writeJob{
-			path: filepath.Join(g.outDir, "categories", c.Name, "index.html"),
-			tmpl: "category.html",
-			data: filteredSite(site, func(a *model.ProcessedArticle) bool {
-				for _, cc := range a.FrontMatter.Categories {
-					if cc == c.Name {
-						return true
-					}
+		filtered := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
+			for _, cc := range a.FrontMatter.Categories {
+				if cc == c.Name {
+					return true
 				}
-				return false
-			}),
+			}
+			return false
 		})
+		basePath := filepath.Join("categories", c.Name)
+		baseURLPath := baseURL + "/categories/" + c.Name
+		jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage)...)
 	}
 
 	// Archive pages: public/archives/<year>/<month>/index.html
@@ -159,6 +163,100 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 	}
 
 	return jobs
+}
+
+// paginatedJobs returns writeJobs for a paginated listing page.
+// basePath is the filesystem path prefix relative to outDir (e.g. "tags/go").
+// baseURLPath is the URL prefix for computing PrevURL/NextURL.
+// When perPage <= 0, a single job with all articles and no Pagination is returned.
+func paginatedJobs(
+	site *model.Site,
+	articles []*model.ProcessedArticle,
+	outDir, tmpl, basePath, baseURLPath string,
+	perPage int,
+) []writeJob {
+	if perPage <= 0 {
+		var path string
+		if basePath == "" {
+			path = filepath.Join(outDir, "index.html")
+		} else {
+			path = filepath.Join(outDir, basePath, "index.html")
+		}
+		return []writeJob{{path: path, tmpl: tmpl, data: siteFor(site, articles)}}
+	}
+
+	total := len(articles)
+	totalPages := total / perPage
+	if total%perPage != 0 {
+		totalPages++
+	}
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	var jobs []writeJob
+	for page := 1; page <= totalPages; page++ {
+		start := (page - 1) * perPage
+		end := start + perPage
+		if end > total {
+			end = total
+		}
+		slice := articles[start:end]
+
+		pg := &model.Pagination{
+			CurrentPage: page,
+			TotalPages:  totalPages,
+			PerPage:     perPage,
+			TotalItems:  total,
+		}
+		if page > 1 {
+			if page == 2 {
+				if baseURLPath != "" {
+					pg.PrevURL = baseURLPath + "/"
+				} else {
+					pg.PrevURL = "/"
+				}
+			} else {
+				pg.PrevURL = fmt.Sprintf("%s/page/%d/", baseURLPath, page-1)
+			}
+		}
+		if page < totalPages {
+			pg.NextURL = fmt.Sprintf("%s/page/%d/", baseURLPath, page+1)
+		}
+
+		var path string
+		if page == 1 {
+			if basePath == "" {
+				path = filepath.Join(outDir, "index.html")
+			} else {
+				path = filepath.Join(outDir, basePath, "index.html")
+			}
+		} else {
+			if basePath == "" {
+				path = filepath.Join(outDir, "page", fmt.Sprintf("%d", page), "index.html")
+			} else {
+				path = filepath.Join(outDir, basePath, "page", fmt.Sprintf("%d", page), "index.html")
+			}
+		}
+
+		jobs = append(jobs, writeJob{
+			path: path,
+			tmpl: tmpl,
+			data: siteWithPagination(site, slice, pg),
+		})
+	}
+	return jobs
+}
+
+// filterArticles returns articles matching pred.
+func filterArticles(articles []*model.ProcessedArticle, pred func(*model.ProcessedArticle) bool) []*model.ProcessedArticle {
+	var out []*model.ProcessedArticle
+	for _, a := range articles {
+		if pred(a) {
+			out = append(out, a)
+		}
+	}
+	return out
 }
 
 func (g *HTMLGenerator) writePage(path, tmplName string, data *model.Site) error {
@@ -290,6 +388,13 @@ func siteFor(base *model.Site, articles []*model.ProcessedArticle) *model.Site {
 		Tags:       base.Tags,
 		Categories: base.Categories,
 	}
+}
+
+// siteWithPagination creates a site copy with a custom article list and pagination metadata.
+func siteWithPagination(base *model.Site, articles []*model.ProcessedArticle, pg *model.Pagination) *model.Site {
+	s := siteFor(base, articles)
+	s.Pagination = pg
+	return s
 }
 
 // filteredSite creates a site copy with articles matching pred.

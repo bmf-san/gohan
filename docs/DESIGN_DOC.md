@@ -80,8 +80,8 @@ The following are out of scope for gohan:
 
 ### UC-1: Build a site (incremental)
 
-**Actor**: Developer  
-**Precondition**: `config.yaml` exists; at least one Markdown article exists  
+**Actor**: Developer
+**Precondition**: `config.yaml` exists; at least one Markdown article exists
 **Trigger**: Run `gohan build`
 
 **Main Flow**:
@@ -93,7 +93,7 @@ The following are out of scope for gohan:
 6. gohan renders the impact set through the template engine and writes HTML files to the output directory.
 7. gohan updates the manifest and prints a build summary (elapsed time, article count).
 
-**Alternative Flow - no Git repo**:  
+**Alternative Flow - no Git repo**:
 Step 3 falls back to comparing file modification times against the manifest.
 
 **Postcondition**: Output directory contains up-to-date HTML, `sitemap.xml`, and `atom.xml`.
@@ -102,10 +102,10 @@ Step 3 falls back to comparing file modification times against the manifest.
 
 ### UC-2: Force a full build
 
-**Actor**: Developer  
+**Actor**: Developer
 **Trigger**: Run `gohan build --full`
 
-**Main Flow**:  
+**Main Flow**:
 Same as UC-1 except steps 2-3 are skipped; all articles are treated as changed.
 
 **Postcondition**: All HTML is regenerated from scratch; manifest is rewritten.
@@ -114,7 +114,7 @@ Same as UC-1 except steps 2-3 are skipped; all articles are treated as changed.
 
 ### UC-3: Create a new article
 
-**Actor**: Developer  
+**Actor**: Developer
 **Trigger**: Run `gohan new "My Article Title"`
 
 **Main Flow**:
@@ -129,7 +129,7 @@ Same as UC-1 except steps 2-3 are skipped; all articles are treated as changed.
 
 ### UC-4: Start the development server
 
-**Actor**: Developer  
+**Actor**: Developer
 **Trigger**: Run `gohan serve`
 
 **Main Flow**:
@@ -147,10 +147,10 @@ Same as UC-1 except steps 2-3 are skipped; all articles are treated as changed.
 
 ### UC-5: Publish an article
 
-**Actor**: Developer  
+**Actor**: Developer
 **Trigger**: Edit Front Matter of a draft article and change `draft: false`, then run `gohan build`
 
-**Main Flow**:  
+**Main Flow**:
 Same as UC-1. Because the article file changed (or `--full` is used), it is now included in the build output.
 
 **Postcondition**: The article appears in the generated HTML, tag/category pages, archive, sitemap, and feed.
