@@ -6,17 +6,23 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/bmf-san/gohan/internal/model"
 )
 
-type mockEngine struct{ calls []string }
+type mockEngine struct {
+	mu    sync.Mutex
+	calls []string
+}
 
 func (m *mockEngine) Load(_ string, _ htmltemplate.FuncMap) error { return nil }
 func (m *mockEngine) Render(w io.Writer, name string, _ *model.Site) error {
+	m.mu.Lock()
 	m.calls = append(m.calls, name)
+	m.mu.Unlock()
 	_, err := io.WriteString(w, "<html>"+name+"</html>")
 	return err
 }
@@ -70,7 +76,9 @@ func TestGenerate_SlugifiesTitle(t *testing.T) {
 
 func TestGenerate_CopiesAssets(t *testing.T) {
 	srcDir := t.TempDir()
-	os.WriteFile(filepath.Join(srcDir, "style.css"), []byte("body{}"), 0o644)
+	if err := os.WriteFile(filepath.Join(srcDir, "style.css"), []byte("body{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	outDir := t.TempDir()
 	cfg := model.Config{Build: model.BuildConfig{Parallelism: 1, AssetsDir: srcDir}}
 	if err := NewHTMLGenerator(outDir, &mockEngine{}, cfg).Generate(makeSite(), nil); err != nil {
@@ -106,8 +114,12 @@ func TestGenerateFeed(t *testing.T) {
 func TestCopyAssets_PreservesStructure(t *testing.T) {
 	src := t.TempDir()
 	sub := filepath.Join(src, "css")
-	os.MkdirAll(sub, 0o755)
-	os.WriteFile(filepath.Join(sub, "main.css"), []byte(".a{}"), 0o644)
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "main.css"), []byte(".a{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	dst := t.TempDir()
 	if err := CopyAssets(src, dst); err != nil {
 		t.Fatalf("CopyAssets: %v", err)

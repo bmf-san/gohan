@@ -51,7 +51,9 @@ func TestGenerateSitemap_Empty(t *testing.T) {
 
 func TestGenerateSitemap_WellFormedXML(t *testing.T) {
 	dir := t.TempDir()
-	GenerateSitemap(dir, "https://example.com", makeArticles())
+	if err := GenerateSitemap(dir, "https://example.com", makeArticles()); err != nil {
+		t.Fatal(err)
+	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
 	var v interface{}
 	if err := xml.Unmarshal(data, &v); err != nil {
@@ -78,7 +80,9 @@ func TestGenerateFeeds_Valid(t *testing.T) {
 
 func TestGenerateFeeds_NewestFirst(t *testing.T) {
 	dir := t.TempDir()
-	GenerateFeeds(dir, "https://example.com", "Blog", makeArticles())
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", makeArticles()); err != nil {
+		t.Fatal(err)
+	}
 	for _, name := range []string{"feed.xml", "atom.xml"} {
 		data, _ := os.ReadFile(filepath.Join(dir, name))
 		s := string(data)
@@ -90,7 +94,9 @@ func TestGenerateFeeds_NewestFirst(t *testing.T) {
 
 func TestGenerateFeeds_WellFormedXML(t *testing.T) {
 	dir := t.TempDir()
-	GenerateFeeds(dir, "https://example.com", "Blog", makeArticles())
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", makeArticles()); err != nil {
+		t.Fatal(err)
+	}
 	for _, name := range []string{"feed.xml", "atom.xml"} {
 		data, _ := os.ReadFile(filepath.Join(dir, name))
 		var v interface{}
@@ -105,7 +111,9 @@ func TestGenerateFeeds_SlugifiesTitle(t *testing.T) {
 	articles := []*model.ProcessedArticle{
 		{Article: model.Article{FrontMatter: model.FrontMatter{Title: "Hello World", Date: time.Now()}}},
 	}
-	GenerateFeeds(dir, "https://example.com", "Blog", articles)
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles); err != nil {
+		t.Fatal(err)
+	}
 	data, _ := os.ReadFile(filepath.Join(dir, "feed.xml"))
 	if !strings.Contains(string(data), "hello-world") {
 		t.Errorf("expected slugified title in feed:\n%s", data)

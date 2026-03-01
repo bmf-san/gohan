@@ -50,9 +50,11 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
-	out.WriteString(xml.Header)
+	if _, err := out.WriteString(xml.Header); err != nil {
+		return err
+	}
 	enc := xml.NewEncoder(out)
 	enc.Indent("", "  ")
 	if err := enc.Encode(us); err != nil {

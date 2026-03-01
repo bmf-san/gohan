@@ -1,17 +1,19 @@
-# Configuration Reference — 設定リファレンス
+# Configuration Reference
 
-`config.yaml` はプロジェクトルートに置く唯一の設定ファイルです。
+`config.yaml` is the single configuration file placed at the project root.
+
+> 日本語版: [configuration.ja.md](configuration.ja.md)
 
 ---
 
-## 完全な設定例
+## Complete example
 
 ```yaml
 site:
   title: "My Blog"
-  description: "技術系個人ブログ"
+  description: "A personal tech blog"
   base_url: "https://myblog.example.com"
-  language: "ja"
+  language: "en"
 
 build:
   content_dir: "content"
@@ -36,75 +38,70 @@ syntax_highlight:
 
 ---
 
-## `site` セクション
+## `site` section
 
-サイト全体のメタデータを設定します。
+Site-wide metadata.
 
-| フィールド | 型 | デフォルト | 説明 |
+| Field | Type | Default | Description |
 |---|---|---|---|
-| `title` | string | *(required)* | サイトタイトル。テンプレートで `.Config.Site.Title` として参照 |
-| `description` | string | `""` | サイトの説明。メタタグや feed に使用 |
-| `base_url` | string | *(required)* | サイトのベース URL。末尾スラッシュなし（例: `https://example.com`） |
-| `language` | string | `"en"` | サイトの言語コード（例: `"ja"`, `"en"`）。`<html lang="">` に使用 |
+| `title` | string | *(required)* | Site title. Available in templates as `.Config.Site.Title` |
+| `description` | string | `""` | Site description. Used in meta tags and the Atom feed |
+| `base_url` | string | *(required)* | Base URL without a trailing slash (e.g. `https://example.com`) |
+| `language` | string | `"en"` | BCP 47 language code used in `<html lang="">` |
 
-### メモ
-
-- `base_url` は `sitemap.xml` と `atom.xml` の URL 生成に使われます
-- `base_url` の末尾にスラッシュを付けないでください
+> `base_url` is used to generate absolute URLs in `sitemap.xml` and `atom.xml`. Do not include a trailing slash.
 
 ---
 
-## `build` セクション
+## `build` section
 
-ファイルパスとビルド動作を設定します。
+File paths and build behaviour.
 
-| フィールド | 型 | デフォルト | 説明 |
+| Field | Type | Default | Description |
 |---|---|---|---|
-| `content_dir` | string | `"content"` | Markdown コンテンツのディレクトリ（プロジェクトルートからの相対パス） |
-| `output_dir` | string | `"public"` | HTML 出力先ディレクトリ |
-| `assets_dir` | string | `"assets"` | 静的ファイル（CSS、画像など）のディレクトリ |
-| `exclude_files` | []string | `[]` | ビルドから除外するファイルのグロブパターン |
-| `parallelism` | int | `4` | HTML 生成の並列数。CPU コア数より大きくても意味はありません |
+| `content_dir` | string | `"content"` | Markdown content directory (relative to project root) |
+| `output_dir` | string | `"public"` | HTML output directory |
+| `assets_dir` | string | `"assets"` | Static files directory (CSS, images, etc.) |
+| `exclude_files` | []string | `[]` | Glob patterns for files to exclude from the build |
+| `parallelism` | int | `4` | Number of parallel HTML generation workers |
 
-### `exclude_files` の例
+### `exclude_files` examples
 
 ```yaml
 build:
   exclude_files:
-    - "*.draft.md"      # .draft.md で終わるファイルを除外
-    - "_*"              # _ で始まるファイルを除外
-    - "templates/*"     # templates/ 配下を除外
+    - "*.draft.md"   # Exclude files ending in .draft.md
+    - "_*"           # Exclude files starting with _
+    - "templates/*"  # Exclude everything under templates/
 ```
 
 ---
 
-## `theme` セクション
+## `theme` section
 
-使用するテーマとカスタムパラメーターを設定します。
+Active theme and custom parameters.
 
-| フィールド | 型 | デフォルト | 説明 |
+| Field | Type | Default | Description |
 |---|---|---|---|
-| `name` | string | `"default"` | テーマ名。`dir` が未設定の場合 `themes/<name>` が使われる |
-| `dir` | string | `"themes/<name>"` | テーマディレクトリのパス（プロジェクトルートからの相対パス） |
-| `params` | map[string]string | `{}` | テンプレートから `.Config.Theme.Params.<key>` でアクセスできる任意のパラメーター |
+| `name` | string | `"default"` | Theme name. Used to resolve `dir` when `dir` is not set |
+| `dir` | string | `"themes/<name>"` | Theme directory path (relative to project root) |
+| `params` | map[string]string | `{}` | Arbitrary parameters accessible in templates as `.Config.Theme.Params.<key>` |
 
-### テンプレートからのアクセス
+### Accessing params in templates
 
 ```html
 <style>
-  :root {
-    --primary: {{.Config.Theme.Params.primary_color}};
-  }
+  :root { --primary: {{.Config.Theme.Params.primary_color}}; }
 </style>
 <footer>{{.Config.Theme.Params.footer_text}}</footer>
 ```
 
-### テーマディレクトリ構成
+### Theme directory layout
 
 ```
 themes/
 └── <name>/
-    └── templates/      ← テンプレートファイルを置くディレクトリ
+    └── templates/      ← Place template files here
         ├── index.html
         ├── article.html
         ├── tag.html
@@ -114,64 +111,64 @@ themes/
 
 ---
 
-## `syntax_highlight` セクション
+## `syntax_highlight` section
 
-コードブロックのシンタックスハイライトを設定します（[chroma](https://github.com/alecthomas/chroma) 使用）。
+Code-block syntax highlighting powered by [chroma](https://github.com/alecthomas/chroma).
 
-| フィールド | 型 | デフォルト | 説明 |
+| Field | Type | Default | Description |
 |---|---|---|---|
-| `theme` | string | `"github"` | chroma のカラーテーマ名 |
-| `line_numbers` | bool | `false` | 行番号を表示するか |
+| `theme` | string | `"github"` | chroma colour theme name |
+| `line_numbers` | bool | `false` | Show line numbers in code blocks |
 
-### 利用可能なテーマ
+### Available themes
 
-| テーマ名 | 特徴 |
+| Theme | Style |
 |---|---|
-| `github` | GitHub の明るいテーマ（デフォルト） |
-| `monokai` | 暗い背景に鮮やかな色 |
-| `dracula` | ダークテーマ |
-| `solarized-dark` | solarized ダークテーマ |
-| `solarized-light` | solarized ライトテーマ |
-| `nord` | 北欧風ダークテーマ |
-| `vs` | Visual Studio 風 |
-| `pygments` | Python pygments スタイル |
+| `github` | Light theme (default) |
+| `monokai` | Dark background, vivid colours |
+| `dracula` | Dark theme |
+| `solarized-dark` | Solarized dark |
+| `solarized-light` | Solarized light |
+| `nord` | Nordic dark theme |
+| `vs` | Visual Studio style |
+| `pygments` | Python pygments style |
 
-全テーマのプレビュー: https://xyproto.github.io/splash/docs/
+Browse all themes: https://xyproto.github.io/splash/docs/
 
-### ハイライトを無効にする
+### Disable highlighting
 
 ```yaml
 syntax_highlight:
-  theme: ""   # 空文字列でハイライト無効
+  theme: ""  # Empty string disables highlighting
 ```
 
 ---
 
-## Front Matter リファレンス
+## Front Matter reference
 
-各 Markdown ファイルの先頭に YAML Front Matter を記述します。
+Every Markdown file begins with a YAML Front Matter block.
 
 ```yaml
 ---
-title: "記事タイトル"              # required: 記事タイトル
-date: 2024-01-15                  # required: 公開日 (YYYY-MM-DD)
-slug: "my-post"                   # optional: URL スラッグ（省略時はタイトルから生成）
-draft: false                      # optional: true の場合ビルドから除外 (default: false)
-tags:                             # optional: タグ一覧
+title: "Article title"       # required: Article title
+date: 2024-01-15             # required: Publication date (YYYY-MM-DD)
+slug: "my-post"              # optional: URL slug (auto-generated from title if omitted)
+draft: false                 # optional: Exclude from build when true (default: false)
+tags:                        # optional: Tag list
   - go
   - blog
-categories:                       # optional: カテゴリー一覧
+categories:                  # optional: Category list
   - tech
-description: "記事の説明"          # optional: メタ description、feed の概要
-author: "Your Name"               # optional: 著者名
-template: "article.html"          # optional: 使用するテンプレートファイル名
+description: "Summary"       # optional: Meta description and feed summary
+author: "Your Name"          # optional: Author name
+template: "article.html"     # optional: Override the template file
 ---
 ```
 
-### `slug` の自動生成
+### Automatic slug generation
 
-`slug` を省略した場合、`title` から自動生成されます:
+When `slug` is omitted it is derived from `title`:
 
-- スペース → ハイフン
-- 大文字 → 小文字
-- 例: `"Hello World"` → `hello-world`
+- Spaces → hyphens
+- Uppercase → lowercase
+- Example: `"Hello World"` → `hello-world`

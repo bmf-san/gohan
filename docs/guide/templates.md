@@ -1,39 +1,41 @@
-# Template Guide — テンプレートガイド
+# Template Guide
 
-gohan のテーマは Go 標準ライブラリの `html/template` を使用します。
+gohan themes are built with Go's standard `html/template` package.
+
+> 日本語版: [templates.ja.md](templates.ja.md)
 
 ---
 
-## テンプレートファイル
+## Template files
 
-テーマディレクトリ（デフォルト: `themes/default/templates/`）にある `.html` ファイルが自動的に読み込まれます。
+All `.html` files inside the theme directory (`themes/default/templates/` by default) are loaded automatically.
 
-### 必須テンプレート
+### Required templates
 
-| ファイル | URL パターン | 説明 |
+| File | URL pattern | Description |
 |---|---|---|
-| `index.html` | `/` | サイトのトップページ（全記事一覧） |
-| `article.html` | `/posts/<slug>/` | 個別記事ページ |
-| `tag.html` | `/tags/<name>/` | タグ別記事一覧ページ |
-| `category.html` | `/categories/<name>/` | カテゴリー別記事一覧ページ |
-| `archive.html` | `/archive/<year>/` | 年別アーカイブページ |
+| `index.html` | `/` | Site top page (full article list) |
+| `article.html` | `/posts/<slug>/` | Individual article page |
+| `tag.html` | `/tags/<name>/` | Tag article list page |
+| `category.html` | `/categories/<name>/` | Category article list page |
+| `archive.html` | `/archive/<year>/` | Year-based archive page |
 
-> **注意**: テンプレートが存在しない場合、そのページは生成されません（エラーにはなりません）。
+> If a template file does not exist, that page is simply not generated (no error is raised).
 
 ---
 
-## テンプレートデータ
+## Template data
 
-すべてのテンプレートに `model.Site` 型の値が渡されます。
+Every template receives a value of type `model.Site`.
 
 ### Site
 
 ```go
 type Site struct {
-    Config     Config              // config.yaml の設定
-    Articles   []*ProcessedArticle // ページに対応する記事一覧（絞り込み済み）
-    Tags       []Taxonomy          // サイト全体のタグ一覧
-    Categories []Taxonomy          // サイト全体のカテゴリー一覧
+    Config     Config              // Settings from config.yaml
+    Articles   []*ProcessedArticle // Articles for the current page (filtered)
+    Tags       []Taxonomy          // All tags across the site
+    Categories []Taxonomy          // All categories across the site
 }
 ```
 
@@ -41,9 +43,9 @@ type Site struct {
 
 ```go
 type Config struct {
-    Site  SiteConfig  // .Config.Site.*
-    Theme ThemeConfig // .Config.Theme.*
-    Build BuildConfig // .Config.Build.*
+    Site  SiteConfig
+    Theme ThemeConfig
+    Build BuildConfig
 }
 
 type SiteConfig struct {
@@ -54,8 +56,8 @@ type SiteConfig struct {
 }
 
 type ThemeConfig struct {
-    Name   string            // .Config.Theme.Name
-    Dir    string            // .Config.Theme.Dir
+    Name   string
+    Dir    string
     Params map[string]string // .Config.Theme.Params
 }
 ```
@@ -64,12 +66,12 @@ type ThemeConfig struct {
 
 ```go
 type ProcessedArticle struct {
-    FrontMatter FrontMatter    // YAML Front Matter
-    HTMLContent template.HTML  // レンダリング済み HTML
-    Summary     string         // 先頭 200 文字の要約
-    OutputPath  string         // 出力ファイルパス
-    FilePath    string         // ソース Markdown ファイルパス
-    LastModified time.Time     // 最終更新日時
+    FrontMatter  FrontMatter    // Parsed YAML Front Matter
+    HTMLContent  template.HTML  // Rendered HTML
+    Summary      string         // First ~200 characters
+    OutputPath   string         // Output file path
+    FilePath     string         // Source Markdown file path
+    LastModified time.Time      // Last modified time
 }
 
 type FrontMatter struct {
@@ -89,46 +91,44 @@ type FrontMatter struct {
 
 ```go
 type Taxonomy struct {
-    Name        string // タグ/カテゴリー名
-    Description string // 説明（任意）
+    Name        string // Tag or category name
+    Description string // Optional description
 }
 ```
 
 ---
 
-## ページ別の `.Articles` の内容
+## `.Articles` contents per template
 
-各テンプレートで `.Articles` に含まれる記事は異なります:
-
-| テンプレート | `.Articles` の内容 |
+| Template | `.Articles` contains |
 |---|---|
-| `index.html` | サイト全体の全記事 |
-| `article.html` | その記事 1 件のみ |
-| `tag.html` | そのタグを持つ記事 |
-| `category.html` | そのカテゴリーを持つ記事 |
-| `archive.html` | その年の記事 |
+| `index.html` | All articles on the site |
+| `article.html` | The single article being rendered |
+| `tag.html` | Articles that have this tag |
+| `category.html` | Articles that belong to this category |
+| `archive.html` | Articles published in this year |
 
 ---
 
-## 組み込み関数
+## Built-in functions
 
-| 関数 | 使用例 | 説明 |
+| Function | Example | Description |
 |---|---|---|
-| `formatDate` | `{{formatDate "2006-01-02" .FrontMatter.Date}}` | 日付フォーマット |
-| `tagURL` | `{{tagURL "go"}}` → `/tags/go/` | タグページの URL |
-| `categoryURL` | `{{categoryURL "tech"}}` → `/categories/tech/` | カテゴリーページの URL |
-| `markdownify` | `{{markdownify "**bold**"}}` | Markdown を HTML に変換 |
+| `formatDate` | `{{formatDate "2006-01-02" .FrontMatter.Date}}` | Format a `time.Time` value |
+| `tagURL` | `{{tagURL "go"}}` → `/tags/go/` | Generate a tag page URL |
+| `categoryURL` | `{{categoryURL "tech"}}` → `/categories/tech/` | Generate a category page URL |
+| `markdownify` | `{{markdownify "**bold**"}}` | Convert a Markdown string to HTML |
 
-`formatDate` のレイアウト文字列は [Go の time フォーマット](https://pkg.go.dev/time#Layout) に従います:
+`formatDate` uses Go's [reference time](https://pkg.go.dev/time#Layout) layout:
+
 - `"2006-01-02"` → `2024-01-15`
 - `"January 2, 2006"` → `January 15, 2024`
-- `"2006年1月2日"` → `2024年1月15日`
 
 ---
 
-## テンプレートの例
+## Template examples
 
-### `index.html` — トップページ
+### `index.html` — Top page
 
 ```html
 <!DOCTYPE html>
@@ -145,28 +145,23 @@ type Taxonomy struct {
     <h1><a href="/">{{.Config.Site.Title}}</a></h1>
     <p>{{.Config.Site.Description}}</p>
   </header>
-
   <main>
-    <h2>最新の記事</h2>
     <ul>
       {{range .Articles}}
       <li>
         <time>{{formatDate "2006-01-02" .FrontMatter.Date}}</time>
         <a href="/posts/{{.FrontMatter.Slug}}/">{{.FrontMatter.Title}}</a>
         {{if .FrontMatter.Tags}}
-        <span class="tags">
-          {{range .FrontMatter.Tags}}
-          <a href="{{tagURL .}}">#{{.}}</a>
-          {{end}}
+        <span>
+          {{range .FrontMatter.Tags}}<a href="{{tagURL .}}">#{{.}}</a> {{end}}
         </span>
         {{end}}
       </li>
       {{end}}
     </ul>
   </main>
-
   <footer>
-    <p><a href="/sitemap.xml">Sitemap</a> · <a href="/atom.xml">Feed</a></p>
+    <a href="/sitemap.xml">Sitemap</a> · <a href="/atom.xml">Feed</a>
     {{if .Config.Theme.Params.footer_text}}
     <p>{{.Config.Theme.Params.footer_text}}</p>
     {{end}}
@@ -175,7 +170,7 @@ type Taxonomy struct {
 </html>
 ```
 
-### `article.html` — 記事ページ
+### `article.html` — Article page
 
 ```html
 <!DOCTYPE html>
@@ -189,32 +184,19 @@ type Taxonomy struct {
   <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-  <header>
-    <nav><a href="/">← {{.Config.Site.Title}}</a></nav>
-  </header>
-
+  <header><nav><a href="/">← {{.Config.Site.Title}}</a></nav></header>
   <main>
     {{with (index .Articles 0)}}
     <article>
       <h1>{{.FrontMatter.Title}}</h1>
-      <div class="meta">
-        <time>{{formatDate "2006年1月2日" .FrontMatter.Date}}</time>
-        {{if .FrontMatter.Author}}
-        <span> · {{.FrontMatter.Author}}</span>
-        {{end}}
-      </div>
-
+      <time>{{formatDate "January 2, 2006" .FrontMatter.Date}}</time>
+      {{if .FrontMatter.Author}}<span> · {{.FrontMatter.Author}}</span>{{end}}
       {{if .FrontMatter.Tags}}
       <ul class="tags">
-        {{range .FrontMatter.Tags}}
-        <li><a href="{{tagURL .}}">{{.}}</a></li>
-        {{end}}
+        {{range .FrontMatter.Tags}}<li><a href="{{tagURL .}}">{{.}}</a></li>{{end}}
       </ul>
       {{end}}
-
-      <div class="content">
-        {{.HTMLContent}}
-      </div>
+      <div class="content">{{.HTMLContent}}</div>
     </article>
     {{end}}
   </main>
@@ -222,22 +204,20 @@ type Taxonomy struct {
 </html>
 ```
 
-### `tag.html` — タグ別記事一覧
+### `tag.html` — Tag page
 
 ```html
 <!DOCTYPE html>
 <html lang="{{.Config.Site.Language}}">
 <head>
   <meta charset="UTF-8">
-  <title>{{.Config.Site.Title}}</title>
+  <title>Tag: {{(index .Articles 0).FrontMatter.Tags}} — {{.Config.Site.Title}}</title>
   <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-  <header>
-    <nav><a href="/">← {{.Config.Site.Title}}</a></nav>
-  </header>
+  <header><nav><a href="/">← {{.Config.Site.Title}}</a></nav></header>
   <main>
-    <h2>記事一覧</h2>
+    <h2>Articles ({{len .Articles}})</h2>
     <ul>
       {{range .Articles}}
       <li>
@@ -253,54 +233,38 @@ type Taxonomy struct {
 
 ---
 
-## 高度な機能
+## Advanced features
 
-### Mermaid 図
+### Mermaid diagrams
 
-Markdown にコードブロックを書くだけで Mermaid 図が描画されます:
+Write a fenced code block with the `mermaid` language identifier:
 
-````markdown
+````text
 ```mermaid
 graph TD
-    A[記事を書く] --> B[gohan build]
-    B --> C[public/ に HTML 生成]
-    C --> D[デプロイ]
+    A[Write article] --> B[gohan build]
+    B --> C[HTML in public/]
+    C --> D[Deploy]
 ```
 ````
 
-テンプレートに Mermaid の CDN スクリプトを含めることで動作します（gohan はレンダリング時に自動挿入することもできます）:
+gohan automatically injects the Mermaid runtime script when it detects a mermaid block.
 
-```html
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-```
+### Syntax highlighting
 
-### シンタックスハイライト
+Fenced code blocks are highlighted automatically using [chroma](https://github.com/alecthomas/chroma). Styles are applied via inline CSS — no external stylesheet is required.
 
-````markdown
-```go
-package main
+### Template partials
 
-import "fmt"
-
-func main() {
-    fmt.Println("Hello!")
-}
-```
-````
-
-ハイライトはインライン CSS スタイルで適用されるため、外部 CSS ファイルは不要です。
-
-### テンプレートの継承（partials）
-
-`themes/default/templates/` 以下に任意のファイルを作成し、`template` アクションで読み込めます:
+Create reusable partial templates using `{{define}}` and `{{template}}`:
 
 ```
 themes/default/templates/
 ├── index.html
 ├── article.html
-├── _partials/
-│   ├── header.html    ← define "header" で定義
-│   └── footer.html    ← define "footer" で定義
+└── _partials/
+    ├── header.html   ← defines "header"
+    └── footer.html   ← defines "footer"
 ```
 
 ```html

@@ -24,8 +24,10 @@ func TestRunNew_UnknownType(t *testing.T) {
 func TestRunNew_CreatePost(t *testing.T) {
 	tmpDir := t.TempDir()
 	old, _ := os.Getwd()
-	defer os.Chdir(old)
-	os.Chdir(tmpDir)
+	defer func() { _ = os.Chdir(old) }()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
 
 	err := runNew([]string{"my-first-post"})
 	if err != nil {
@@ -55,8 +57,10 @@ func TestRunNew_CreatePost(t *testing.T) {
 func TestRunNew_CreatePage(t *testing.T) {
 	tmpDir := t.TempDir()
 	old, _ := os.Getwd()
-	defer os.Chdir(old)
-	os.Chdir(tmpDir)
+	defer func() { _ = os.Chdir(old) }()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
 
 	err := runNew([]string{"--type=page", "--title=About Me", "about"})
 	if err != nil {
@@ -76,8 +80,10 @@ func TestRunNew_CreatePage(t *testing.T) {
 func TestRunNew_ExistingFileError(t *testing.T) {
 	tmpDir := t.TempDir()
 	old, _ := os.Getwd()
-	defer os.Chdir(old)
-	os.Chdir(tmpDir)
+	defer func() { _ = os.Chdir(old) }()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatal(err)
+	}
 
 	// Create first time
 	if err := runNew([]string{"duplicate-slug"}); err != nil {
