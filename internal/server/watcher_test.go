@@ -15,9 +15,9 @@ func newFakeWatcher() *fakeWatcher {
 	return &fakeWatcher{ch: make(chan string, 10)}
 }
 
-func (f *fakeWatcher) Add(path string) error   { return nil }
-func (f *fakeWatcher) Events() <-chan string    { return f.ch }
-func (f *fakeWatcher) Close() error            { close(f.ch); return nil }
+func (f *fakeWatcher) Add(path string) error { return nil }
+func (f *fakeWatcher) Events() <-chan string { return f.ch }
+func (f *fakeWatcher) Close() error          { close(f.ch); return nil }
 
 func TestNewFsnotifyWatcher_CreatesWatcher(t *testing.T) {
 	fw, err := NewFsnotifyWatcher()
