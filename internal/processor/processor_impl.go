@@ -26,7 +26,7 @@ func (p *SiteProcessor) Process(articles []*model.Article, cfg model.Config) ([]
 		Theme:       cfg.SyntaxHighlight.Theme,
 		LineNumbers: cfg.SyntaxHighlight.LineNumbers,
 	}
-	convOpts := []parser.ConverterOption{parser.WithGFM()}
+	convOpts := []parser.ConverterOption{parser.WithGFM(), parser.WithMermaid()}
 	if hlCfg.Theme != "" {
 		convOpts = append(convOpts, parser.WithHighlighting(hlCfg))
 	}

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bmf-san/gohan/internal/mermaid"
 	"github.com/bmf-san/gohan/internal/model"
 	gohantemplate "github.com/bmf-san/gohan/internal/template"
 )
@@ -168,7 +169,11 @@ func (g *HTMLGenerator) writePage(path, tmplName string, data *model.Site) error
 	if err := g.engine.Render(&buf, tmplName, data); err != nil {
 		return fmt.Errorf("render %s: %w", tmplName, err)
 	}
-	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+	pageBytes := buf.Bytes()
+	if bytes.Contains(pageBytes, []byte(mermaid.MermaidMarker)) {
+		pageBytes = mermaid.InjectScript(pageBytes)
+	}
+	if err := os.WriteFile(path, pageBytes, 0o644); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	return nil

@@ -11,6 +11,7 @@ import (
 	"github.com/yuin/goldmark/renderer/html"
 
 	"github.com/bmf-san/gohan/internal/highlight"
+	"github.com/bmf-san/gohan/internal/mermaid"
 )
 
 // Converter converts Markdown source bytes into safe HTML.
@@ -25,6 +26,7 @@ type converterConfig struct {
 	gfm          bool
 	unsafeHTML   bool
 	highlighting *highlight.Config
+	mermaid      bool
 }
 
 // ConverterOption is a functional option for NewConverter.
@@ -47,6 +49,12 @@ func WithUnsafeHTML() ConverterOption {
 // cfg specifies the chroma theme and line-number settings.
 func WithHighlighting(cfg highlight.Config) ConverterOption {
 	return func(c *converterConfig) { c.highlighting = &cfg }
+}
+
+// WithMermaid enables client-side Mermaid diagram rendering.
+// Fenced code blocks tagged "mermaid" are output as <div class="mermaid">.
+func WithMermaid() ConverterOption {
+	return func(c *converterConfig) { c.mermaid = true }
 }
 
 // NewConverter builds a Converter with the supplied options.  When no options
@@ -75,6 +83,10 @@ func NewConverter(opts ...ConverterOption) *Converter {
 	if cfg.highlighting != nil {
 		h := highlight.New(*cfg.highlighting)
 		mdOpts = append(mdOpts, goldmark.WithExtensions(h.Extension()))
+	}
+
+	if cfg.mermaid {
+		mdOpts = append(mdOpts, goldmark.WithExtensions(mermaid.Extension()))
 	}
 
 	return &Converter{md: goldmark.New(mdOpts...)}
