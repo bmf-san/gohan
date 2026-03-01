@@ -13,13 +13,14 @@ import (
 )
 
 const (
-	configFileName     = "config.yaml"
-	defaultContentDir  = "content"
-	defaultOutputDir   = "public"
-	defaultAssetsDir   = "assets"
-	defaultParallelism = 4
-	defaultThemeName   = "default"
-	defaultLanguage    = "en"
+	configFileName        = "config.yaml"
+	defaultContentDir     = "content"
+	defaultOutputDir      = "public"
+	defaultAssetsDir      = "assets"
+	defaultParallelism    = 4
+	defaultThemeName      = "default"
+	defaultLanguage       = "en"
+	defaultHighlightTheme = "github"
 )
 
 // Loader reads and validates the gohan project configuration.
@@ -81,6 +82,9 @@ func applyDefaults(cfg *model.Config) {
 	}
 	if cfg.Site.Language == "" {
 		cfg.Site.Language = defaultLanguage
+	}
+	if cfg.SyntaxHighlight.Theme == "" {
+		cfg.SyntaxHighlight.Theme = defaultHighlightTheme
 	}
 }
 
