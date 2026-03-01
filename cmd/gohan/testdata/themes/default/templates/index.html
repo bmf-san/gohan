@@ -1,0 +1,6 @@
+<!DOCTYPE html>
+<html><head><title>{{.Config.Site.Title}}</title></head>
+<body>
+<h1>{{.Config.Site.Title}}</h1>
+{{range .Articles}}<a href="/posts/{{.FrontMatter.Slug}}/">{{.FrontMatter.Title}}</a>{{end}}
+</body></html>
