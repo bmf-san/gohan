@@ -1,0 +1,5 @@
+site:
+  title: Test Blog
+  description: A test blog
+  base_url: http://localhost
+  language: en

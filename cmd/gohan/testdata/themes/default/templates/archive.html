@@ -1,0 +1,5 @@
+<!DOCTYPE html>
+<html><head><title>Archive - {{.Config.Site.Title}}</title></head>
+<body>
+{{range .Articles}}<a href="/posts/{{.FrontMatter.Slug}}/">{{.FrontMatter.Title}}</a>{{end}}
+</body></html>
