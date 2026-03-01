@@ -10,7 +10,7 @@ gohan themes are built with Go's standard `html/template` package.
 
 All `.html` files inside the theme directory (`themes/default/templates/` by default) are loaded automatically.
 
-### Required templates
+### Available page templates
 
 | File | URL pattern | Description |
 |---|---|---|
@@ -20,7 +20,7 @@ All `.html` files inside the theme directory (`themes/default/templates/` by def
 | `category.html` | `/categories/<name>/` | Category article list page |
 | `archive.html` | `/archive/<year>/` | Year-based archive page |
 
-> If a template file does not exist, that page is simply not generated (no error is raised).
+> All template files are optional. If a template does not exist, that page is simply not generated (no error is raised).
 
 ---
 

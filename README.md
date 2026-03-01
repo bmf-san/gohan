@@ -8,6 +8,10 @@ A simple, fast static site generator written in Go — featuring incremental bui
 
 > 日本語版: [README.ja.md](README.ja.md)
 
+<img src="./docs/assets/icon.png" alt="gohan" title="gohan" width="100px">
+
+This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77fef33a2c2fe234c8fc478c08d013).
+
 ---
 
 ## Features
@@ -74,42 +78,35 @@ gohan serve   # open http://127.0.0.1:1313
 
 ## User Guide
 
-For full documentation see **[docs/guide/](docs/guide/README.md)**:
-
 | Guide | Description |
 |---|---|
 | [Getting Started](docs/guide/getting-started.md) | Installation, first site, build & preview |
 | [Configuration](docs/guide/configuration.md) | All `config.yaml` fields and Front Matter |
 | [Templates](docs/guide/templates.md) | Theme templates, variables, built-in functions |
 | [Taxonomy](docs/guide/taxonomy.md) | Tags, categories, and archive pages |
+| [CLI Reference](docs/guide/cli.md) | All commands and flags |
 
 ---
 
-## CLI Reference
-
-| Command | Description |
-|---|---|
-| `gohan build` | Build the site (incremental by default) |
-| `gohan build --full` | Force a full rebuild |
-| `gohan build --dry-run` | Simulate a build without writing files |
-| `gohan new post --slug=<s> --title=<t>` | Create a new post skeleton |
-| `gohan new page --slug=<s> --title=<t>` | Create a new page skeleton |
-| `gohan serve` | Start the live-reload development server |
-| `gohan version` | Print version information |
-
----
-
-## For Developers
-
-```bash
-make test      # Run all tests with the race detector
-make coverage  # Run tests and report coverage percentage
-make lint      # Run golangci-lint
-make build     # Compile the gohan binary
-make clean     # Remove build artifacts
-```
+## Design
 
 For architecture and design decisions see [docs/DESIGN_DOC.md](docs/DESIGN_DOC.md).
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and contribution guidelines.
+
+---
+
+## Sponsor
+
+If you'd like to support my work, please consider sponsoring me!
+
+[GitHub Sponsors – bmf-san](https://github.com/sponsors/bmf-san)
+
+Or simply giving ⭐ on GitHub is greatly appreciated—it keeps me motivated to maintain and improve the project! :D
 
 ---
 
