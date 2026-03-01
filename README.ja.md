@@ -74,42 +74,35 @@ gohan serve   # http://127.0.0.1:1313 を開く
 
 ## ユーザーガイド
 
-詳細なドキュメントは **[docs/guide/](docs/guide/README.ja.md)** を参照してください:
-
 | ガイド | 内容 |
 |---|---|
 | [Getting Started](docs/guide/getting-started.ja.md) | インストール、最初のサイト作成、ビルド、プレビュー |
 | [Configuration](docs/guide/configuration.ja.md) | `config.yaml` の全フィールドと Front Matter |
 | [Templates](docs/guide/templates.ja.md) | テーマテンプレート・変数・組み込み関数 |
 | [Taxonomy](docs/guide/taxonomy.ja.md) | タグ・カテゴリー・アーカイブページ |
+| [CLI リファレンス](docs/guide/cli.ja.md) | 全コマンドとフラグ |
 
 ---
 
-## CLI リファレンス
+## 設計
 
-| コマンド | 説明 |
-|---|---|
-| `gohan build` | サイトをビルド（デフォルトで差分ビルド） |
-| `gohan build --full` | フルビルドを強制実行 |
-| `gohan build --dry-run` | ファイルを書き出さずにビルドをシミュレート |
-| `gohan new post --slug=<s> --title=<t>` | 新規記事スケルトンを作成 |
-| `gohan new page --slug=<s> --title=<t>` | 新規ページスケルトンを作成 |
-| `gohan serve` | ライブリロード付き開発サーバーを起動 |
-| `gohan version` | バージョン情報を表示 |
+アーキテクチャと設計方針については [docs/DESIGN_DOC.ja.md](docs/DESIGN_DOC.ja.md) を参照してください。
 
 ---
 
-## 開発者向け
+## 貢献
 
-```bash
-make test      # テストを実行（race detector 有効）
-make coverage  # テストを実行してカバレッジを表示
-make lint      # golangci-lint を実行
-make build     # gohan バイナリをビルド
-make clean     # ビルド成果物を削除
-```
+開発セットアップやコントリビュートの手順については [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
 
-設計ドキュメントは [docs/DESIGN_DOC.ja.md](docs/DESIGN_DOC.ja.md) を参照してください。
+---
+
+## スポンサー
+
+私の活動を支援していただける場合は、スポンサーへの登録をなに卒お願いします！
+
+[GitHub Sponsors – bmf-san](https://github.com/sponsors/bmf-san)
+
+GitHubで⭐をつけていただくだけでも大変慕びです—モチベーションになります！ :D
 
 ---
 
