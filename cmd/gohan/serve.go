@@ -29,7 +29,12 @@ func runServe(args []string) error {
 	rootDir := filepath.Dir(*configPath)
 	outDir := filepath.Join(rootDir, "public")
 
-	srv := server.NewDevServer(*host, *port, outDir)
+	// rebuildFn triggers a differential build on file change
+	rebuildFn := func() error {
+		return runBuild([]string{"--config", *configPath})
+	}
+
+	srv := server.NewDevServer(*host, *port, outDir, rebuildFn)
 	fmt.Printf("serve: listening on http://%s:%d\n", *host, *port)
 	return srv.Start()
 }
