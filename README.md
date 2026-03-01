@@ -4,7 +4,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/bmf-san/gohan.svg)](https://pkg.go.dev/github.com/bmf-san/gohan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**gohan** は Go で実装されたシンプルな静的サイトジェネレーター（SSG）です。  
+**gohan** は Go で実装されたシンプルな静的サイトジェネレーター（SSG）です。
 個人ブログや小規模サイト向けに、差分ビルドによる高速な HTML 生成を提供します。
 
 > A simple, fast static site generator written in Go — featuring incremental builds, syntax highlighting, Mermaid diagrams, and a live-reload dev server.

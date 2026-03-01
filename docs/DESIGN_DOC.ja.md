@@ -76,7 +76,88 @@ HugoやJekyll、Gatsby、Next.jsなど多くの静的サイトジェネレータ
 
 ---
 
-## 5. ディレクトリ構造
+## 5. ユースケース
+
+### UC-1: サイトをビルドする（差分ビルド）
+
+**アクター**: 開発者  
+**前提条件**: `config.yaml` が存在し、1件以上のMarkdown記事がある  
+**トリガー**: `gohan build` を実行
+
+**メインフロー**:
+1. gohan が `config.yaml` を読み込み、プロジェクトルートを解決する。
+2. gohan が前回ビルドの差分マニフェスト（`.gohan/cache/manifest.json`）を読み込む。
+3. gohan が `git diff` を呼び出し、前回ビルドから変更されたMarkdownファイルを検出する。
+4. gohan が変更された記事のみをパースする（Front Matter + Markdown -> HTML）。
+5. gohan が影響範囲（タグページ・カテゴリページ・アーカイブ・インデックス・サイトマップ・フィード）を計算する。
+6. gohan がテンプレートエンジンを通じて影響セットをレンダリングし、HTMLファイルを出力ディレクトリに書き出す。
+7. gohan がマニフェストを更新し、ビルドサマリー（経過時間・記事数）を表示する。
+
+**代替フロー - Git リポジトリでない場合**:  
+ステップ3では、マニフェストとファイル更新日時を比較するフォールバックを使用する。
+
+**事後条件**: 出力ディレクトリに最新の HTML・`sitemap.xml`・`atom.xml` が生成される。
+
+---
+
+### UC-2: フルビルドを強制する
+
+**アクター**: 開発者  
+**トリガー**: `gohan build --full` を実行
+
+**メインフロー**:  
+UC-1 と同じだが、ステップ2-3をスキップし、すべての記事を変更済みとして扱う。
+
+**事後条件**: すべてのHTMLがゼロから再生成され、マニフェストが書き直される。
+
+---
+
+### UC-3: 新しい記事を作成する
+
+**アクター**: 開発者  
+**トリガー**: `gohan new "記事タイトル"` を実行
+
+**メインフロー**:
+1. gohan が `config.yaml` を読み込み、コンテンツディレクトリを取得する。
+2. gohan がタイトルからスラッグを生成する（小文字化、スペース -> ハイフン）。
+3. gohan が `content/posts/<slug>.md` をFront Mattterテンプレート（title・date・`draft: true`）付きで作成する。
+4. gohan が作成したファイルのパスを表示する。
+
+**事後条件**: 新しいMarkdownファイルが編集可能な状態になる。`draft: true` のためビルドに含まれない。
+
+---
+
+### UC-4: 開発サーバーを起動する
+
+**アクター**: 開発者  
+**トリガー**: `gohan serve` を実行
+
+**メインフロー**:
+1. gohan が一時出力ディレクトリに対してフルビルドを実行する。
+2. gohan が出力ディレクトリを配信するHTTPサーバーを起動する。
+3. gohan がコンテンツ・テーマ・設定ファイルを監視する（`fsnotify`）。
+4. 開発者がブラウザで `http://localhost:<port>` を開き、SSEエンドポイント（`/sse`）に接続する。
+5. 開発者がMarkdownファイルを保存する。
+6. gohan が変更を検知し、差分ビルドを実行してSSE経由で `reload` イベントを送信する。
+7. ブラウザが自動でページをリロードする。
+
+**事後条件**: ブラウザが常に最新のコンテンツを手動リロードなしに反映する。
+
+---
+
+### UC-5: 記事を公開する
+
+**アクター**: 開発者  
+**トリガー**: 下書き記事のFront Matterで `draft: false` に変更し、`gohan build` を実行
+
+**メインフロー**:  
+UC-1 と同じ。記事ファイルが変更されている（または `--full` を使用している）ため、ビルド出力に含まれるようになる。
+
+**事後条件**: 記事が生成済みHTML・タグ/カテゴリページ・アーカイブ・サイトマップ・フィードに反映される。
+
+---
+
+## 6. ディレクトリ構造
 
 ### 入力側
 
@@ -138,9 +219,9 @@ public/
 
 ---
 
-## 6. 機能要件
+## 7. 機能要件
 
-### 6.1 コア機能
+### 7.1 コア機能
 
 #### Markdown処理
 - **Markdownパース**: CommonMark準拠
@@ -172,7 +253,7 @@ public/
 - **Atom 1.0**: 規格準拠フィード
 - **カテゴリ別フィード**: タグ・カテゴリ別フィード
 
-### 6.2 CLIインターフェース
+### 7.2 CLIインターフェース
 
 詳細は Section 11 を参照。主要なコマンドは以下の通り。
 
@@ -184,26 +265,26 @@ gohan serve
 
 ---
 
-## 7. 非機能要件
+## 8. 非機能要件
 
-### 7.1 パフォーマンス要件
+### 8.1 パフォーマンス要件
 
 #### ビルド性能
 - **初回フルビルド**: 1,000記事を5分以内
 - **差分ビルド**: 10件の変更を30秒以内
 - **並行処理**: CPU数に応じた並行記事処理
 
-### 7.2 スケーラビリティ
+### 8.2 スケーラビリティ
 
 - **記事数**: 10,000件まで安定動作
 
-### 7.3 再現性
+### 8.3 再現性
 
 - **決定論的ビルド**: 同一入力に対して同一出力を保証
 - **キャッシュ無効化**: ファイル変更の正確な検出
 - **クロスプラットフォーム**: Windows / macOS / Linux で同一出力
 
-### 7.4 保守性・拡張性
+### 8.4 保守性・拡張性
 
 #### コード品質
 - **テストカバレッジ**: 80%以上
@@ -217,7 +298,7 @@ gohan serve
 - **設定の外部化**: YAML設定ファイル
 - **プラグインAPI**: 機能拡張用インターフェース
 
-### 7.5 運用性
+### 8.5 運用性
 
 #### ロギング・モニタリング
 - **ログ形式**: デフォルトは人間可読形式（`--log-format=json` オプションでJSONに切り替え可）
@@ -230,13 +311,13 @@ gohan serve
 - **設定バリデーション**: 起動時の設定値チェック
 - **デフォルト値**: ゼロコンフィグで動作
 
-### 7.6 セキュリティ
+### 8.6 セキュリティ
 
 - **入力バリデーション**: Markdownおよび設定ファイルの検証
 - **パストラバーサル防止**: ファイルパスの正規化
 - **依存関係スキャン**: 脆弱性のある依存関係の検出
 
-### 7.7 ポータビリティ
+### 8.7 ポータビリティ
 
 - **クロスプラットフォーム**: Windows / macOS / Linux対応
 - **Go単体依存**: 外部ランタイム不要、シングルバイナリ
@@ -246,9 +327,9 @@ gohan serve
 
 ---
 
-## 8. アーキテクチャ概要
+## 9. アーキテクチャ概要
 
-### 8.1 システムアーキテクチャ
+### 9.1 システムアーキテクチャ
 
 ```mermaid
 graph TB
@@ -265,7 +346,7 @@ graph TB
     I[アセット] --> E
 ```
 
-### 8.2 データフロー
+### 9.2 データフロー
 
 #### 入力
 - **記事ファイル**: `content/posts/*.md`
@@ -307,7 +388,7 @@ graph TB
 - **サイトマップ**: `sitemap.xml`
 - **静的アセット**: CSS、画像
 
-### 8.3 コンポーネント設計
+### 9.3 コンポーネント設計
 
 #### パーサー層
 ```go
@@ -383,9 +464,101 @@ type OutputGenerator interface {
 
 ---
 
-## 9. データモデル設計
+## 10. シーケンス図
 
-### 9.1 記事データ構造
+### 10.1 差分ビルド（`gohan build`）
+
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant CLI as gohan CLI
+    participant Config as Config Loader
+    participant Diff as Diff Engine
+    participant Cache as Cache Manager
+    participant Parser as パーサー
+    participant Processor as プロセッサー
+    participant Generator as ジェネレーター
+    participant FS as ファイルシステム
+
+    User->>CLI: gohan build
+    CLI->>Config: config.yaml を読み込む
+    Config-->>CLI: cfg
+    CLI->>Cache: ReadManifest(.gohan/cache/manifest.json)
+    Cache-->>CLI: 前回マニフェスト
+    CLI->>Diff: DetectChanges(contentDir, manifest)
+    Diff->>FS: git diff / mtime 比較
+    FS-->>Diff: 変更ファイルリスト
+    Diff-->>CLI: changedFiles
+    CLI->>Parser: Parse(changedFiles)
+    Parser-->>CLI: []Article
+    CLI->>Processor: BuildDependencyGraph([]Article)
+    Processor-->>CLI: impactSet
+    CLI->>Generator: GenerateHTML(impactSet)
+    Generator->>FS: HTMLファイル書き出し
+    CLI->>Generator: GenerateSitemap / GenerateFeeds
+    Generator->>FS: sitemap.xml, atom.xml 書き出し
+    CLI->>Cache: WriteManifest(newManifest)
+    CLI-->>User: ビルド完了（X秒、N記事）
+```
+
+---
+
+### 10.2 開発サーバー・ライブリロード（`gohan serve`）
+
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant CLI as gohan CLI
+    participant Builder as ビルドパイプライン
+    participant Watcher as fsnotify Watcher
+    participant HTTP as HTTP サーバー
+    participant SSE as SSE ハンドラー
+    participant Browser as ブラウザ
+
+    User->>CLI: gohan serve
+    CLI->>Builder: フルビルド（初回）
+    Builder-->>CLI: 完了
+    CLI->>HTTP: HTTP サーバー起動（静的ファイル + /sse）
+    CLI->>Watcher: content/, themes/, config.yaml を監視
+    User->>Browser: http://localhost:<port> を開く
+    Browser->>HTTP: GET /
+    HTTP-->>Browser: index.html
+    Browser->>SSE: GET /sse（EventSource 接続）
+    SSE-->>Browser: 接続確立
+
+    User->>FS: article.md を保存
+    Watcher->>CLI: FileChanged イベント
+    CLI->>Builder: 差分ビルド
+    Builder-->>CLI: 完了
+    CLI->>SSE: "reload" イベント送信
+    SSE-->>Browser: data: reload
+    Browser->>Browser: location.reload()
+    Browser->>HTTP: GET /（再読み込み）
+    HTTP-->>Browser: 更新済み index.html
+```
+
+---
+
+### 10.3 新規記事作成（`gohan new`）
+
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant CLI as gohan CLI
+    participant Config as Config Loader
+    participant FS as ファイルシステム
+
+    User->>CLI: gohan new "記事タイトル"
+    CLI->>Config: config.yaml を読み込む
+    Config-->>CLI: cfg（contentDir）
+    CLI->>CLI: スラッグ生成（"article-title"）
+    CLI->>FS: content/posts/article-title.md を作成
+    FS-->>CLI: ok
+    CLI-->>User: Created: content/posts/article-title.md
+```
+## 11. データモデル設計
+
+### 11.1 記事データ構造
 
 `Article` はファイルから読み込んだローデータ。`ProcessedArticle` はビルド時に生成される派生データを保持する。
 
@@ -418,7 +591,7 @@ type FrontMatter struct {
 }
 ```
 
-### 9.2 タクソノミーシステム
+### 11.2 タクソノミーシステム
 
 `TaxonomyRegistry` は `tags.yaml` / `categories.yaml` から読み込むマスターデータ。`Type` フィールドはレジストリの構造から明確なため保持しない。
 
@@ -434,7 +607,7 @@ type TaxonomyRegistry struct {
 }
 ```
 
-### 9.3 サイト設定
+### 11.3 サイト設定
 
 `config.yaml` のトップレベルの構造と一致するように `Config` 型を定義し、その中に `SiteConfig` などを内包する。
 
@@ -468,7 +641,7 @@ type ThemeConfig struct {
 }
 ```
 
-### 9.4 ビルドマニフェスト
+### 11.4 ビルドマニフェスト
 
 `.gohan/cache/manifest.json` に保存されるビルド履歴で、ハッシュベースの差分検出に使用する。
 
@@ -493,9 +666,9 @@ type OutputFile struct {
 
 ---
 
-## 10. 差分ビルド戦略
+## 12. 差分ビルド戦略
 
-### 10.1 差分検出メカニズム
+### 12.1 差分検出メカニズム
 
 #### 検出方式の選択ロジック
 
@@ -535,7 +708,7 @@ func IsGitRepo(dir string) bool {
 
 Git リポジトリでない場合、ビルドマニフェスト（`.gohan/cache/manifest.json`）に記録したファイルハッシュと現在のファイルハッシュを比較し、変更ファイルを特定する。ただし依存グラフが存在しないため差分ビルドは行わず、フルビルドを実行する。
 
-### 10.2 影響範囲の計算
+### 12.2 影響範囲の計算
 
 #### 依存関係グラフ
 ```go
@@ -570,7 +743,7 @@ func (g *DependencyGraph) CalculateImpact(changedFiles []string) []string {
 - **タグマスターを更新** → 全タグページ・関連記事ページ・ナビゲーション
 - **テンプレートを更新** → 全ページ（フルビルド）
 
-### 10.3 キャッシュ戦略
+### 12.3 キャッシュ戦略
 
 #### キャッシュ保存場所
 
@@ -595,9 +768,9 @@ func (g *DependencyGraph) CalculateImpact(changedFiles []string) []string {
 
 ---
 
-## 11. CLI仕様
+## 13. CLI仕様
 
-### 11.1 基本コマンド
+### 13.1 基本コマンド
 
 #### build - サイトビルド
 ```bash
@@ -644,7 +817,7 @@ gohan serve --port=8080
 gohan serve --host=0.0.0.0 --port=8080
 ```
 
-### 11.2 設定ファイル
+### 13.2 設定ファイル
 
 #### グローバル設定
 ```yaml
@@ -675,13 +848,13 @@ theme:
 
 ---
 
-## 12. 開発サーバー
+## 14. 開発サーバー
 
-### 12.1 概要
+### 14.1 概要
 
 `gohan serve` で起動するローカル開発用HTTPサーバー。ファイル配信には Go 標準の `net/http` を使用する。ファイル変更検知には外部ライブラリ `fsnotify` を使用する（開発サーバー限定の依存）。
 
-### 12.2 基本仕様
+### 14.2 基本仕様
 
 ```go
 // FileWatcher はファイル変更検知インターフェース。実装には fsnotify を使用する。
@@ -707,14 +880,14 @@ func (s *DevServer) Start() error {
 }
 ```
 
-### 12.3 ファイル変更検知とライブリロード
+### 14.3 ファイル変更検知とライブリロード
 
 - **変更検知**: `fsnotify` を使い `content/`・`themes/`・`assets/` を監視
 - **差分ビルド連携**: 変更検知時に差分ビルドを自動実行
 - **ライブリロード**: ビルド完了後にブラウザへ SSE（Server-Sent Events）で通知・自動リロード
 - **注入方式**: 各HTMLレスポンスに `<script>` スニペットを動的に付与（出力ファイルは汚染しない）
 
-### 12.4 動作フロー
+### 14.4 動作フロー
 
 ```
 ファイル変更
@@ -726,24 +899,24 @@ func (s *DevServer) Start() error {
 
 ---
 
-## 13. バイナリ配布・リリース戦略
+## 15. バイナリ配布・リリース戦略
 
 GoReleaserによる自動リリースを採用する。
 
-### 13.1 配布チャンネル
+### 15.1 配布チャンネル
 - **GitHub Releases**: 全プラットフォーム向けバイナリ
 - **Go Install**: `go install github.com/bmf-san/gohan@latest`
 
-### 13.2 リリースワークフロー
+### 15.2 リリースワークフロー
 1. **リリースノート**: 自動生成・GitHub Release作成
 2. **自動ビルド**: GitHub ActionsによるGoReleaser実行
 3. **成果物生成**: 各プラットフォーム向けバイナリ
 
 ---
 
-## 14. テスト戦略
+## 16. テスト戦略
 
-### 14.1 ユニットテスト
+### 16.1 ユニットテスト
 
 対象コンポーネントと観点：
 
@@ -756,13 +929,13 @@ GoReleaserによる自動リリースを採用する。
 | 差分検出 | 変更/追加/削除ファイルの正確な検出 |
 | 設定ローダー | YAMLパース・バリデーション・デフォルト値の適用 |
 
-### 14.2 インテグレーションテスト
+### 16.2 インテグレーションテスト
 
 - **フルビルドテスト**: フィクスチャのコンテンツ・テンプレートを入力として `public/` の出力HTMLを検証
 - **差分ビルドテスト**: 一部ファイル変更後の再ビルドで影響範囲のファイルのみ更新されることを確認
 - **CLIテスト**: 各サブコマンドの終了コード・標準出力・エラー出力を検証
 
-### 14.3 テストフィクスチャの構成
+### 16.3 テストフィクスチャの構成
 
 ```
 testdata/
@@ -782,7 +955,7 @@ testdata/
     └── public/
 ```
 
-### 14.4 カバレッジ目標
+### 16.4 カバレッジ目標
 
 - **全体**: 80%以上
 - **パーサー・レンダラー層**: 90%以上（コアロジックのため重点テスト）
@@ -790,20 +963,23 @@ testdata/
 
 ---
 
-## 15. 技術的負債の管理
+## 17. 技術的負債の管理
 
-### 15.1 継続的品質管理
+### 17.1 継続的品質管理
 
 - **依存関係の更新**: dependabot により週次でPRを自動作成
 - **静的解析・テスト**: PRごとに `golangci-lint` および `go test -race -cover` を CI で実行
 - **カバレッジ閾値**: `go test -coverprofile` の結果をスクリプトで検証し、80%未満の場合はCIを失敗させる
 
-### 15.2 パフォーマンス監視
+### 17.2 パフォーマンス監視
 
 - **ベンチマーク**: `go test -bench` でパーサー・レンダラー・差分ビルドの各処理時間を計測
 - **リグレッション検知**: ベンチマーク結果の前回比較を CI で記録し、大幅な悪化時にアラート
 
-### 15.3 既知の制限事項
+### 17.3 既知の制限事項
 
 - `gohan serve` のライブリロードは `fsnotify` に依存するため、一部のNFSやDockerボリューム環境でイベント検知が機能しない可能性がある
 - `os/exec` による Git 呼び出しは Git がインストールされていない環境では動作しない（差分ビルドのみ影響、フルビルドは動作する）
+
+---
+

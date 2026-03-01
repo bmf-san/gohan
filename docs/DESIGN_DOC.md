@@ -76,7 +76,88 @@ The following are out of scope for gohan:
 
 ---
 
-## 5. Directory Structure
+## 5. Use Cases
+
+### UC-1: Build a site (incremental)
+
+**Actor**: Developer  
+**Precondition**: `config.yaml` exists; at least one Markdown article exists  
+**Trigger**: Run `gohan build`
+
+**Main Flow**:
+1. gohan loads `config.yaml` and resolves the project root.
+2. gohan reads the diff manifest (`.gohan/cache/manifest.json`) from the previous build.
+3. gohan calls `git diff` to detect which Markdown files have changed since the last build.
+4. gohan parses only the changed articles (Front Matter + Markdown -> HTML).
+5. gohan calculates the impact set (tag pages, category pages, archive page, index page, sitemap, feed).
+6. gohan renders the impact set through the template engine and writes HTML files to the output directory.
+7. gohan updates the manifest and prints a build summary (elapsed time, article count).
+
+**Alternative Flow - no Git repo**:  
+Step 3 falls back to comparing file modification times against the manifest.
+
+**Postcondition**: Output directory contains up-to-date HTML, `sitemap.xml`, and `atom.xml`.
+
+---
+
+### UC-2: Force a full build
+
+**Actor**: Developer  
+**Trigger**: Run `gohan build --full`
+
+**Main Flow**:  
+Same as UC-1 except steps 2-3 are skipped; all articles are treated as changed.
+
+**Postcondition**: All HTML is regenerated from scratch; manifest is rewritten.
+
+---
+
+### UC-3: Create a new article
+
+**Actor**: Developer  
+**Trigger**: Run `gohan new "My Article Title"`
+
+**Main Flow**:
+1. gohan reads `config.yaml` to determine the content directory.
+2. gohan generates a slug from the title (lowercase, spaces -> hyphens).
+3. gohan creates `content/posts/<slug>.md` with a pre-filled Front Matter template (title, date, draft: true).
+4. gohan prints the path of the created file.
+
+**Postcondition**: A new Markdown file is ready for editing; it is marked `draft: true` so it is excluded from builds until published.
+
+---
+
+### UC-4: Start the development server
+
+**Actor**: Developer  
+**Trigger**: Run `gohan serve`
+
+**Main Flow**:
+1. gohan performs an initial full build into a temporary output directory.
+2. gohan starts an HTTP server serving the output directory.
+3. gohan starts a file watcher (`fsnotify`) on the content, theme, and config directories.
+4. The developer opens `http://localhost:<port>` in a browser; the browser connects to the SSE endpoint (`/sse`).
+5. The developer saves a Markdown file.
+6. gohan detects the change, runs an incremental build, and sends a `reload` event via SSE.
+7. The browser reloads the page automatically.
+
+**Postcondition**: The browser always reflects the latest content without manual refresh.
+
+---
+
+### UC-5: Publish an article
+
+**Actor**: Developer  
+**Trigger**: Edit Front Matter of a draft article and change `draft: false`, then run `gohan build`
+
+**Main Flow**:  
+Same as UC-1. Because the article file changed (or `--full` is used), it is now included in the build output.
+
+**Postcondition**: The article appears in the generated HTML, tag/category pages, archive, sitemap, and feed.
+
+---
+
+## 6. Directory Structure
 
 ### Input Side
 
@@ -138,9 +219,9 @@ public/
 
 ---
 
-## 6. Functional Requirements
+## 7. Functional Requirements
 
-### 6.1 Core Features
+### 7.1 Core Features
 
 #### Markdown Processing
 - **Markdown parsing**: CommonMark compliant
@@ -172,7 +253,7 @@ public/
 - **Atom 1.0**: Standards-compliant feed
 - **Category feeds**: Per-tag and per-category feeds
 
-### 6.2 CLI Interface
+### 7.2 CLI Interface
 
 See Section 11 for details. The primary commands are:
 
@@ -184,26 +265,26 @@ gohan serve
 
 ---
 
-## 7. Non-functional Requirements
+## 8. Non-functional Requirements
 
-### 7.1 Performance Requirements
+### 8.1 Performance Requirements
 
 #### Build Performance
 - **Initial full build**: 1,000 articles within 5 minutes
 - **Differential build**: 10 changes within 30 seconds
 - **Parallelism**: Parallel article processing based on CPU count
 
-### 7.2 Scalability
+### 8.2 Scalability
 
 - **Article count**: Stable operation up to 10,000 articles
 
-### 7.3 Reproducibility
+### 8.3 Reproducibility
 
 - **Deterministic builds**: Guarantees identical output for identical input
 - **Cache invalidation**: Accurate detection of file changes
 - **Cross-platform**: Identical output on Windows / macOS / Linux
 
-### 7.4 Maintainability & Extensibility
+### 8.4 Maintainability & Extensibility
 
 #### Code Quality
 - **Test coverage**: 80% or higher
@@ -217,7 +298,7 @@ gohan serve
 - **Externalized configuration**: YAML configuration file
 - **Plugin API**: Interfaces for feature extension
 
-### 7.5 Operability
+### 8.5 Operability
 
 #### Logging & Monitoring
 - **Log format**: Human-readable by default (switchable to JSON with `--log-format=json` option)
@@ -230,13 +311,13 @@ gohan serve
 - **Configuration validation**: Configuration value checks at startup
 - **Default values**: Zero-config operation
 
-### 7.6 Security
+### 8.6 Security
 
 - **Input validation**: Validation of Markdown and configuration files
 - **Path traversal prevention**: File path normalization
 - **Dependency scanning**: Detection of vulnerable dependencies
 
-### 7.7 Portability
+### 8.7 Portability
 
 - **Cross-platform**: Windows / macOS / Linux support
 - **Go-only dependency**: No external runtime required, single binary
@@ -246,9 +327,9 @@ gohan serve
 
 ---
 
-## 8. Architecture Overview
+## 9. Architecture Overview
 
-### 8.1 System Architecture
+### 9.1 System Architecture
 
 ```mermaid
 graph TB
@@ -265,7 +346,7 @@ graph TB
     I[Assets] --> E
 ```
 
-### 8.2 Data Flow
+### 9.2 Data Flow
 
 #### Input
 - **Article files**: `content/posts/*.md`
@@ -307,7 +388,7 @@ graph TB
 - **Sitemap**: `sitemap.xml`
 - **Static assets**: CSS, images
 
-### 8.3 Component Design
+### 9.3 Component Design
 
 #### Parser Layer
 ```go
@@ -383,9 +464,101 @@ type OutputGenerator interface {
 
 ---
 
-## 9. Data Model Design
+## 10. Sequence Diagrams
 
-### 9.1 Article Data Structure
+### 10.1 Incremental Build (`gohan build`)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as gohan CLI
+    participant Config as Config Loader
+    participant Diff as Diff Engine
+    participant Cache as Cache Manager
+    participant Parser
+    participant Processor
+    participant Generator
+    participant FS as File System
+
+    User->>CLI: gohan build
+    CLI->>Config: Load config.yaml
+    Config-->>CLI: cfg
+    CLI->>Cache: ReadManifest(.gohan/cache/manifest.json)
+    Cache-->>CLI: previous manifest
+    CLI->>Diff: DetectChanges(contentDir, manifest)
+    Diff->>FS: git diff / mtime comparison
+    FS-->>Diff: changed file list
+    Diff-->>CLI: changedFiles
+    CLI->>Parser: Parse(changedFiles)
+    Parser-->>CLI: []Article
+    CLI->>Processor: BuildDependencyGraph([]Article)
+    Processor-->>CLI: impactSet
+    CLI->>Generator: GenerateHTML(impactSet)
+    Generator->>FS: Write HTML files
+    CLI->>Generator: GenerateSitemap / GenerateFeeds
+    Generator->>FS: Write sitemap.xml, atom.xml
+    CLI->>Cache: WriteManifest(newManifest)
+    CLI-->>User: Build complete (Xs, N articles)
+```
+
+---
+
+### 10.2 Development Server & Live Reload (`gohan serve`)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as gohan CLI
+    participant Builder as Build Pipeline
+    participant Watcher as fsnotify Watcher
+    participant HTTP as HTTP Server
+    participant SSE as SSE Handler
+    participant Browser
+
+    User->>CLI: gohan serve
+    CLI->>Builder: Full build (initial)
+    Builder-->>CLI: done
+    CLI->>HTTP: Start HTTP server (static files + /sse)
+    CLI->>Watcher: Watch content/, themes/, config.yaml
+    User->>Browser: Open http://localhost:<port>
+    Browser->>HTTP: GET /
+    HTTP-->>Browser: index.html
+    Browser->>SSE: GET /sse (EventSource)
+    SSE-->>Browser: connection established
+
+    User->>FS: Save article.md
+    Watcher->>CLI: FileChanged event
+    CLI->>Builder: Incremental build
+    Builder-->>CLI: done
+    CLI->>SSE: Send "reload" event
+    SSE-->>Browser: data: reload
+    Browser->>Browser: location.reload()
+    Browser->>HTTP: GET / (refreshed)
+    HTTP-->>Browser: updated index.html
+```
+
+---
+
+### 10.3 New Article Creation (`gohan new`)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as gohan CLI
+    participant Config as Config Loader
+    participant FS as File System
+
+    User->>CLI: gohan new "My Article Title"
+    CLI->>Config: Load config.yaml
+    Config-->>CLI: cfg (contentDir)
+    CLI->>CLI: Generate slug ("my-article-title")
+    CLI->>FS: Create content/posts/my-article-title.md
+    FS-->>CLI: ok
+    CLI-->>User: Created: content/posts/my-article-title.md
+```
+## 11. Data Model Design
+
+### 11.1 Article Data Structure
 
 `Article` is the raw data read from a file. `ProcessedArticle` holds derived data generated at build time.
 
@@ -418,7 +591,7 @@ type FrontMatter struct {
 }
 ```
 
-### 9.2 Taxonomy System
+### 11.2 Taxonomy System
 
 `TaxonomyRegistry` is the master data loaded from `tags.yaml` / `categories.yaml`. The `Type` field is not held because it is clear from the structure of the registry.
 
@@ -434,7 +607,7 @@ type TaxonomyRegistry struct {
 }
 ```
 
-### 9.3 Site Configuration
+### 11.3 Site Configuration
 
 Define the `Config` type to match the top-level structure of `config.yaml`, containing `SiteConfig` and other types within it.
 
@@ -468,7 +641,7 @@ type ThemeConfig struct {
 }
 ```
 
-### 9.4 Build Manifest
+### 11.4 Build Manifest
 
 The build history saved to `.gohan/cache/manifest.json`, used for hash-based diff detection.
 
@@ -493,9 +666,9 @@ type OutputFile struct {
 
 ---
 
-## 10. Differential Build Strategy
+## 12. Differential Build Strategy
 
-### 10.1 Diff Detection Mechanism
+### 12.1 Diff Detection Mechanism
 
 #### Detection Method Selection Logic
 
@@ -535,7 +708,7 @@ func IsGitRepo(dir string) bool {
 
 When not in a Git repository, changed files are identified by comparing file hashes recorded in the build manifest (`.gohan/cache/manifest.json`) with the current file hashes. However, since no dependency graph exists, a full build is performed instead of a differential build.
 
-### 10.2 Impact Scope Calculation
+### 12.2 Impact Scope Calculation
 
 #### Dependency Graph
 ```go
@@ -570,7 +743,7 @@ func (g *DependencyGraph) CalculateImpact(changedFiles []string) []string {
 - **Update tag master** → All tag pages, related article pages, navigation
 - **Update templates** → All pages (full build)
 
-### 10.3 Cache Strategy
+### 12.3 Cache Strategy
 
 #### Cache Storage Location
 
@@ -595,9 +768,9 @@ func (g *DependencyGraph) CalculateImpact(changedFiles []string) []string {
 
 ---
 
-## 11. CLI Specification
+## 13. CLI Specification
 
-### 11.1 Basic Commands
+### 13.1 Basic Commands
 
 #### build - Site Build
 ```bash
@@ -644,7 +817,7 @@ gohan serve --port=8080
 gohan serve --host=0.0.0.0 --port=8080
 ```
 
-### 11.2 Configuration Files
+### 13.2 Configuration Files
 
 #### Global Configuration
 ```yaml
@@ -675,13 +848,13 @@ theme:
 
 ---
 
-## 12. Development Server
+## 14. Development Server
 
-### 12.1 Overview
+### 14.1 Overview
 
 A local HTTP server for development launched by `gohan serve`. Uses Go's standard `net/http` for file serving. Uses the external library `fsnotify` for file change detection (a development server-only dependency).
 
-### 12.2 Basic Specification
+### 14.2 Basic Specification
 
 ```go
 // FileWatcher is the file change detection interface. The implementation uses fsnotify.
@@ -707,14 +880,14 @@ func (s *DevServer) Start() error {
 }
 ```
 
-### 12.3 File Change Detection and Live Reload
+### 14.3 File Change Detection and Live Reload
 
 - **Change detection**: Use `fsnotify` to watch `content/`, `themes/`, and `assets/`
 - **Differential build integration**: Automatically run a differential build upon change detection
 - **Live reload**: Notify the browser via SSE (Server-Sent Events) after build completion for automatic reload
 - **Injection method**: Dynamically append a `<script>` snippet to each HTML response (output files are not modified)
 
-### 12.4 Operation Flow
+### 14.4 Operation Flow
 
 ```
 File change
@@ -726,24 +899,24 @@ File change
 
 ---
 
-## 13. Binary Distribution & Release Strategy
+## 15. Binary Distribution & Release Strategy
 
 Automated releases using GoReleaser.
 
-### 13.1 Distribution Channels
+### 15.1 Distribution Channels
 - **GitHub Releases**: Binaries for all platforms
 - **Go Install**: `go install github.com/bmf-san/gohan@latest`
 
-### 13.2 Release Workflow
+### 15.2 Release Workflow
 1. **Release notes**: Automatically generated and GitHub Release created
 2. **Automated build**: GoReleaser executed via GitHub Actions
 3. **Artifact generation**: Binaries for each platform
 
 ---
 
-## 14. Testing Strategy
+## 16. Testing Strategy
 
-### 14.1 Unit Tests
+### 16.1 Unit Tests
 
 Target components and test perspectives:
 
@@ -756,13 +929,13 @@ Target components and test perspectives:
 | Diff detection | Accurate detection of modified/added/deleted files |
 | Configuration loader | YAML parsing, validation, default value application |
 
-### 14.2 Integration Tests
+### 16.2 Integration Tests
 
 - **Full build test**: Verify HTML output in `public/` using fixture content and templates as input
 - **Differential build test**: Confirm that only files within the impact scope are updated after rebuilding with partial file changes
 - **CLI test**: Verify exit codes, stdout, and stderr for each subcommand
 
-### 14.3 Test Fixture Structure
+### 16.3 Test Fixture Structure
 
 ```
 testdata/
@@ -782,7 +955,7 @@ testdata/
     └── public/
 ```
 
-### 14.4 Coverage Goals
+### 16.4 Coverage Goals
 
 - **Overall**: 80% or higher
 - **Parser / renderer layer**: 90% or higher (priority testing for core logic)
@@ -790,20 +963,23 @@ testdata/
 
 ---
 
-## 15. Technical Debt Management
+## 17. Technical Debt Management
 
-### 15.1 Continuous Quality Management
+### 17.1 Continuous Quality Management
 
 - **Dependency updates**: dependabot automatically creates PRs on a weekly basis
 - **Static analysis & testing**: Run `golangci-lint` and `go test -race -cover` in CI for every PR
 - **Coverage threshold**: Verify `go test -coverprofile` results with a script and fail CI if below 80%
 
-### 15.2 Performance Monitoring
+### 17.2 Performance Monitoring
 
 - **Benchmarks**: Measure processing time for parser, renderer, and differential build using `go test -bench`
 - **Regression detection**: Record benchmark result comparisons against the previous run in CI and alert on significant degradation
 
-### 15.3 Known Limitations
+### 17.3 Known Limitations
 
 - Live reload in `gohan serve` depends on `fsnotify`, so event detection may not work in some NFS or Docker volume environments
 - Git calls via `os/exec` do not work in environments where Git is not installed (only affects differential builds; full builds still work)
+
+---
+
