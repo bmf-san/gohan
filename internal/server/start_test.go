@@ -19,7 +19,7 @@ func freePort(t *testing.T) int {
 		t.Fatalf("freePort: %v", err)
 	}
 	port := l.Addr().(*net.TCPAddr).Port
-	l.Close()
+	_ = l.Close()
 	return port
 }
 
@@ -29,7 +29,7 @@ func waitForPort(addr string, deadline time.Duration) bool {
 	for time.Now().Before(end) {
 		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return true
 		}
 		time.Sleep(20 * time.Millisecond)
@@ -60,7 +60,7 @@ func TestStart_ServesStaticFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HTTP GET: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected 200 OK, got %d", resp.StatusCode)
@@ -97,7 +97,7 @@ func TestStart_SSEEndpoint(t *testing.T) {
 		t.Logf("SSE request ended (expected timeout): %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	ct := resp.Header.Get("Content-Type")
 	if ct != "text/event-stream" {
 		t.Errorf("expected text/event-stream, got %q", ct)
@@ -106,8 +106,10 @@ func TestStart_SSEEndpoint(t *testing.T) {
 
 func TestStart_WithMockWatcher(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "page.html"),
-		[]byte("<html><body>Page</body></html>"), 0644)
+	if err := os.WriteFile(filepath.Join(dir, "page.html"),
+		[]byte("<html><body>Page</body></html>"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	rebuilt := make(chan struct{}, 1)
 	fw := newFakeWatcher()
