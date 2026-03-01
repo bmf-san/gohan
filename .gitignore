@@ -32,7 +32,7 @@ go.work.sum
 .vscode/
 
 # gohan binary
-gohan
+/gohan
 
 # GoReleaser build output
 dist/
