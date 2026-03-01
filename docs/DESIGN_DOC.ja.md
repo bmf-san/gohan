@@ -807,3 +807,179 @@ testdata/
 
 - `gohan serve` のライブリロードは `fsnotify` に依存するため、一部のNFSやDockerボリューム環境でイベント検知が機能しない可能性がある
 - `os/exec` による Git 呼び出しは Git がインストールされていない環境では動作しない（差分ビルドのみ影響、フルビルドは動作する）
+
+---
+
+## 16. ユースケース
+
+### UC-1: サイトをビルドする（差分ビルド）
+
+**アクター**: 開発者  
+**前提条件**: `config.yaml` が存在し、1件以上のMarkdown記事がある  
+**トリガー**: `gohan build` を実行
+
+**メインフロー**:
+1. gohan が `config.yaml` を読み込み、プロジェクトルートを解決する。
+2. gohan が前回ビルドの差分マニフェスト（`.gohan/cache/manifest.json`）を読み込む。
+3. gohan が `git diff` を呼び出し、前回ビルドから変更されたMarkdownファイルを検出する。
+4. gohan が変更された記事のみをパースする（Front Matter + Markdown -> HTML）。
+5. gohan が影響範囲（タグページ・カテゴリページ・アーカイブ・インデックス・サイトマップ・フィード）を計算する。
+6. gohan がテンプレートエンジンを通じて影響セットをレンダリングし、HTMLファイルを出力ディレクトリに書き出す。
+7. gohan がマニフェストを更新し、ビルドサマリー（経過時間・記事数）を表示する。
+
+**代替フロー - Git リポジトリでない場合**:  
+ステップ3では、マニフェストとファイル更新日時を比較するフォールバックを使用する。
+
+**事後条件**: 出力ディレクトリに最新の HTML・`sitemap.xml`・`atom.xml` が生成される。
+
+---
+
+### UC-2: フルビルドを強制する
+
+**アクター**: 開発者  
+**トリガー**: `gohan build --full` を実行
+
+**メインフロー**:  
+UC-1 と同じだが、ステップ2-3をスキップし、すべての記事を変更済みとして扱う。
+
+**事後条件**: すべてのHTMLがゼロから再生成され、マニフェストが書き直される。
+
+---
+
+### UC-3: 新しい記事を作成する
+
+**アクター**: 開発者  
+**トリガー**: `gohan new "記事タイトル"` を実行
+
+**メインフロー**:
+1. gohan が `config.yaml` を読み込み、コンテンツディレクトリを取得する。
+2. gohan がタイトルからスラッグを生成する（小文字化、スペース -> ハイフン）。
+3. gohan が `content/posts/<slug>.md` をFront Mattterテンプレート（title・date・`draft: true`）付きで作成する。
+4. gohan が作成したファイルのパスを表示する。
+
+**事後条件**: 新しいMarkdownファイルが編集可能な状態になる。`draft: true` のためビルドに含まれない。
+
+---
+
+### UC-4: 開発サーバーを起動する
+
+**アクター**: 開発者  
+**トリガー**: `gohan serve` を実行
+
+**メインフロー**:
+1. gohan が一時出力ディレクトリに対してフルビルドを実行する。
+2. gohan が出力ディレクトリを配信するHTTPサーバーを起動する。
+3. gohan がコンテンツ・テーマ・設定ファイルを監視する（`fsnotify`）。
+4. 開発者がブラウザで `http://localhost:<port>` を開き、SSEエンドポイント（`/sse`）に接続する。
+5. 開発者がMarkdownファイルを保存する。
+6. gohan が変更を検知し、差分ビルドを実行してSSE経由で `reload` イベントを送信する。
+7. ブラウザが自動でページをリロードする。
+
+**事後条件**: ブラウザが常に最新のコンテンツを手動リロードなしに反映する。
+
+---
+
+### UC-5: 記事を公開する
+
+**アクター**: 開発者  
+**トリガー**: 下書き記事のFront Matterで `draft: false` に変更し、`gohan build` を実行
+
+**メインフロー**:  
+UC-1 と同じ。記事ファイルが変更されている（または `--full` を使用している）ため、ビルド出力に含まれるようになる。
+
+**事後条件**: 記事が生成済みHTML・タグ/カテゴリページ・アーカイブ・サイトマップ・フィードに反映される。
+
+---
+
+## 17. シーケンス図
+
+### 17.1 差分ビルド（`gohan build`）
+
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant CLI as gohan CLI
+    participant Config as Config Loader
+    participant Diff as Diff Engine
+    participant Cache as Cache Manager
+    participant Parser as パーサー
+    participant Processor as プロセッサー
+    participant Generator as ジェネレーター
+    participant FS as ファイルシステム
+
+    User->>CLI: gohan build
+    CLI->>Config: config.yaml を読み込む
+    Config-->>CLI: cfg
+    CLI->>Cache: ReadManifest(.gohan/cache/manifest.json)
+    Cache-->>CLI: 前回マニフェスト
+    CLI->>Diff: DetectChanges(contentDir, manifest)
+    Diff->>FS: git diff / mtime 比較
+    FS-->>Diff: 変更ファイルリスト
+    Diff-->>CLI: changedFiles
+    CLI->>Parser: Parse(changedFiles)
+    Parser-->>CLI: []Article
+    CLI->>Processor: BuildDependencyGraph([]Article)
+    Processor-->>CLI: impactSet
+    CLI->>Generator: GenerateHTML(impactSet)
+    Generator->>FS: HTMLファイル書き出し
+    CLI->>Generator: GenerateSitemap / GenerateFeeds
+    Generator->>FS: sitemap.xml, atom.xml 書き出し
+    CLI->>Cache: WriteManifest(newManifest)
+    CLI-->>User: ビルド完了（X秒、N記事）
+```
+
+---
+
+### 17.2 開発サーバー・ライブリロード（`gohan serve`）
+
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant CLI as gohan CLI
+    participant Builder as ビルドパイプライン
+    participant Watcher as fsnotify Watcher
+    participant HTTP as HTTP サーバー
+    participant SSE as SSE ハンドラー
+    participant Browser as ブラウザ
+
+    User->>CLI: gohan serve
+    CLI->>Builder: フルビルド（初回）
+    Builder-->>CLI: 完了
+    CLI->>HTTP: HTTP サーバー起動（静的ファイル + /sse）
+    CLI->>Watcher: content/, themes/, config.yaml を監視
+    User->>Browser: http://localhost:<port> を開く
+    Browser->>HTTP: GET /
+    HTTP-->>Browser: index.html
+    Browser->>SSE: GET /sse（EventSource 接続）
+    SSE-->>Browser: 接続確立
+
+    User->>FS: article.md を保存
+    Watcher->>CLI: FileChanged イベント
+    CLI->>Builder: 差分ビルド
+    Builder-->>CLI: 完了
+    CLI->>SSE: "reload" イベント送信
+    SSE-->>Browser: data: reload
+    Browser->>Browser: location.reload()
+    Browser->>HTTP: GET /（再読み込み）
+    HTTP-->>Browser: 更新済み index.html
+```
+
+---
+
+### 17.3 新規記事作成（`gohan new`）
+
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant CLI as gohan CLI
+    participant Config as Config Loader
+    participant FS as ファイルシステム
+
+    User->>CLI: gohan new "記事タイトル"
+    CLI->>Config: config.yaml を読み込む
+    Config-->>CLI: cfg（contentDir）
+    CLI->>CLI: スラッグ生成（"article-title"）
+    CLI->>FS: content/posts/article-title.md を作成
+    FS-->>CLI: ok
+    CLI-->>User: Created: content/posts/article-title.md
+```

@@ -807,3 +807,179 @@ testdata/
 
 - Live reload in `gohan serve` depends on `fsnotify`, so event detection may not work in some NFS or Docker volume environments
 - Git calls via `os/exec` do not work in environments where Git is not installed (only affects differential builds; full builds still work)
+
+---
+
+## 16. Use Cases
+
+### UC-1: Build a site (incremental)
+
+**Actor**: Developer  
+**Precondition**: `config.yaml` exists; at least one Markdown article exists  
+**Trigger**: Run `gohan build`
+
+**Main Flow**:
+1. gohan loads `config.yaml` and resolves the project root.
+2. gohan reads the diff manifest (`.gohan/cache/manifest.json`) from the previous build.
+3. gohan calls `git diff` to detect which Markdown files have changed since the last build.
+4. gohan parses only the changed articles (Front Matter + Markdown -> HTML).
+5. gohan calculates the impact set (tag pages, category pages, archive page, index page, sitemap, feed).
+6. gohan renders the impact set through the template engine and writes HTML files to the output directory.
+7. gohan updates the manifest and prints a build summary (elapsed time, article count).
+
+**Alternative Flow - no Git repo**:  
+Step 3 falls back to comparing file modification times against the manifest.
+
+**Postcondition**: Output directory contains up-to-date HTML, `sitemap.xml`, and `atom.xml`.
+
+---
+
+### UC-2: Force a full build
+
+**Actor**: Developer  
+**Trigger**: Run `gohan build --full`
+
+**Main Flow**:  
+Same as UC-1 except steps 2-3 are skipped; all articles are treated as changed.
+
+**Postcondition**: All HTML is regenerated from scratch; manifest is rewritten.
+
+---
+
+### UC-3: Create a new article
+
+**Actor**: Developer  
+**Trigger**: Run `gohan new "My Article Title"`
+
+**Main Flow**:
+1. gohan reads `config.yaml` to determine the content directory.
+2. gohan generates a slug from the title (lowercase, spaces -> hyphens).
+3. gohan creates `content/posts/<slug>.md` with a pre-filled Front Matter template (title, date, draft: true).
+4. gohan prints the path of the created file.
+
+**Postcondition**: A new Markdown file is ready for editing; it is marked `draft: true` so it is excluded from builds until published.
+
+---
+
+### UC-4: Start the development server
+
+**Actor**: Developer  
+**Trigger**: Run `gohan serve`
+
+**Main Flow**:
+1. gohan performs an initial full build into a temporary output directory.
+2. gohan starts an HTTP server serving the output directory.
+3. gohan starts a file watcher (`fsnotify`) on the content, theme, and config directories.
+4. The developer opens `http://localhost:<port>` in a browser; the browser connects to the SSE endpoint (`/sse`).
+5. The developer saves a Markdown file.
+6. gohan detects the change, runs an incremental build, and sends a `reload` event via SSE.
+7. The browser reloads the page automatically.
+
+**Postcondition**: The browser always reflects the latest content without manual refresh.
+
+---
+
+### UC-5: Publish an article
+
+**Actor**: Developer  
+**Trigger**: Edit Front Matter of a draft article and change `draft: false`, then run `gohan build`
+
+**Main Flow**:  
+Same as UC-1. Because the article file changed (or `--full` is used), it is now included in the build output.
+
+**Postcondition**: The article appears in the generated HTML, tag/category pages, archive, sitemap, and feed.
+
+---
+
+## 17. Sequence Diagrams
+
+### 17.1 Incremental Build (`gohan build`)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as gohan CLI
+    participant Config as Config Loader
+    participant Diff as Diff Engine
+    participant Cache as Cache Manager
+    participant Parser
+    participant Processor
+    participant Generator
+    participant FS as File System
+
+    User->>CLI: gohan build
+    CLI->>Config: Load config.yaml
+    Config-->>CLI: cfg
+    CLI->>Cache: ReadManifest(.gohan/cache/manifest.json)
+    Cache-->>CLI: previous manifest
+    CLI->>Diff: DetectChanges(contentDir, manifest)
+    Diff->>FS: git diff / mtime comparison
+    FS-->>Diff: changed file list
+    Diff-->>CLI: changedFiles
+    CLI->>Parser: Parse(changedFiles)
+    Parser-->>CLI: []Article
+    CLI->>Processor: BuildDependencyGraph([]Article)
+    Processor-->>CLI: impactSet
+    CLI->>Generator: GenerateHTML(impactSet)
+    Generator->>FS: Write HTML files
+    CLI->>Generator: GenerateSitemap / GenerateFeeds
+    Generator->>FS: Write sitemap.xml, atom.xml
+    CLI->>Cache: WriteManifest(newManifest)
+    CLI-->>User: Build complete (Xs, N articles)
+```
+
+---
+
+### 17.2 Development Server & Live Reload (`gohan serve`)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as gohan CLI
+    participant Builder as Build Pipeline
+    participant Watcher as fsnotify Watcher
+    participant HTTP as HTTP Server
+    participant SSE as SSE Handler
+    participant Browser
+
+    User->>CLI: gohan serve
+    CLI->>Builder: Full build (initial)
+    Builder-->>CLI: done
+    CLI->>HTTP: Start HTTP server (static files + /sse)
+    CLI->>Watcher: Watch content/, themes/, config.yaml
+    User->>Browser: Open http://localhost:<port>
+    Browser->>HTTP: GET /
+    HTTP-->>Browser: index.html
+    Browser->>SSE: GET /sse (EventSource)
+    SSE-->>Browser: connection established
+
+    User->>FS: Save article.md
+    Watcher->>CLI: FileChanged event
+    CLI->>Builder: Incremental build
+    Builder-->>CLI: done
+    CLI->>SSE: Send "reload" event
+    SSE-->>Browser: data: reload
+    Browser->>Browser: location.reload()
+    Browser->>HTTP: GET / (refreshed)
+    HTTP-->>Browser: updated index.html
+```
+
+---
+
+### 17.3 New Article Creation (`gohan new`)
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as gohan CLI
+    participant Config as Config Loader
+    participant FS as File System
+
+    User->>CLI: gohan new "My Article Title"
+    CLI->>Config: Load config.yaml
+    Config-->>CLI: cfg (contentDir)
+    CLI->>CLI: Generate slug ("my-article-title")
+    CLI->>FS: Create content/posts/my-article-title.md
+    FS-->>CLI: ok
+    CLI-->>User: Created: content/posts/my-article-title.md
+```
