@@ -8,6 +8,10 @@ A simple, fast static site generator written in Go — featuring incremental bui
 
 > 日本語版: [README.ja.md](README.ja.md)
 
+<img src="./docs/assets/icon.png" alt="gohan" title="gohan" width="100px">
+
+This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77fef33a2c2fe234c8fc478c08d013).
+
 ---
 
 ## Features

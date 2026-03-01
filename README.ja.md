@@ -8,6 +8,10 @@ Go で実装されたシンプルな静的サイトジェネレーター（SSG�
 
 > English version: [README.md](README.md)
 
+<img src="./docs/assets/icon.png" alt="gohan" title="gohan" width="100px">
+
+This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77fef33a2c2fe234c8fc478c08d013).
+
 ---
 
 ## 特徴
