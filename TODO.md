@@ -40,9 +40,9 @@ feat: {概要} (#{issue番号})
 
 ## PR チェーン（全フェーズ）
 
-> **現在のブランチ**: `feat/phase-7-2-cache`（PR #38 作成済み）
-> **次のタスク**: Phase 8-1 (Issue #18) から再開
-> **注意**: PR #26〜#38 はすべて OPEN。チェーン構成のため #26 から順番にマージすること。
+> **現在のブランチ**: `feat/misc-docs`（PR #49 作成済み）
+> **次のタスク**: PR #26 から順番にマージしていく
+> **注意**: PR #26〜#49 はすべて OPEN。チェーン構成のため #26 から順番にマージすること。
 
 | フェーズ | Issue | ブランチ | Base ブランチ | PR | 状態 |
 |---|---|---|---|---|---|
@@ -59,14 +59,14 @@ feat: {概要} (#{issue番号})
 | 6-2  | #15 | `feat/phase-6-2-sitemap-feed`        | `feat/phase-6-1-html-generator`      | #36 | ✅ PR作成済み |
 | 7-1  | #16 | `feat/phase-7-1-git-diff`            | `feat/phase-6-2-sitemap-feed`        | #37 | ✅ PR作成済み |
 | 7-2  | #17 | `feat/phase-7-2-cache`               | `feat/phase-7-1-git-diff`            | #38 | ✅ PR作成済み |
-| 8-1  | #18 | `feat/phase-8-1-build-command`       | `feat/phase-7-2-cache`               | -   | ⏳ 未着手 |
-| 8-2  | #19 | `feat/phase-8-2-new-command`         | `feat/phase-8-1-build-command`       | -   | ⏳ 未着手 |
-| 8-3  | #20 | `feat/phase-8-3-serve-command`       | `feat/phase-8-2-new-command`         | -   | ⏳ 未着手 |
-| 9    | #21 | `feat/phase-9-dev-server`            | `feat/phase-8-3-serve-command`       | -   | ⏳ 未着手 |
-| 10-1 | #22 | `feat/phase-10-1-syntax-highlight`   | `feat/phase-9-dev-server`            | -   | ⏳ 未着手 |
-| 10-2 | #23 | `feat/phase-10-2-mermaid`            | `feat/phase-10-1-syntax-highlight`   | -   | ⏳ 未着手 |
-| 11   | #24 | `feat/phase-11-goreleaser`           | `feat/phase-10-2-mermaid`            | -   | ⏳ 未着手 |
-| 12   | #25 | `feat/phase-12-test-infra`           | `feat/phase-11-goreleaser`           | -   | ⏳ 未着手 |
+| 8-1  | #18 | `feat/phase-8-1-build-command`       | `feat/phase-7-2-cache`               | #39 | ✅ PR作成済み |
+| 8-2  | #19 | `feat/phase-8-2-new-command`         | `feat/phase-8-1-build-command`       | #40 | ✅ PR作成済み |
+| 8-3  | #20 | `feat/phase-8-3-serve-command`       | `feat/phase-8-2-new-command`         | #41 | ✅ PR作成済み |
+| 9    | #21 | `feat/phase-9-dev-server`            | `feat/phase-8-3-serve-command`       | #42 | ✅ PR作成済み |
+| 10-1 | #22 | `feat/phase-10-1-syntax-highlight`   | `feat/phase-9-dev-server`            | #43 | ✅ PR作成済み |
+| 10-2 | #23 | `feat/phase-10-2-mermaid`            | `feat/phase-10-1-syntax-highlight`   | #44 | ✅ PR作成済み |
+| 11   | #24 | `feat/phase-11-goreleaser`           | `feat/phase-10-2-mermaid`            | #45 | ✅ PR作成済み |
+| 12   | #25 | `feat/phase-12-test-infra`           | `feat/phase-11-goreleaser`           | #46 | ✅ PR作成済み |
 
 ---
 
@@ -112,17 +112,10 @@ feat: {概要} (#{issue番号})
 
 ```bash
 cd /Users/bmf/localdev/gohan
-git checkout feat/phase-7-2-cache  # 現在の最新ブランチ
 
-# Phase 8-1 から再開
-git checkout -b feat/phase-8-1-build-command
-# 実装 → テスト → コミット
-git add -A && git commit -m "feat: implement gohan build command (#18)"
-git push -u origin feat/phase-8-1-build-command
-gh pr create --base feat/phase-7-2-cache --head feat/phase-8-1-build-command \
-  --title "feat: implement gohan build command (Phase 8-1, #18)" --body "Closes #18"
-gh api -X POST /repos/bmf-san/gohan/issues/<PR番号>/labels -f "labels[]=enhancement"
-gh api -X POST /repos/bmf-san/gohan/issues/<PR番号>/assignees -f "assignees[]=bmf-san"
+# 実装はすべて完了済み。PR #26 から順にマージするだけ。
+# マージ順: #26 → #27 → #28 → #29 → #30 → #31 → #32 → #33 → #34 → #35 → #36 → #37 → #38
+#          → #39 → #40 → #41 → #42 → #43 → #44 → #45 → #46 → #47 → #48 → #49
 ```
 
 ## 実装済みファイル
