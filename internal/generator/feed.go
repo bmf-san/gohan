@@ -131,10 +131,8 @@ func writeXML(path string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
-	if _, err := f.WriteString(xml.Header); err != nil {
-		return err
-	}
+	defer f.Close()
+	f.WriteString(xml.Header)
 	enc := xml.NewEncoder(f)
 	enc.Indent("", "  ")
 	if err := enc.Encode(v); err != nil {

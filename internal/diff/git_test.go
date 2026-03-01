@@ -25,7 +25,7 @@ func writeTemp(t *testing.T, content string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = f.Close() }()
+	defer f.Close()
 	if _, err := f.WriteString(content); err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestIsGitRepo_GitDir(t *testing.T) {
 func TestHash_ValidFile(t *testing.T) {
 	content := "hello gohan"
 	path := writeTemp(t, content)
-	defer func() { _ = os.Remove(path) }()
+	defer os.Remove(path)
 	got, err := hashFile(path)
 	if err != nil {
 		t.Fatalf("hashFile: %v", err)

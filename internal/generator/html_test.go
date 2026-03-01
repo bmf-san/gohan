@@ -70,9 +70,7 @@ func TestGenerate_SlugifiesTitle(t *testing.T) {
 
 func TestGenerate_CopiesAssets(t *testing.T) {
 	srcDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(srcDir, "style.css"), []byte("body{}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	os.WriteFile(filepath.Join(srcDir, "style.css"), []byte("body{}"), 0o644)
 	outDir := t.TempDir()
 	cfg := model.Config{Build: model.BuildConfig{Parallelism: 1, AssetsDir: srcDir}}
 	if err := NewHTMLGenerator(outDir, &mockEngine{}, cfg).Generate(makeSite(), nil); err != nil {
@@ -108,12 +106,8 @@ func TestGenerateFeed(t *testing.T) {
 func TestCopyAssets_PreservesStructure(t *testing.T) {
 	src := t.TempDir()
 	sub := filepath.Join(src, "css")
-	if err := os.MkdirAll(sub, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(sub, "main.css"), []byte(".a{}"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	os.MkdirAll(sub, 0o755)
+	os.WriteFile(filepath.Join(sub, "main.css"), []byte(".a{}"), 0o644)
 	dst := t.TempDir()
 	if err := CopyAssets(src, dst); err != nil {
 		t.Fatalf("CopyAssets: %v", err)

@@ -19,11 +19,11 @@ func TestPrintUsage_WritesToStderr(t *testing.T) {
 
 	printUsage()
 
-	_ = w.Close()
+	w.Close()
 	os.Stderr = orig
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	io.Copy(&buf, r)
 	out := buf.String()
 
 	for _, want := range []string{"build", "new", "serve", "version"} {

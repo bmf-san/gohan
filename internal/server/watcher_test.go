@@ -7,7 +7,8 @@ import (
 
 // fakeWatcher is a mock FileWatcher for unit tests.
 type fakeWatcher struct {
-	ch chan string
+	ch     chan string
+	closed bool
 }
 
 func newFakeWatcher() *fakeWatcher {
@@ -23,7 +24,7 @@ func TestNewFsnotifyWatcher_CreatesWatcher(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewFsnotifyWatcher: %v", err)
 	}
-	defer func() { _ = fw.Close() }()
+	defer fw.Close()
 
 	if fw.Events() == nil {
 		t.Error("expected non-nil events channel")
@@ -126,7 +127,7 @@ func TestWatchLoop_ExitsOnChannelClose(t *testing.T) {
 		close(done)
 	}()
 
-	_ = fw.Close() // closes the events channel → watchLoop should return
+	fw.Close() // closes the events channel → watchLoop should return
 
 	select {
 	case <-done:

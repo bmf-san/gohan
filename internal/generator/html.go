@@ -255,12 +255,12 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = in.Close() }()
+	defer in.Close()
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = out.Close() }()
+	defer out.Close()
 	_, err = io.Copy(out, in)
 	return err
 }
