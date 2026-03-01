@@ -1,57 +1,59 @@
-# gohan ユーザーガイド / User Guide
+# gohan User Guide
 
-gohan のすべての使い方・設定・カスタマイズについての公式ドキュメントです。
+Official documentation for using, configuring, and customizing gohan.
+
+> 日本語版: [README.ja.md](README.ja.md)
 
 ---
 
-## ガイド一覧
+## Guides
 
-| ドキュメント | 内容 |
+| Document | Description |
 |---|---|
-| [Getting Started](getting-started.md) | インストール、最初のサイト作成、ビルド、開発サーバー |
-| [Configuration](configuration.md) | `config.yaml` の全フィールドリファレンス、Front Matter |
-| [Templates](templates.md) | テーマテンプレートの作成・変数・組み込み関数 |
-| [Taxonomy](taxonomy.md) | タグ・カテゴリー・アーカイブの管理と活用 |
+| [Getting Started](getting-started.md) | Install gohan, create your first site, build & preview |
+| [Configuration](configuration.md) | Full `config.yaml` field reference and Front Matter |
+| [Templates](templates.md) | Create themes, template variables, and built-in functions |
+| [Taxonomy](taxonomy.md) | Manage tags, categories, and archive pages |
 
 ---
 
-## クイックリファレンス
+## Quick Reference
 
-### よく使うコマンド
+### Common commands
 
 ```bash
-# 新しい記事を作成
-gohan new post --slug=my-post --title="記事タイトル"
+# Create a new post
+gohan new post --slug=my-post --title="My Post Title"
 
-# サイトをビルド
+# Build the site
 gohan build
 
-# 差分ビルドをスキップして全記事を再生成
+# Force a full rebuild (skip diff detection)
 gohan build --full
 
-# ファイルを一切書き出さずにビルドをシミュレート
+# Simulate a build without writing any files
 gohan build --dry-run
 
-# 開発サーバーを起動 (http://127.0.0.1:1313)
+# Start the development server (http://127.0.0.1:1313)
 gohan serve
 
-# バージョン確認
+# Print version information
 gohan version
 ```
 
-### Makefile ターゲット
+### Makefile targets
 
 ```bash
-make build     # バイナリをビルド
-make test      # テストを実行
-make coverage  # カバレッジを計測・表示
-make lint      # golangci-lint を実行
-make clean     # ビルド成果物を削除
-make help      # 利用可能なターゲットを表示
+make build     # Compile the gohan binary
+make test      # Run all tests with the race detector
+make coverage  # Run tests and report coverage
+make lint      # Run golangci-lint
+make clean     # Remove build artifacts
+make help      # List available targets
 ```
 
 ---
 
-## 設計ドキュメント
+## Design Document
 
-gohan の内部設計・アーキテクチャについては [DESIGN_DOC.md](../DESIGN_DOC.md) を参照してください。
+For gohan's internal architecture and design decisions, see [DESIGN_DOC.md](../DESIGN_DOC.md).

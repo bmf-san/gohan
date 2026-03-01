@@ -1,50 +1,62 @@
-# Getting Started — gohan 入門ガイド
+# Getting Started
 
-> This guide walks you through installing gohan, creating your first site, and publishing it as static HTML.
+> This guide walks you through installing gohan, creating your first site, and previewing it locally.
 
----
-
-## 前提条件 / Prerequisites
-
-- Go 1.21 以上
-- Git（差分ビルド機能を使う場合）
+> 日本語版: [getting-started.ja.md](getting-started.ja.md)
 
 ---
 
-## インストール / Installation
+## Prerequisites
+
+- Go 1.21 or later
+- Git (required for incremental builds)
+
+---
+
+## Installation
 
 ```bash
 go install github.com/bmf-san/gohan/cmd/gohan@latest
 ```
 
-インストールを確認します:
+Verify the installation:
 
 ```bash
 gohan version
 # gohan v1.0.0 (commit: abc1234, built: 2024-01-01T00:00:00Z)
 ```
 
+### Build from source
+
+```bash
+git clone https://github.com/bmf-san/gohan.git
+cd gohan
+make install
+```
+
+### Download a binary
+
+Download a pre-built binary for your platform from [GitHub Releases](https://github.com/bmf-san/gohan/releases).
+
 ---
 
-## 最初のサイトを作る / Create Your First Site
+## Create Your First Site
 
-### ステップ 1: プロジェクトを作成する
+### Step 1: Create a project directory
 
 ```bash
 mkdir myblog
 cd myblog
 ```
 
-### ステップ 2: `config.yaml` を作成する
-
-サイト設定ファイルをプロジェクトルートに作成します。
+### Step 2: Create `config.yaml`
 
 ```yaml
 site:
   title: My Blog
   description: A simple personal blog
   base_url: https://myblog.example.com
-  language: ja
+  language: en
 
 build:
   content_dir: content
@@ -60,13 +72,15 @@ syntax_highlight:
   line_numbers: false
 ```
 
-### ステップ 3: 最初の記事を作成する
+See [Configuration](configuration.md) for all available fields.
+
+### Step 3: Create your first article
 
 ```bash
 gohan new post --slug=hello-world --title="Hello, World!"
 ```
 
-`content/posts/hello-world.md` が作成されます。編集して本文を追加しましょう:
+This creates `content/posts/hello-world.md`. Edit it to add body content:
 
 ```markdown
 ---
@@ -79,18 +93,18 @@ tags:
 categories:
   - tech
 draft: false
-description: はじめての gohan ブログ記事
+description: My first gohan post
 ---
 
 # Hello, World!
 
-**gohan** でブログを始めました！
+Welcome to my blog powered by **gohan**!
 
-## gohan の特徴
+## Features
 
-- 差分ビルドによる高速ビルド
-- Go html/template によるテーマカスタマイズ
-- Mermaid 図やシンタックスハイライトのサポート
+- Incremental builds for fast generation
+- Customizable themes with Go html/template
+- Mermaid diagrams and syntax highlighting
 
 ```go
 package main
@@ -103,9 +117,7 @@ func main() {
 ```
 ```
 
-### ステップ 4: テーマテンプレートを作成する
-
-`themes/default/templates/` ディレクトリを作成し、最小限のテンプレートを用意します:
+### Step 4: Create theme templates
 
 ```bash
 mkdir -p themes/default/templates
@@ -129,10 +141,10 @@ mkdir -p themes/default/templates
     <h1><a href="/">{{.Config.Site.Title}}</a></h1>
   </header>
   <main>
-    <ul class="post-list">
+    <ul>
       {{range .Articles}}
       <li>
-        <span class="date">{{formatDate "2006-01-02" .FrontMatter.Date}}</span>
+        <span>{{formatDate "2006-01-02" .FrontMatter.Date}}</span>
         <a href="/posts/{{.FrontMatter.Slug}}/">{{.FrontMatter.Title}}</a>
       </li>
       {{end}}
@@ -151,12 +163,9 @@ mkdir -p themes/default/templates
   <meta charset="UTF-8">
   <title>{{(index .Articles 0).FrontMatter.Title}} — {{.Config.Site.Title}}</title>
   <link rel="stylesheet" href="/assets/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 </head>
 <body>
-  <header>
-    <a href="/">← {{.Config.Site.Title}}</a>
-  </header>
+  <header><a href="/">← {{.Config.Site.Title}}</a></header>
   <main>
     {{with (index .Articles 0)}}
     <article>
@@ -177,25 +186,25 @@ mkdir -p themes/default/templates
 </html>
 ```
 
-### ステップ 5: アセットを追加する（任意）
+See [Templates](templates.md) for the complete template reference.
+
+### Step 5: Add static assets (optional)
 
 ```bash
 mkdir -p assets
 cat > assets/style.css << 'EOF'
 body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 1rem; }
 a { color: #0066cc; }
-.date { color: #888; margin-right: 1em; }
-.tags { list-style: none; display: flex; gap: 0.5em; padding: 0; }
 EOF
 ```
 
-### ステップ 6: サイトをビルドする
+### Step 6: Build the site
 
 ```bash
 gohan build
 ```
 
-`public/` ディレクトリにサイトが生成されます:
+The site is generated in `public/`:
 
 ```
 public/
@@ -209,40 +218,42 @@ public/
     └── style.css
 ```
 
-### ステップ 7: 開発サーバーで確認する
+### Step 7: Preview with the development server
 
 ```bash
 gohan serve
-# http://127.0.0.1:1313 でプレビュー
+# Open http://127.0.0.1:1313
 ```
+
+The browser reloads automatically whenever you save a file.
 
 ---
 
-## よくある操作 / Common Operations
+## Common Operations
 
-### 記事の下書き
+### Draft articles
 
-`draft: true` を設定した記事はビルドに含まれません:
+Articles with `draft: true` are excluded from builds:
 
 ```yaml
 ---
-title: 作成中の記事
+title: Work in progress
 draft: true
 ---
 ```
 
-### 差分ビルド
+### Incremental builds
 
-2 回目以降のビルドは自動的に差分ビルドになります（変更されたファイルのみ再生成）:
+After the first build, subsequent builds are automatically incremental (only changed files are regenerated):
 
 ```bash
-gohan build          # 初回: フルビルド
-# content/ を編集
-gohan build          # 2 回目: 変更分のみ再生成
-gohan build --full   # 強制的なフルビルド
+gohan build        # First run: full build
+# edit content/
+gohan build        # Second run: only changed files
+gohan build --full # Force a full rebuild
 ```
 
-### .gitignore の設定
+### Recommended `.gitignore`
 
 ```gitignore
 public/
@@ -252,8 +263,8 @@ gohan
 
 ---
 
-## 次のステップ
+## Next Steps
 
-- [設定リファレンス](configuration.md) — すべての config.yaml オプション
-- [テンプレートガイド](templates.md) — テーマのカスタマイズ
-- [タクソノミーガイド](taxonomy.md) — タグ・カテゴリーの管理
+- [Configuration](configuration.md) — all `config.yaml` options
+- [Templates](templates.md) — customize your theme
+- [Taxonomy](taxonomy.md) — manage tags and categories
