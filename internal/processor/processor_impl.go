@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmf-san/gohan/internal/highlight"
 	"github.com/bmf-san/gohan/internal/model"
 	"github.com/bmf-san/gohan/internal/parser"
 )
@@ -21,7 +22,15 @@ func NewSiteProcessor() *SiteProcessor {
 // Process converts raw Articles into ProcessedArticles by rendering Markdown
 // to HTML, extracting summaries, and computing output paths.
 func (p *SiteProcessor) Process(articles []*model.Article, cfg model.Config) ([]*model.ProcessedArticle, error) {
-	conv := parser.NewConverter(parser.WithGFM())
+	hlCfg := highlight.Config{
+		Theme:       cfg.SyntaxHighlight.Theme,
+		LineNumbers: cfg.SyntaxHighlight.LineNumbers,
+	}
+	convOpts := []parser.ConverterOption{parser.WithGFM()}
+	if hlCfg.Theme != "" {
+		convOpts = append(convOpts, parser.WithHighlighting(hlCfg))
+	}
+	conv := parser.NewConverter(convOpts...)
 	result := make([]*model.ProcessedArticle, 0, len(articles))
 	for _, a := range articles {
 		html, err := conv.Convert([]byte(a.RawContent))

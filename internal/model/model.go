@@ -37,10 +37,19 @@ type FrontMatter struct {
 
 // Config is the top-level structure of config.yaml.
 type Config struct {
-	Site    SiteConfig             `yaml:"site"`
-	Build   BuildConfig            `yaml:"build"`
-	Theme   ThemeConfig            `yaml:"theme"`
-	Plugins map[string]interface{} `yaml:"plugins"`
+	Site            SiteConfig             `yaml:"site"`
+	Build           BuildConfig            `yaml:"build"`
+	Theme           ThemeConfig            `yaml:"theme"`
+	SyntaxHighlight SyntaxHighlightConfig  `yaml:"syntax_highlight"`
+	Plugins         map[string]interface{} `yaml:"plugins"`
+}
+
+// SyntaxHighlightConfig holds settings for code-block syntax highlighting.
+type SyntaxHighlightConfig struct {
+	// Theme is a chroma style name (e.g. "github", "monokai", "dracula").
+	Theme string `yaml:"theme"`
+	// LineNumbers enables line number display when true.
+	LineNumbers bool `yaml:"line_numbers"`
 }
 
 // SiteConfig holds site-wide metadata.

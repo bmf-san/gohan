@@ -7,8 +7,10 @@ import (
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/parser"
+	goldmarkparser "github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
+
+	"github.com/bmf-san/gohan/internal/highlight"
 )
 
 // Converter converts Markdown source bytes into safe HTML.
@@ -20,8 +22,9 @@ type Converter struct {
 
 // converterConfig holds the options accumulated before building the Markdown engine.
 type converterConfig struct {
-	gfm        bool
-	unsafeHTML bool
+	gfm          bool
+	unsafeHTML   bool
+	highlighting *highlight.Config
 }
 
 // ConverterOption is a functional option for NewConverter.
@@ -40,6 +43,12 @@ func WithUnsafeHTML() ConverterOption {
 	return func(c *converterConfig) { c.unsafeHTML = true }
 }
 
+// WithHighlighting enables chroma syntax highlighting for fenced code blocks.
+// cfg specifies the chroma theme and line-number settings.
+func WithHighlighting(cfg highlight.Config) ConverterOption {
+	return func(c *converterConfig) { c.highlighting = &cfg }
+}
+
 // NewConverter builds a Converter with the supplied options.  When no options
 // are given, GFM extensions are enabled and raw HTML is escaped.
 func NewConverter(opts ...ConverterOption) *Converter {
@@ -54,13 +63,18 @@ func NewConverter(opts ...ConverterOption) *Converter {
 		mdOpts = append(mdOpts,
 			goldmark.WithExtensions(extension.GFM),
 			goldmark.WithParserOptions(
-				parser.WithAutoHeadingID(),
+				goldmarkparser.WithAutoHeadingID(),
 			),
 		)
 	}
 
 	if cfg.unsafeHTML {
 		mdOpts = append(mdOpts, goldmark.WithRendererOptions(html.WithUnsafe()))
+	}
+
+	if cfg.highlighting != nil {
+		h := highlight.New(*cfg.highlighting)
+		mdOpts = append(mdOpts, goldmark.WithExtensions(h.Extension()))
 	}
 
 	return &Converter{md: goldmark.New(mdOpts...)}
