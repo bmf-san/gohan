@@ -136,11 +136,10 @@ const sseScript = `<script>(function(){` +
 	`})()</script>`
 
 type injectingResponseWriter struct {
-	wrapped    http.ResponseWriter
-	buf        bytes.Buffer
-	header     int
-	isHTML     bool
-	headerSent bool
+	wrapped http.ResponseWriter
+	buf     bytes.Buffer
+	header  int
+	isHTML  bool
 }
 
 func (w *injectingResponseWriter) Header() http.Header { return w.wrapped.Header() }
@@ -245,7 +244,7 @@ func (s *DevServer) Start() error {
 				if !ok {
 					return
 				}
-				fmt.Fprintf(w, "data: %s\n\n", msg)
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", msg)
 				flusher.Flush()
 			}
 		}
@@ -260,7 +259,7 @@ func (s *DevServer) Start() error {
 		// Try to create a real watcher; silently skip if unavailable
 		if fw, err := NewFsnotifyWatcher(); err == nil {
 			s.Watcher = fw
-			defer fw.Close()
+			defer func() { _ = fw.Close() }()
 		}
 	}
 	if s.Watcher != nil {
