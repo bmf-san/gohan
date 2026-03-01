@@ -6,23 +6,17 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/bmf-san/gohan/internal/model"
 )
 
-type mockEngine struct {
-	mu    sync.Mutex
-	calls []string
-}
+type mockEngine struct{ calls []string }
 
 func (m *mockEngine) Load(_ string, _ htmltemplate.FuncMap) error { return nil }
 func (m *mockEngine) Render(w io.Writer, name string, _ *model.Site) error {
-	m.mu.Lock()
 	m.calls = append(m.calls, name)
-	m.mu.Unlock()
 	_, err := io.WriteString(w, "<html>"+name+"</html>")
 	return err
 }

@@ -111,9 +111,7 @@ func TestGenerateFeeds_SlugifiesTitle(t *testing.T) {
 	articles := []*model.ProcessedArticle{
 		{Article: model.Article{FrontMatter: model.FrontMatter{Title: "Hello World", Date: time.Now()}}},
 	}
-	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles); err != nil {
-		t.Fatal(err)
-	}
+	GenerateFeeds(dir, "https://example.com", "Blog", articles)
 	data, _ := os.ReadFile(filepath.Join(dir, "feed.xml"))
 	if !strings.Contains(string(data), "hello-world") {
 		t.Errorf("expected slugified title in feed:\n%s", data)

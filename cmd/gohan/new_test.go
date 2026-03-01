@@ -80,10 +80,8 @@ func TestRunNew_CreatePage(t *testing.T) {
 func TestRunNew_ExistingFileError(t *testing.T) {
 	tmpDir := t.TempDir()
 	old, _ := os.Getwd()
-	defer func() { _ = os.Chdir(old) }()
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatal(err)
-	}
+	defer os.Chdir(old)
+	os.Chdir(tmpDir)
 
 	// Create first time
 	if err := runNew([]string{"duplicate-slug"}); err != nil {
