@@ -301,59 +301,6 @@ func (g *HTMLGenerator) writePage(path, tmplName string, data *model.Site) error
 	return nil
 }
 
-// GenerateSitemap writes a sitemap.xml listing all article URLs.
-func (g *HTMLGenerator) GenerateSitemap(site *model.Site) error {
-	baseURL := site.Config.Site.BaseURL
-	var buf bytes.Buffer
-	buf.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-	buf.WriteString("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n")
-	for _, a := range site.Articles {
-		slug := a.FrontMatter.Slug
-		if slug == "" {
-			slug = slugify(a.FrontMatter.Title)
-		}
-		buf.WriteString("  <url><loc>" + baseURL + "/posts/" + slug + "/</loc></url>\n")
-	}
-	buf.WriteString("</urlset>\n")
-	if err := os.MkdirAll(g.outDir, 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(g.outDir, "sitemap.xml"), buf.Bytes(), 0o644)
-}
-
-// GenerateFeed writes an atom.xml (Atom feed) listing all articles.
-func (g *HTMLGenerator) GenerateFeed(site *model.Site) error {
-	baseURL := site.Config.Site.BaseURL
-	title := site.Config.Site.Title
-	now := time.Now().UTC().Format(time.RFC3339)
-
-	var buf bytes.Buffer
-	buf.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-	buf.WriteString("<feed xmlns=\"http://www.w3.org/2005/Atom\">\n")
-	buf.WriteString("  <title>" + title + "</title>\n")
-	buf.WriteString("  <link href=\"" + baseURL + "\"/>\n")
-	buf.WriteString("  <updated>" + now + "</updated>\n")
-	for _, a := range site.Articles {
-		slug := a.FrontMatter.Slug
-		if slug == "" {
-			slug = slugify(a.FrontMatter.Title)
-		}
-		updated := a.FrontMatter.Date.UTC().Format(time.RFC3339)
-		buf.WriteString("  <entry>\n")
-		buf.WriteString("    <title>" + a.FrontMatter.Title + "</title>\n")
-		buf.WriteString("    <link href=\"" + baseURL + "/posts/" + slug + "/\"/>\n")
-		buf.WriteString("    <updated>" + updated + "</updated>\n")
-		buf.WriteString("    <summary>" + a.Summary + "</summary>\n")
-		buf.WriteString("  </entry>\n")
-	}
-	buf.WriteString("</feed>\n")
-
-	if err := os.MkdirAll(g.outDir, 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(g.outDir, "atom.xml"), buf.Bytes(), 0o644)
-}
-
 // CopyAssets recursively copies all files from srcDir into dstDir.
 func CopyAssets(srcDir, dstDir string) error {
 	return filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {

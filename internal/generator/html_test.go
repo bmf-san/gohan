@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -87,28 +86,6 @@ func TestGenerate_CopiesAssets(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(outDir, "assets", "style.css")); err != nil {
 		t.Errorf("expected copied asset: %v", err)
-	}
-}
-
-func TestGenerateSitemap(t *testing.T) {
-	outDir := t.TempDir()
-	if err := NewHTMLGenerator(outDir, &mockEngine{}, model.Config{}).GenerateSitemap(makeSite()); err != nil {
-		t.Fatalf("GenerateSitemap: %v", err)
-	}
-	data, _ := os.ReadFile(filepath.Join(outDir, "sitemap.xml"))
-	if !strings.Contains(string(data), "hello-world") || !strings.Contains(string(data), "urlset") {
-		t.Errorf("sitemap wrong:\n%s", data)
-	}
-}
-
-func TestGenerateFeed(t *testing.T) {
-	outDir := t.TempDir()
-	if err := NewHTMLGenerator(outDir, &mockEngine{}, model.Config{}).GenerateFeed(makeSite()); err != nil {
-		t.Fatalf("GenerateFeed: %v", err)
-	}
-	data, _ := os.ReadFile(filepath.Join(outDir, "atom.xml"))
-	if !strings.Contains(string(data), "Hello World") || !strings.Contains(string(data), "Test Site") {
-		t.Errorf("feed wrong:\n%s", data)
 	}
 }
 
