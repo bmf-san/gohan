@@ -223,8 +223,8 @@ func TestDetectLocale(t *testing.T) {
 	}{
 		{"content/en/posts/hello.md", "en"},
 		{"content/ja/posts/hello.md", "ja"},
-		{"content/posts/hello.md", ""},    // no matching locale segment
-		{"other/en/posts/hello.md", ""},   // outside content dir
+		{"content/posts/hello.md", ""},  // no matching locale segment
+		{"other/en/posts/hello.md", ""}, // outside content dir
 	}
 	for _, tc := range tests {
 		a := &model.Article{FilePath: tc.filePath}

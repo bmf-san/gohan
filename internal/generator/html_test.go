@@ -348,4 +348,3 @@ func TestGenerate_I18nLocalePrefixedArticlePage(t *testing.T) {
 		t.Errorf("missing ja/index.html: %v", err)
 	}
 }
-

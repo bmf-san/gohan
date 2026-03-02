@@ -173,4 +173,3 @@ func TestGenerateSitemap_UsesPrecomputedURL(t *testing.T) {
 		t.Errorf("sitemap should NOT use slug when URL is set:\n%s", s)
 	}
 }
-
