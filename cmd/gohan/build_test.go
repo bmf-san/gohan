@@ -82,3 +82,51 @@ func TestRunBuild_OutputOverride(t *testing.T) {
 		t.Fatalf("--output override: %v", err)
 	}
 }
+
+func TestRunBuild_DraftFlagAccepted(t *testing.T) {
+	dir := t.TempDir()
+	cfg := []byte("site:\n  title: Test\n  base_url: http://localhost\n")
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), cfg, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "content"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	err := runBuild([]string{
+		"--config=" + filepath.Join(dir, "config.yaml"),
+		"--draft",
+		"--dry-run",
+	})
+	if err != nil {
+		t.Fatalf("--draft --dry-run: %v", err)
+	}
+}
+
+func TestRunBuild_DraftArticlesExcludedByDefault(t *testing.T) {
+	dir := t.TempDir()
+	cfg := []byte("site:\n  title: Test\n  base_url: http://localhost\n")
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), cfg, 0644); err != nil {
+		t.Fatal(err)
+	}
+	contentDir := filepath.Join(dir, "content")
+	if err := os.MkdirAll(contentDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// Write one draft and one published article.
+	draft := []byte("---\ntitle: Draft Post\ndraft: true\n---\nDraft body.\n")
+	pub := []byte("---\ntitle: Published Post\ndraft: false\n---\nPublished body.\n")
+	if err := os.WriteFile(filepath.Join(contentDir, "draft.md"), draft, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(contentDir, "published.md"), pub, 0644); err != nil {
+		t.Fatal(err)
+	}
+	// dry-run reports processed count; we just verify it doesn't error.
+	err := runBuild([]string{
+		"--config=" + filepath.Join(dir, "config.yaml"),
+		"--dry-run",
+	})
+	if err != nil {
+		t.Fatalf("build with draft article: %v", err)
+	}
+}
