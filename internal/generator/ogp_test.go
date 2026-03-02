@@ -98,7 +98,7 @@ func TestOGPGenerator_NoFontFile_ProducesImage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	img, err := png.Decode(f)
 	if err != nil {
 		t.Fatalf("output is not a valid PNG: %v", err)
@@ -197,7 +197,7 @@ func TestOGPGenerator_DefaultDimensions(t *testing.T) {
 		t.Fatalf("Generate: %v", err)
 	}
 	f, _ := os.Open(filepath.Join(outDir, "ogp", "def.png"))
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	img, _ := png.Decode(f)
 	b := img.Bounds()
 	if b.Dx() != ogpDefaultWidth || b.Dy() != ogpDefaultHeight {
