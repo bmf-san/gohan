@@ -7,6 +7,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -97,6 +99,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			locArticles := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
 				return a.Locale == locale
 			})
+			sortByDateDesc(locArticles)
 			var basePath, baseURLPath string
 			if locale == g.cfg.I18n.DefaultLocale {
 				basePath = ""
@@ -108,25 +111,23 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			jobs = append(jobs, paginatedJobs(site, locArticles, g.outDir, "index.html", basePath, baseURLPath, perPage)...)
 		}
 	} else {
-		jobs = append(jobs, paginatedJobs(site, site.Articles, g.outDir, "index.html", "", baseURL, perPage)...)
+		allArticles := make([]*model.ProcessedArticle, len(site.Articles))
+		copy(allArticles, site.Articles)
+		sortByDateDesc(allArticles)
+		jobs = append(jobs, paginatedJobs(site, allArticles, g.outDir, "index.html", "", baseURL, perPage)...)
 	}
 
-	// Article pages: locale-aware output path.
+	// Article pages: use pre-computed output path and respect FrontMatter.Template.
 	for _, a := range site.Articles {
 		a := a
-		slug := a.FrontMatter.Slug
-		if slug == "" {
-			slug = slugify(a.FrontMatter.Title)
-		}
-		var articlePath string
-		if a.Locale != "" && a.Locale != g.cfg.I18n.DefaultLocale {
-			articlePath = filepath.Join(g.outDir, a.Locale, "posts", slug, "index.html")
-		} else {
-			articlePath = filepath.Join(g.outDir, "posts", slug, "index.html")
+		articlePath := articleOutputPath(a, g.outDir, g.cfg)
+		tmplName := "article.html"
+		if a.FrontMatter.Template != "" {
+			tmplName = a.FrontMatter.Template
 		}
 		jobs = append(jobs, writeJob{
 			path: articlePath,
-			tmpl: "article.html",
+			tmpl: tmplName,
 			data: siteFor(site, []*model.ProcessedArticle{a}),
 		})
 	}
@@ -142,6 +143,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			}
 			return false
 		})
+		sortByDateDesc(filtered)
 		basePath := filepath.Join("tags", t.Name)
 		baseURLPath := baseURL + "/tags/" + t.Name
 		jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage)...)
@@ -158,23 +160,30 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			}
 			return false
 		})
+		sortByDateDesc(filtered)
 		basePath := filepath.Join("categories", c.Name)
 		baseURLPath := baseURL + "/categories/" + c.Name
 		jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage)...)
 	}
 
 	// Archive pages: public/archives/<year>/<month>/index.html
+	// Articles with a zero date are skipped to avoid generating archives/0001/01/.
 	type ym struct {
 		year  int
 		month time.Month
 	}
 	archives := map[ym][]*model.ProcessedArticle{}
 	for _, a := range site.Articles {
+		if a.FrontMatter.Date.IsZero() {
+			continue
+		}
 		key := ym{a.FrontMatter.Date.Year(), a.FrontMatter.Date.Month()}
 		archives[key] = append(archives[key], a)
 	}
 	for key, articles := range archives {
-		as := articles
+		as := make([]*model.ProcessedArticle, len(articles))
+		copy(as, articles)
+		sortByDateDesc(as)
 		k := key
 		jobs = append(jobs, writeJob{
 			path: filepath.Join(g.outDir, "archives",
@@ -419,6 +428,37 @@ func siteWithPagination(base *model.Site, articles []*model.ProcessedArticle, pg
 	s := siteFor(base, articles)
 	s.Pagination = pg
 	return s
+}
+
+// sortByDateDesc sorts a slice of processed articles newest-first in place.
+func sortByDateDesc(articles []*model.ProcessedArticle) {
+	sort.Slice(articles, func(i, j int) bool {
+		return articles[i].FrontMatter.Date.After(articles[j].FrontMatter.Date)
+	})
+}
+
+// articleOutputPath returns the absolute filesystem path for an article page.
+// When a.OutputPath is a valid relative path under cfg.Build.OutputDir, it is
+// translated to an absolute path under outDir.  Otherwise (e.g. in tests that
+// create ProcessedArticles without OutputPath), it falls back to the
+// slug-based locale-aware path used in previous versions.
+func articleOutputPath(a *model.ProcessedArticle, outDir string, cfg model.Config) string {
+	if a.OutputPath != "" && cfg.Build.OutputDir != "" {
+		rel, err := filepath.Rel(cfg.Build.OutputDir, a.OutputPath)
+		// Accept only valid descendants: no "." (same dir) and no ".." escapes.
+		if err == nil && rel != "." && !strings.HasPrefix(filepath.ToSlash(rel), "..") {
+			return filepath.Join(outDir, rel)
+		}
+	}
+	// Fallback: construct from slug and locale.
+	slug := a.FrontMatter.Slug
+	if slug == "" {
+		slug = slugify(a.FrontMatter.Title)
+	}
+	if a.Locale != "" && a.Locale != cfg.I18n.DefaultLocale {
+		return filepath.Join(outDir, a.Locale, "posts", slug, "index.html")
+	}
+	return filepath.Join(outDir, "posts", slug, "index.html")
 }
 
 // filteredSite creates a site copy with articles matching pred.
