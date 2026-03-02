@@ -20,6 +20,9 @@ type ProcessedArticle struct {
 	HTMLContent template.HTML
 	Summary     string
 	OutputPath  string
+	// PluginData holds per-article data injected by enabled plugins.
+	// Access in templates: {{index .PluginData "amazon_books"}}
+	PluginData map[string]interface{}
 }
 
 // FrontMatter holds the YAML metadata from the top of a Markdown file.
@@ -33,6 +36,9 @@ type FrontMatter struct {
 	Author      string    `yaml:"author"`
 	Slug        string    `yaml:"slug"`
 	Template    string    `yaml:"template"`
+	// Extra captures any front-matter keys not listed above.
+	// Plugins read their configuration from this field.
+	Extra map[string]interface{} `yaml:",inline"`
 }
 
 // Config is the top-level structure of config.yaml.
