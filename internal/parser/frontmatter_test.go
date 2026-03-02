@@ -203,3 +203,40 @@ func TestFileParser_ParseAll_EmptyDir(t *testing.T) {
 		t.Errorf("expected 0 articles, got %d", len(articles))
 	}
 }
+
+func TestFileParser_ParseAll_ExcludeFiles(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "keep.md", "# Keep\n")
+	writeFile(t, dir, "skip.md", "# Skip\n")
+	writeFile(t, dir, "also-keep.md", "# Also Keep\n")
+
+	p := NewFileParser("skip.md")
+	articles, err := p.ParseAll(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(articles) != 2 {
+		t.Errorf("expected 2 articles after excluding skip.md, got %d", len(articles))
+	}
+	for _, a := range articles {
+		if a.FilePath == dir+"/skip.md" {
+			t.Error("skip.md should have been excluded")
+		}
+	}
+}
+
+func TestFileParser_ParseAll_ExcludeFilesGlob(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "draft-one.md", "# Draft One\n")
+	writeFile(t, dir, "draft-two.md", "# Draft Two\n")
+	writeFile(t, dir, "published.md", "# Published\n")
+
+	p := NewFileParser("draft-*.md")
+	articles, err := p.ParseAll(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(articles) != 1 {
+		t.Errorf("expected 1 article after glob exclude, got %d", len(articles))
+	}
+}

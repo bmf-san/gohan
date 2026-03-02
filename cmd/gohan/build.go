@@ -25,6 +25,7 @@ func runBuild(args []string) error {
 	parallel := fs.Int("parallel", 0, "override parallelism (0 = use config value)")
 	dryRun := fs.Bool("dry-run", false, "simulate build without writing files")
 	logFmt := fs.String("log-format", "text", "log format: text or json")
+	draft := fs.Bool("draft", false, "include draft articles in the build")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -80,11 +81,22 @@ func runBuild(args []string) error {
 	}
 
 	// Parse content.
-	p := parser.NewFileParser()
+	p := parser.NewFileParser(cfg.Build.ExcludeFiles...)
 	contentDir := filepath.Join(rootDir, cfg.Build.ContentDir)
 	articles, err := p.ParseAll(contentDir)
 	if err != nil {
 		return fmt.Errorf("parse content: %w", err)
+	}
+
+	// Filter draft articles unless --draft flag is set.
+	if !*draft {
+		filtered := articles[:0]
+		for _, a := range articles {
+			if !a.FrontMatter.Draft {
+				filtered = append(filtered, a)
+			}
+		}
+		articles = filtered
 	}
 
 	// Detect diff.
