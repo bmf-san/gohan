@@ -61,9 +61,9 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle)
 			if locale == "" {
 				locale = "x-default"
 			}
-			buf.WriteString(fmt.Sprintf("    <xhtml:link rel=\"alternate\" hreflang=\"%s\" href=\"%s\"/>\n", locale, loc))
+			fmt.Fprintf(&buf, "    <xhtml:link rel=\"alternate\" hreflang=\"%s\" href=\"%s\"/>\n", locale, loc)
 			for _, tr := range a.Translations {
-				buf.WriteString(fmt.Sprintf("    <xhtml:link rel=\"alternate\" hreflang=\"%s\" href=\"%s\"/>\n", tr.Locale, baseURL+tr.URL))
+				fmt.Fprintf(&buf, "    <xhtml:link rel=\"alternate\" hreflang=\"%s\" href=\"%s\"/>\n", tr.Locale, baseURL+tr.URL)
 			}
 		}
 		buf.WriteString("  </url>\n")
