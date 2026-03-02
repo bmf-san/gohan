@@ -963,7 +963,7 @@ testdata/
 
 ---
 
-## 17–20. Feature Specifications
+## 17–21. Feature Specifications
 
 Detailed feature specifications are maintained as separate documents:
 
@@ -972,9 +972,10 @@ Detailed feature specifications are maintained as separate documents:
 | Pagination | [docs/features/pagination.md](features/pagination.md) |
 | OGP Image Generation | [docs/features/ogp.md](features/ogp.md) |
 | Plugin System | [docs/features/plugin-system.md](features/plugin-system.md) |
+| GitHub Source Link | [docs/features/github-source-link.md](features/github-source-link.md) |
 | i18n (Multi-language) | [docs/features/i18n.md](features/i18n.md) |
 
-## 21. Technical Debt Management
+## 22. Technical Debt Management
 
 ### 20.1 Continuous Quality Management
 

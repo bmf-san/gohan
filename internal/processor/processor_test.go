@@ -363,3 +363,71 @@ func TestProcess_I18nLocaleAndURL(t *testing.T) {
 		t.Errorf("ja URL = %q, want /ja/posts/hello/", byLocale["ja"])
 	}
 }
+
+func TestComputeContentPath(t *testing.T) {
+	tests := []struct {
+		name       string
+		filePath   string
+		contentDir string
+		want       string
+	}{
+		{
+			name:       "nested post",
+			filePath:   "content/posts/hello.md",
+			contentDir: "content",
+			want:       "posts/hello.md",
+		},
+		{
+			name:       "root-level file",
+			filePath:   "content/index.md",
+			contentDir: "content",
+			want:       "index.md",
+		},
+		{
+			name:       "deeply nested",
+			filePath:   "content/a/b/c.md",
+			contentDir: "content",
+			want:       "a/b/c.md",
+		},
+		{
+			name:       "fallback when Rel fails (no common prefix)",
+			filePath:   "other/posts/x.md",
+			contentDir: "content",
+			want: filepath.ToSlash(func() string {
+				rel, err := filepath.Rel("content", "other/posts/x.md")
+				if err != nil {
+					return filepath.Base("other/posts/x.md")
+				}
+				return filepath.ToSlash(rel)
+			}()),
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			a := &model.Article{FilePath: tc.filePath}
+			cfg := model.Config{Build: model.BuildConfig{ContentDir: tc.contentDir}}
+			got := computeContentPath(a, cfg)
+			if got != tc.want {
+				t.Errorf("computeContentPath: got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestProcess_ContentPathSet(t *testing.T) {
+	p := NewSiteProcessor()
+	a := &model.Article{
+		FilePath:     "content/posts/my-post.md",
+		RawContent:   "Hello",
+		LastModified: time.Now(),
+	}
+	cfg := model.Config{Build: model.BuildConfig{ContentDir: "content", OutputDir: "public"}}
+	processed, err := p.Process([]*model.Article{a}, cfg)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+	want := "posts/my-post.md"
+	if processed[0].ContentPath != want {
+		t.Errorf("ContentPath: got %q, want %q", processed[0].ContentPath, want)
+	}
+}

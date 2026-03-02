@@ -89,6 +89,12 @@ type SiteConfig struct {
 	Description string `yaml:"description"`
 	BaseURL     string `yaml:"base_url"`
 	Language    string `yaml:"language"`
+	// GitHubRepo is the base URL of the GitHub repository that holds the site
+	// source (e.g. "https://github.com/owner/repo"). When set, templates can
+	// render an "Edit this page" link using .ContentPath.
+	GitHubRepo string `yaml:"github_repo"`
+	// GitHubBranch is the branch used to build the edit URL. Defaults to "main".
+	GitHubBranch string `yaml:"github_branch"`
 }
 
 // BuildConfig holds build-time directory and parallelism settings.

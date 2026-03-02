@@ -21,6 +21,7 @@ const (
 	defaultThemeName      = "default"
 	defaultLanguage       = "en"
 	defaultHighlightTheme = "github"
+	defaultGitHubBranch   = "main"
 )
 
 // Loader reads and validates the gohan project configuration.
@@ -85,6 +86,9 @@ func applyDefaults(cfg *model.Config) {
 	}
 	if cfg.SyntaxHighlight.Theme == "" {
 		cfg.SyntaxHighlight.Theme = defaultHighlightTheme
+	}
+	if cfg.Site.GitHubBranch == "" {
+		cfg.Site.GitHubBranch = defaultGitHubBranch
 	}
 	// i18n: when locales are configured, default_locale falls back to site.language.
 	if len(cfg.I18n.Locales) > 0 && cfg.I18n.DefaultLocale == "" {
