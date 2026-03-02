@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	htmltemplate "html/template"
 	"io"
 	"os"
@@ -149,5 +150,161 @@ func TestFilteredSite(t *testing.T) {
 	empty := filteredSite(site, func(a *model.ProcessedArticle) bool { return false })
 	if len(empty.Articles) != 0 {
 		t.Errorf("expected 0, got %d", len(empty.Articles))
+	}
+}
+
+// ---- Pagination tests ----
+
+func makePaginatedArticles(n int) []*model.ProcessedArticle {
+	articles := make([]*model.ProcessedArticle, n)
+	for i := range articles {
+		articles[i] = &model.ProcessedArticle{
+			Article: model.Article{
+				FrontMatter: model.FrontMatter{
+					Title: fmt.Sprintf("Article %d", i+1),
+					Slug:  fmt.Sprintf("article-%d", i+1),
+				},
+			},
+		}
+	}
+	return articles
+}
+
+func TestPaginatedJobs_Disabled(t *testing.T) {
+	site := makeSite()
+	articles := makePaginatedArticles(5)
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 0)
+	if len(jobs) != 1 {
+		t.Fatalf("expected 1 job when pagination disabled, got %d", len(jobs))
+	}
+	if jobs[0].data.Pagination != nil {
+		t.Error("Pagination should be nil when disabled")
+	}
+	if len(jobs[0].data.Articles) != 5 {
+		t.Errorf("expected all 5 articles, got %d", len(jobs[0].data.Articles))
+	}
+}
+
+func TestPaginatedJobs_SinglePage(t *testing.T) {
+	site := makeSite()
+	articles := makePaginatedArticles(3)
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 10)
+	if len(jobs) != 1 {
+		t.Fatalf("expected 1 job for 3 articles with perPage=10, got %d", len(jobs))
+	}
+	pg := jobs[0].data.Pagination
+	if pg == nil {
+		t.Fatal("Pagination should not be nil")
+	}
+	if pg.TotalPages != 1 || pg.CurrentPage != 1 {
+		t.Errorf("unexpected pagination: %+v", pg)
+	}
+	if pg.PrevURL != "" || pg.NextURL != "" {
+		t.Errorf("no prev/next expected for single page: prev=%q next=%q", pg.PrevURL, pg.NextURL)
+	}
+}
+
+func TestPaginatedJobs_MultiPage_Paths(t *testing.T) {
+	site := makeSite()
+	articles := makePaginatedArticles(5)
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "", 2)
+	// 5 articles / perPage 2 → pages 1,2,3
+	if len(jobs) != 3 {
+		t.Fatalf("expected 3 jobs, got %d", len(jobs))
+	}
+	// Page 1 → /out/index.html
+	if jobs[0].path != filepath.Join("/out", "index.html") {
+		t.Errorf("page1 path = %q", jobs[0].path)
+	}
+	// Page 2 → /out/page/2/index.html
+	if jobs[1].path != filepath.Join("/out", "page", "2", "index.html") {
+		t.Errorf("page2 path = %q", jobs[1].path)
+	}
+	// Page 3 → /out/page/3/index.html
+	if jobs[2].path != filepath.Join("/out", "page", "3", "index.html") {
+		t.Errorf("page3 path = %q", jobs[2].path)
+	}
+}
+
+func TestPaginatedJobs_MultiPage_PrevNext(t *testing.T) {
+	site := makeSite()
+	articles := makePaginatedArticles(5)
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/blog", 2)
+
+	pg1 := jobs[0].data.Pagination
+	if pg1.PrevURL != "" {
+		t.Errorf("page1 PrevURL should be empty, got %q", pg1.PrevURL)
+	}
+	if pg1.NextURL != "/blog/page/2/" {
+		t.Errorf("page1 NextURL = %q, want /blog/page/2/", pg1.NextURL)
+	}
+
+	pg2 := jobs[1].data.Pagination
+	if pg2.PrevURL != "/blog/" {
+		t.Errorf("page2 PrevURL = %q, want /blog/", pg2.PrevURL)
+	}
+	if pg2.NextURL != "/blog/page/3/" {
+		t.Errorf("page2 NextURL = %q, want /blog/page/3/", pg2.NextURL)
+	}
+
+	pg3 := jobs[2].data.Pagination
+	if pg3.PrevURL != "/blog/page/2/" {
+		t.Errorf("page3 PrevURL = %q, want /blog/page/2/", pg3.PrevURL)
+	}
+	if pg3.NextURL != "" {
+		t.Errorf("page3 NextURL should be empty, got %q", pg3.NextURL)
+	}
+}
+
+func TestPaginatedJobs_WithBasePath(t *testing.T) {
+	site := makeSite()
+	articles := makePaginatedArticles(3)
+	jobs := paginatedJobs(site, articles, "/out", "tag.html", "tags/go", "/tags/go", 2)
+	// 3 articles / perPage 2 → 2 pages
+	if len(jobs) != 2 {
+		t.Fatalf("expected 2 jobs, got %d", len(jobs))
+	}
+	if jobs[0].path != filepath.Join("/out", "tags/go", "index.html") {
+		t.Errorf("page1 path = %q", jobs[0].path)
+	}
+	if jobs[1].path != filepath.Join("/out", "tags/go", "page", "2", "index.html") {
+		t.Errorf("page2 path = %q", jobs[1].path)
+	}
+}
+
+func TestGenerate_WithPagination_CreatesPageDirs(t *testing.T) {
+	outDir := t.TempDir()
+	cfg := model.Config{Build: model.BuildConfig{Parallelism: 2, PerPage: 1}}
+	site := makeSite()
+	// Add a second article so pagination kicks in
+	site.Articles = append(site.Articles, &model.ProcessedArticle{
+		Article: model.Article{FrontMatter: model.FrontMatter{
+			Title: "Second Post", Slug: "second-post",
+			Tags: []string{"go"}, Categories: []string{"tech"},
+			Date: time.Date(2024, 3, 16, 0, 0, 0, 0, time.UTC),
+		}},
+	})
+	g := NewHTMLGenerator(outDir, &mockEngine{}, cfg)
+	if err := g.Generate(site, nil); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	// With perPage=1 and 2 articles, page 2 should be generated
+	if _, err := os.Stat(filepath.Join(outDir, "page", "2", "index.html")); err != nil {
+		t.Errorf("expected /page/2/index.html: %v", err)
+	}
+}
+
+func TestFilterArticles(t *testing.T) {
+	articles := makePaginatedArticles(4)
+	even := filterArticles(articles, func(a *model.ProcessedArticle) bool {
+		// keep article-2 and article-4
+		return a.FrontMatter.Slug == "article-2" || a.FrontMatter.Slug == "article-4"
+	})
+	if len(even) != 2 {
+		t.Errorf("expected 2 filtered articles, got %d", len(even))
+	}
+	none := filterArticles(articles, func(*model.ProcessedArticle) bool { return false })
+	if len(none) != 0 {
+		t.Errorf("expected 0, got %d", len(none))
 	}
 }

@@ -41,6 +41,7 @@ type Config struct {
 	Build           BuildConfig            `yaml:"build"`
 	Theme           ThemeConfig            `yaml:"theme"`
 	SyntaxHighlight SyntaxHighlightConfig  `yaml:"syntax_highlight"`
+	OGP             OGPConfig              `yaml:"ogp"`
 	Plugins         map[string]interface{} `yaml:"plugins"`
 }
 
@@ -67,6 +68,7 @@ type BuildConfig struct {
 	AssetsDir    string   `yaml:"assets_dir"`
 	ExcludeFiles []string `yaml:"exclude_files"`
 	Parallelism  int      `yaml:"parallelism"`
+	PerPage      int      `yaml:"per_page"`
 }
 
 // ThemeConfig holds theme name, directory, and custom parameters.
@@ -146,6 +148,28 @@ type Site struct {
 	Articles   []*ProcessedArticle
 	Tags       []Taxonomy
 	Categories []Taxonomy
+	Pagination *Pagination // nil when pagination is disabled or not a listing page
+}
+
+// Pagination holds computed paging metadata for listing pages.
+type Pagination struct {
+	CurrentPage int
+	TotalPages  int
+	PerPage     int
+	TotalItems  int
+	PrevURL     string // empty string if no previous page
+	NextURL     string // empty string if no next page
+}
+
+// OGPConfig holds settings for build-time OGP image generation.
+type OGPConfig struct {
+	Enabled         bool   `yaml:"enabled"`
+	BackgroundColor string `yaml:"background_color"`
+	TextColor       string `yaml:"text_color"`
+	FontFile        string `yaml:"font_file"`
+	LogoFile        string `yaml:"logo_file"` // empty means no logo
+	Width           int    `yaml:"width"`
+	Height          int    `yaml:"height"`
 }
 
 // FileWatcher is the interface for watching file system changes.

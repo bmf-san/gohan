@@ -80,8 +80,8 @@ HugoやJekyll、Gatsby、Next.jsなど多くの静的サイトジェネレータ
 
 ### UC-1: サイトをビルドする（差分ビルド）
 
-**アクター**: 開発者  
-**前提条件**: `config.yaml` が存在し、1件以上のMarkdown記事がある  
+**アクター**: 開発者
+**前提条件**: `config.yaml` が存在し、1件以上のMarkdown記事がある
 **トリガー**: `gohan build` を実行
 
 **メインフロー**:
@@ -93,7 +93,7 @@ HugoやJekyll、Gatsby、Next.jsなど多くの静的サイトジェネレータ
 6. gohan がテンプレートエンジンを通じて影響セットをレンダリングし、HTMLファイルを出力ディレクトリに書き出す。
 7. gohan がマニフェストを更新し、ビルドサマリー（経過時間・記事数）を表示する。
 
-**代替フロー - Git リポジトリでない場合**:  
+**代替フロー - Git リポジトリでない場合**:
 ステップ3では、マニフェストとファイル更新日時を比較するフォールバックを使用する。
 
 **事後条件**: 出力ディレクトリに最新の HTML・`sitemap.xml`・`atom.xml` が生成される。
@@ -102,10 +102,10 @@ HugoやJekyll、Gatsby、Next.jsなど多くの静的サイトジェネレータ
 
 ### UC-2: フルビルドを強制する
 
-**アクター**: 開発者  
+**アクター**: 開発者
 **トリガー**: `gohan build --full` を実行
 
-**メインフロー**:  
+**メインフロー**:
 UC-1 と同じだが、ステップ2-3をスキップし、すべての記事を変更済みとして扱う。
 
 **事後条件**: すべてのHTMLがゼロから再生成され、マニフェストが書き直される。
@@ -114,7 +114,7 @@ UC-1 と同じだが、ステップ2-3をスキップし、すべての記事を
 
 ### UC-3: 新しい記事を作成する
 
-**アクター**: 開発者  
+**アクター**: 開発者
 **トリガー**: `gohan new "記事タイトル"` を実行
 
 **メインフロー**:
@@ -129,7 +129,7 @@ UC-1 と同じだが、ステップ2-3をスキップし、すべての記事を
 
 ### UC-4: 開発サーバーを起動する
 
-**アクター**: 開発者  
+**アクター**: 開発者
 **トリガー**: `gohan serve` を実行
 
 **メインフロー**:
@@ -147,10 +147,10 @@ UC-1 と同じだが、ステップ2-3をスキップし、すべての記事を
 
 ### UC-5: 記事を公開する
 
-**アクター**: 開発者  
+**アクター**: 開発者
 **トリガー**: 下書き記事のFront Matterで `draft: false` に変更し、`gohan build` を実行
 
-**メインフロー**:  
+**メインフロー**:
 UC-1 と同じ。記事ファイルが変更されている（または `--full` を使用している）ため、ビルド出力に含まれるようになる。
 
 **事後条件**: 記事が生成済みHTML・タグ/カテゴリページ・アーカイブ・サイトマップ・フィードに反映される。
@@ -963,20 +963,237 @@ testdata/
 
 ---
 
-## 17. 技術的負債の管理
+## 17. ページネーション
 
-### 17.1 継続的品質管理
+### 17.1 概要
+
+gohan は、主要なSSG（Hugo、Jekyllなど）の慣習に準拠し、静的ホスティング（Cloudflare Pages、GitHub Pagesなど）と互換性のあるパスベースURLスキームでページネーション済み一覧ページを生成する。
+
+### 17.2 URLスキーム
+
+```
+/              → 1ページ目 (public/index.html)
+/page/2/       → 2ページ目 (public/page/2/index.html)
+/page/3/       → 3ページ目 (public/page/3/index.html)
+```
+
+- 1ページ目は常にルートの `index.html` から配信される。`/page/1/` エイリアスは生成しない
+- タグ・カテゴリ一覧ページも同じパターンに従う：
+  - `/tags/go/` → 1ページ目
+  - `/tags/go/page/2/` → 2ページ目
+  - `/categories/architecture/` → 1ページ目
+  - `/categories/architecture/page/2/` → 2ページ目
+
+### 17.3 設定
+
+`config.yaml` の `BuildConfig` に `per_page` を追加する：
+
+```yaml
+build:
+  per_page: 10   # 1ページあたりの記事数。0または省略でページネーション無効
+```
+
+### 17.4 データモデル
+
+`model.go` に `Pagination` 構造体と `PerPage` フィールドを追加する：
+
+```go
+// Pagination は一覧ページ用のページング메타情報を保持する。
+type Pagination struct {
+    CurrentPage int
+    TotalPages  int
+    PerPage     int
+    TotalItems  int
+    PrevURL     string // 前のページがない場合は空文字列
+    NextURL     string // 次のページがない場合は空文字列
+}
+```
+
+`Site` に `Pagination` フィールドを追加する：
+
+```go
+type Site struct {
+    // ... 既存フィールド ...
+    Pagination *Pagination // ページネーション無効または一覧ページでない場合はnil
+}
+```
+
+`BuildConfig` に `PerPage` を追加する：
+
+```go
+type BuildConfig struct {
+    // ... 既存フィールド ...
+    PerPage int `yaml:"per_page"`
+}
+```
+
+### 17.5 実装
+
+**`internal/model/model.go`**
+- `Pagination` 構造体を追加
+- `Site` に `Pagination *Pagination` を追加
+- `BuildConfig` に `PerPage int` を追加
+
+**`internal/generator/html.go`**
+- `buildJobs()` が `cfg.Build.PerPage` のサイズで記事を分割
+- 1ページ目 → `{outDir}/index.html`
+- Nページ目（N ≥ 2）→ `{outDir}/page/N/index.html`
+- 指定した記事スライスと `Pagination` を持つ `Site` のシャローコピーを返す `siteWithPagination(site, articles, pagination)` ヘルパーを追加
+- タグ・カテゴリ一覧ページにも同じ分割ロジックを適用
+
+**テンプレート使用例（ユーザー側）**：
+
+```html
+{{if .Pagination}}
+  {{if .Pagination.PrevURL}}
+    <link rel="prev" href="{{.Pagination.PrevURL}}">
+  {{end}}
+  {{if .Pagination.NextURL}}
+    <link rel="next" href="{{.Pagination.NextURL}}">
+  {{end}}
+
+  {{if .Pagination.PrevURL}}
+    <a href="{{.Pagination.PrevURL}}">← 前へ</a>
+  {{end}}
+  <span>{{.Pagination.CurrentPage}} / {{.Pagination.TotalPages}}</span>
+  {{if .Pagination.NextURL}}
+    <a href="{{.Pagination.NextURL}}">次へ →</a>
+  {{end}}
+{{end}}
+```
+
+### 17.6 SEO 考慮事項
+
+- `<link rel="prev">` / `<link rel="next">` により、Googleがページネーションチェーンを発見・クロール可能になる
+- 各ページネーションページは独自の正規URLを持つ（`/page/2/` など）
+- クエリパラメータ方式（`?page=2`）からの移行時はリダイレクト不要（ページネーション一覧ページはほとんどインデックスされていないため）
+
+---
+
+## 18. OGP画像生成
+
+### 18.1 概要
+
+gohan はビルド時に純粋なGoでOGP（Open Graph Protocol）サムネイル画像を生成する。各記事のタイトルから一意の `og:image` を生成するため、手動での画像作成が不要になる。
+
+### 18.2 出力
+
+```
+public/
+└── ogp/
+    └── {slug}.png    # 記事ごとに1200×630pxのOGP画像
+```
+
+各記事ページの `og:image` タグには以下のURLを使用する：
+
+```
+{{.Config.Site.BaseURL}}/ogp/{{.Article.FrontMatter.Slug}}.png
+```
+
+一覧ページ（インデックス、タグ、カテゴリ）はユーザーが用意したデフォルト画像にフォールバックする：
+
+```
+{{.Config.Site.BaseURL}}/assets/images/ogp-default.png
+```
+
+### 18.3 設定
+
+`config.yaml` に `ogp` ブロックを追加する：
+
+```yaml
+ogp:
+  enabled: true
+  background_color: "#1e1e2e"
+  text_color: "#cdd6f4"
+  font_file: "assets/fonts/NotoSansJP-Bold.ttf"   # TTF/OTF、CJK対応に必要
+  logo_file: "assets/images/logo.png"              # オプションのロゴオーバーレイ
+  width: 1200
+  height: 630
+```
+
+フォントファイルはユーザーが用意する。TTF/OTF形式であれば任意のフォントが利用可能。
+
+### 18.4 データモデル
+
+`model.go` に `OGPConfig` を追加する：
+
+```go
+// OGPConfig はビルド時OGP画像生成の設定を保持する。
+type OGPConfig struct {
+    Enabled         bool   `yaml:"enabled"`
+    BackgroundColor string `yaml:"background_color"`
+    TextColor       string `yaml:"text_color"`
+    FontFile        string `yaml:"font_file"`
+    LogoFile        string `yaml:"logo_file"` // 空文字列はロゴなし
+    Width           int    `yaml:"width"`
+    Height          int    `yaml:"height"`
+}
+```
+
+`Config` に追加する：
+
+```go
+type Config struct {
+    // ... 既存フィールド ...
+    OGP OGPConfig `yaml:"ogp"`
+}
+```
+
+### 18.5 実装
+
+**`internal/generator/ogp.go`**（新規ファイル）
+- `OutputGenerator` を満たす `OGPGenerator` を実装
+- 標準ライブラリ `image`・`image/color`・`image/png`・`image/draw` を使用
+- TrueTypeレンダリングに `golang.org/x/image/font` と `golang.org/x/image/font/opentype` を使用
+- `golang.org/x/image/math/fixed` でフォントレンダリング用の固定小数点演算を行う
+- レンダリングパイプライン：背景塗りつぶし → ロゴ描画（設定時） → タイトルテキストを縦横中央に折り返して描画
+- `ogp.enabled: false` の場合は生成をスキップ
+- 出力 `.png` が存在し、かつ元の記事が変更されていない場合はスキップ（`ChangeSet` によるキャッシュ対応）
+
+**`internal/generator/generator.go`**
+- `cfg.OGP.Enabled` が true の場合、ビルドパイプライン内で `OGPGenerator.Generate()` を呼び出す
+
+**テンプレート使用例（ユーザー側）**：
+
+```html
+<!-- article.html -->
+<meta property="og:image"
+  content="{{.Config.Site.BaseURL}}/ogp/{{.Article.FrontMatter.Slug}}.png">
+<meta name="twitter:image"
+  content="{{.Config.Site.BaseURL}}/ogp/{{.Article.FrontMatter.Slug}}.png">
+
+<!-- index.html, tag.html, category.html -->
+<meta property="og:image"
+  content="{{.Config.Site.BaseURL}}/assets/images/ogp-default.png">
+```
+
+### 18.6 依存関係
+
+| パッケージ | 用途 |
+|---|---|
+| `image`, `image/png`, `image/draw` | 標準ライブラリ — キャンバス生成とPNGエンコード |
+| `golang.org/x/image/font` | フォントフェースインターフェースとテキスト描画 |
+| `golang.org/x/image/font/opentype` | TTF/OTFフォントファイルの読み込み |
+| `golang.org/x/image/math/fixed` | フォントレンダリング用固定小数点演算 |
+
+`golang.org/x/image` は多くのGoプロジェクトで推移的に取り込まれており、ビルドオーバーヘッドは無視できる。
+
+---
+
+## 19. 技術的負債の管理
+
+### 19.1 継続的品質管理
 
 - **依存関係の更新**: dependabot により週次でPRを自動作成
 - **静的解析・テスト**: PRごとに `golangci-lint` および `go test -race -cover` を CI で実行
 - **カバレッジ閾値**: `go test -coverprofile` の結果をスクリプトで検証し、80%未満の場合はCIを失敗させる
 
-### 17.2 パフォーマンス監視
+### 19.2 パフォーマンス監視
 
 - **ベンチマーク**: `go test -bench` でパーサー・レンダラー・差分ビルドの各処理時間を計測
 - **リグレッション検知**: ベンチマーク結果の前回比較を CI で記録し、大幅な悪化時にアラート
 
-### 17.3 既知の制限事項
+### 19.3 既知の制限事項
 
 - `gohan serve` のライブリロードは `fsnotify` に依存するため、一部のNFSやDockerボリューム環境でイベント検知が機能しない可能性がある
 - `os/exec` による Git 呼び出しは Git がインストールされていない環境では動作しない（差分ビルドのみ影響、フルビルドは動作する）
