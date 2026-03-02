@@ -173,3 +173,55 @@ func TestGenerateSitemap_UsesPrecomputedURL(t *testing.T) {
 		t.Errorf("sitemap should NOT use slug when URL is set:\n%s", s)
 	}
 }
+
+func TestGenerateFeeds_I18nUsesPrecomputedURL(t *testing.T) {
+	dir := t.TempDir()
+	date := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+	articles := []*model.ProcessedArticle{
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{
+				Title: "Japanese Post",
+				Slug:  "ja-post",
+				Date:  date,
+			}},
+			URL:    "/ja/posts/ja-post/",
+			Locale: "ja",
+		},
+	}
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"feed.xml", "atom.xml"} {
+		data, _ := os.ReadFile(filepath.Join(dir, name))
+		s := string(data)
+		if !strings.Contains(s, "/ja/posts/ja-post/") {
+			t.Errorf("%s: expected locale-aware URL /ja/posts/ja-post/:\n%s", name, s)
+		}
+		if strings.Contains(s, "https://example.com/posts/ja-post/") {
+			t.Errorf("%s: should NOT fall back to /posts/ when URL is set:\n%s", name, s)
+		}
+	}
+}
+
+func TestGenerateFeeds_NoURLFallsBackToSlug(t *testing.T) {
+	dir := t.TempDir()
+	articles := []*model.ProcessedArticle{
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{
+				Title: "Plain Post",
+				Slug:  "plain-post",
+				Date:  time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			}},
+			// URL is empty (no i18n)
+		},
+	}
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"feed.xml", "atom.xml"} {
+		data, _ := os.ReadFile(filepath.Join(dir, name))
+		if !strings.Contains(string(data), "/posts/plain-post/") {
+			t.Errorf("%s: expected /posts/plain-post/ fallback:\n%s", name, data)
+		}
+	}
+}

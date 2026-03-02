@@ -25,6 +25,7 @@ func runBuild(args []string) error {
 	parallel := fs.Int("parallel", 0, "override parallelism (0 = use config value)")
 	dryRun := fs.Bool("dry-run", false, "simulate build without writing files")
 	logFmt := fs.String("log-format", "text", "log format: text or json")
+	draft := fs.Bool("draft", false, "include draft articles in the build")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -80,11 +81,22 @@ func runBuild(args []string) error {
 	}
 
 	// Parse content.
-	p := parser.NewFileParser()
+	p := parser.NewFileParser(cfg.Build.ExcludeFiles...)
 	contentDir := filepath.Join(rootDir, cfg.Build.ContentDir)
 	articles, err := p.ParseAll(contentDir)
 	if err != nil {
 		return fmt.Errorf("parse content: %w", err)
+	}
+
+	// Filter draft articles unless --draft flag is set.
+	if !*draft {
+		filtered := articles[:0]
+		for _, a := range articles {
+			if !a.FrontMatter.Draft {
+				filtered = append(filtered, a)
+			}
+		}
+		articles = filtered
 	}
 
 	// Detect diff.
@@ -108,9 +120,28 @@ func runBuild(args []string) error {
 	proc.BuildTranslationMap(processed)
 
 	// Build taxonomy.
-	taxo, err := proc.BuildTaxonomyRegistry(processed, *cfg)
-	if err != nil {
-		return fmt.Errorf("build taxonomy: %w", err)
+	// If tags.yaml / categories.yaml exist in the content directory they are
+	// treated as the authoritative registry and every article is validated
+	// against them.  When the files are absent the registry is derived from
+	// the articles themselves (no validation errors are possible).
+	var taxo *model.TaxonomyRegistry
+	loaded, loadErr := processor.LoadTaxonomyRegistry(contentDir)
+	if loadErr != nil {
+		return fmt.Errorf("load taxonomy registry: %w", loadErr)
+	}
+	if len(loaded.Tags) > 0 || len(loaded.Categories) > 0 {
+		taxo = loaded
+		if errs := processor.ValidateArticleTaxonomies(processed, taxo); len(errs) > 0 {
+			for _, e := range errs {
+				fmt.Fprintf(os.Stderr, "warn: taxonomy: %v\n", e)
+			}
+		}
+	} else {
+		computed, err := proc.BuildTaxonomyRegistry(processed, *cfg)
+		if err != nil {
+			return fmt.Errorf("build taxonomy: %w", err)
+		}
+		taxo = computed
 	}
 
 	site := &model.Site{
