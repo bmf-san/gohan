@@ -206,6 +206,164 @@ func TestExtractSummary_Truncate(t *testing.T) {
 	}
 }
 
+// ---- i18n tests ----
+
+func i18nCfg() model.Config {
+	return model.Config{
+		Build: model.BuildConfig{ContentDir: "content", OutputDir: "public"},
+		I18n:  model.I18nConfig{Locales: []string{"en", "ja"}, DefaultLocale: "en"},
+	}
+}
+
+func TestDetectLocale(t *testing.T) {
+	cfg := i18nCfg()
+	tests := []struct {
+		filePath string
+		want     string
+	}{
+		{"content/en/posts/hello.md", "en"},
+		{"content/ja/posts/hello.md", "ja"},
+		{"content/posts/hello.md", ""},  // no matching locale segment
+		{"other/en/posts/hello.md", ""}, // outside content dir
+	}
+	for _, tc := range tests {
+		a := &model.Article{FilePath: tc.filePath}
+		got := detectLocale(a, cfg)
+		if got != tc.want {
+			t.Errorf("detectLocale(%q) = %q, want %q", tc.filePath, got, tc.want)
+		}
+	}
+}
+
+func TestDetectLocale_NoI18n(t *testing.T) {
+	cfg := model.Config{Build: model.BuildConfig{ContentDir: "content", OutputDir: "public"}}
+	a := &model.Article{FilePath: "content/en/posts/hello.md"}
+	if got := detectLocale(a, cfg); got != "" {
+		t.Errorf("detectLocale without i18n config: got %q, want empty", got)
+	}
+}
+
+func TestComputeOutputPath_I18n(t *testing.T) {
+	cfg := i18nCfg()
+	tests := []struct {
+		filePath string
+		want     string
+	}{
+		// Default locale (en) → no URL prefix
+		{"content/en/posts/hello.md", filepath.Join("public", "posts", "hello", "index.html")},
+		// Non-default locale (ja) → /ja/ prefix
+		{"content/ja/posts/hello.md", filepath.Join("public", "ja", "posts", "hello", "index.html")},
+	}
+	for _, tc := range tests {
+		a := &model.Article{FilePath: tc.filePath}
+		got := computeOutputPath(a, cfg)
+		if got != tc.want {
+			t.Errorf("computeOutputPath(%q) = %q, want %q", tc.filePath, got, tc.want)
+		}
+	}
+}
+
+func TestComputeArticleURL(t *testing.T) {
+	cfg := i18nCfg()
+	tests := []struct {
+		filePath string
+		want     string
+	}{
+		{"content/en/posts/hello.md", "/posts/hello/"},
+		{"content/ja/posts/hello.md", "/ja/posts/hello/"},
+	}
+	for _, tc := range tests {
+		a := &model.Article{FilePath: tc.filePath}
+		got := computeArticleURL(a, cfg)
+		if got != tc.want {
+			t.Errorf("computeArticleURL(%q) = %q, want %q", tc.filePath, got, tc.want)
+		}
+	}
+}
+
+func TestComputeArticleURL_NoI18n(t *testing.T) {
+	cfg := model.Config{Build: model.BuildConfig{ContentDir: "content", OutputDir: "public"}}
+	a := &model.Article{FilePath: "content/posts/hello.md"}
+	if got := computeArticleURL(a, cfg); got != "" {
+		t.Errorf("computeArticleURL without i18n: got %q, want empty", got)
+	}
+}
+
+func TestBuildTranslationMap(t *testing.T) {
+	p := NewSiteProcessor()
+	articles := []*model.ProcessedArticle{
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{TranslationKey: "hello"}},
+			Locale:  "en",
+			URL:     "/posts/hello/",
+		},
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{TranslationKey: "hello"}},
+			Locale:  "ja",
+			URL:     "/ja/posts/hello/",
+		},
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{TranslationKey: ""}},
+			Locale:  "en",
+			URL:     "/posts/other/",
+		},
+	}
+	p.BuildTranslationMap(articles)
+
+	enArt := articles[0]
+	if len(enArt.Translations) != 1 {
+		t.Fatalf("en article: expected 1 translation, got %d", len(enArt.Translations))
+	}
+	if enArt.Translations[0].Locale != "ja" || enArt.Translations[0].URL != "/ja/posts/hello/" {
+		t.Errorf("en Translations[0] = %+v", enArt.Translations[0])
+	}
+
+	jaArt := articles[1]
+	if len(jaArt.Translations) != 1 {
+		t.Fatalf("ja article: expected 1 translation, got %d", len(jaArt.Translations))
+	}
+	if jaArt.Translations[0].Locale != "en" || jaArt.Translations[0].URL != "/posts/hello/" {
+		t.Errorf("ja Translations[0] = %+v", jaArt.Translations[0])
+	}
+
+	// Article without TranslationKey should remain unchanged.
+	if len(articles[2].Translations) != 0 {
+		t.Errorf("unkeyed article should have no translations")
+	}
+}
+
+func TestProcess_I18nLocaleAndURL(t *testing.T) {
+	p := NewSiteProcessor()
+	cfg := i18nCfg()
+	articles := []*model.Article{
+		{FilePath: "content/en/posts/hello.md", RawContent: "Hello", LastModified: time.Now()},
+		{FilePath: "content/ja/posts/hello.md", RawContent: "こんにちは", LastModified: time.Now()},
+	}
+	processed, err := p.Process(articles, cfg)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+	for _, a := range processed {
+		if a.Locale == "" {
+			t.Errorf("Locale not set for %s", a.FilePath)
+		}
+		if a.URL == "" {
+			t.Errorf("URL not set for %s", a.FilePath)
+		}
+	}
+	// Verify actual URLs.
+	byLocale := map[string]string{}
+	for _, a := range processed {
+		byLocale[a.Locale] = a.URL
+	}
+	if byLocale["en"] != "/posts/hello/" {
+		t.Errorf("en URL = %q, want /posts/hello/", byLocale["en"])
+	}
+	if byLocale["ja"] != "/ja/posts/hello/" {
+		t.Errorf("ja URL = %q, want /ja/posts/hello/", byLocale["ja"])
+	}
+}
+
 func TestComputeContentPath(t *testing.T) {
 	tests := []struct {
 		name       string

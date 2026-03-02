@@ -90,6 +90,10 @@ func applyDefaults(cfg *model.Config) {
 	if cfg.Site.GitHubBranch == "" {
 		cfg.Site.GitHubBranch = defaultGitHubBranch
 	}
+	// i18n: when locales are configured, default_locale falls back to site.language.
+	if len(cfg.I18n.Locales) > 0 && cfg.I18n.DefaultLocale == "" {
+		cfg.I18n.DefaultLocale = cfg.Site.Language
+	}
 }
 
 // validate checks required fields and returns an error if any are missing.

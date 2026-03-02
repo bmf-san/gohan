@@ -104,6 +104,9 @@ func runBuild(args []string) error {
 		return fmt.Errorf("process articles: %w", err)
 	}
 
+	// Link translations across locales (no-op when i18n is not configured).
+	proc.BuildTranslationMap(processed)
+
 	// Build taxonomy.
 	taxo, err := proc.BuildTaxonomyRegistry(processed, *cfg)
 	if err != nil {

@@ -43,6 +43,8 @@ func (p *SiteProcessor) Process(articles []*model.Article, cfg model.Config) ([]
 			Summary:     extractSummary(a.RawContent, 200),
 			OutputPath:  computeOutputPath(a, cfg),
 			ContentPath: computeContentPath(a, cfg),
+			Locale:      detectLocale(a, cfg),
+			URL:         computeArticleURL(a, cfg),
 		}
 		result = append(result, processed)
 	}
@@ -116,8 +118,81 @@ func computeContentPath(a *model.Article, cfg model.Config) string {
 	return filepath.ToSlash(rel)
 }
 
+// detectLocale returns the locale code for the article by matching the first
+// path segment after the content directory against cfg.I18n.Locales.
+// Returns an empty string when i18n is not configured or no match is found.
+func detectLocale(a *model.Article, cfg model.Config) string {
+	if len(cfg.I18n.Locales) == 0 {
+		return ""
+	}
+	rel, err := filepath.Rel(cfg.Build.ContentDir, a.FilePath)
+	if err != nil {
+		return ""
+	}
+	parts := strings.SplitN(filepath.ToSlash(rel), "/", 2)
+	if len(parts) == 0 {
+		return ""
+	}
+	for _, loc := range cfg.I18n.Locales {
+		if parts[0] == loc {
+			return loc
+		}
+	}
+	return ""
+}
+
+// computeArticleURL returns the canonical URL path for an article
+// (e.g. "/posts/hello/" or "/ja/posts/hello/").
+// Returns an empty string when i18n is not configured.
+func computeArticleURL(a *model.Article, cfg model.Config) string {
+	if len(cfg.I18n.Locales) == 0 {
+		return ""
+	}
+	outPath := computeOutputPath(a, cfg)
+	rel, err := filepath.Rel(cfg.Build.OutputDir, outPath)
+	if err != nil {
+		return ""
+	}
+	// "posts/hello/index.html" → dir="posts/hello" → "/posts/hello/"
+	// "ja/posts/hello/index.html" → dir="ja/posts/hello" → "/ja/posts/hello/"
+	dir := filepath.ToSlash(filepath.Dir(rel))
+	if dir == "." {
+		return "/"
+	}
+	return "/" + dir + "/"
+}
+
+// BuildTranslationMap populates the Translations field of each ProcessedArticle
+// that has a TranslationKey set, linking it to sibling articles in other locales.
+// Call this once after all articles have been processed.
+func (p *SiteProcessor) BuildTranslationMap(articles []*model.ProcessedArticle) {
+	byKey := make(map[string][]*model.ProcessedArticle)
+	for _, a := range articles {
+		if a.FrontMatter.TranslationKey != "" {
+			byKey[a.FrontMatter.TranslationKey] = append(byKey[a.FrontMatter.TranslationKey], a)
+		}
+	}
+	for _, a := range articles {
+		key := a.FrontMatter.TranslationKey
+		if key == "" {
+			continue
+		}
+		for _, sibling := range byKey[key] {
+			if sibling == a {
+				continue
+			}
+			a.Translations = append(a.Translations, model.LocaleRef{
+				Locale: sibling.Locale,
+				URL:    sibling.URL,
+			})
+		}
+	}
+}
+
 // computeOutputPath determines the output HTML path for an article.
 // Respects FrontMatter.Slug when set; otherwise uses the file base name.
+// When i18n is active, strips the locale segment from the content path and
+// re-adds it as a URL prefix for non-default locales.
 func computeOutputPath(a *model.Article, cfg model.Config) string {
 	rel, err := filepath.Rel(cfg.Build.ContentDir, a.FilePath)
 	if err != nil {
@@ -127,6 +202,18 @@ func computeOutputPath(a *model.Article, cfg model.Config) string {
 	base := strings.TrimSuffix(filepath.Base(rel), filepath.Ext(rel))
 	if a.FrontMatter.Slug != "" {
 		base = a.FrontMatter.Slug
+	}
+	// i18n: strip the locale segment from dir, re-add only for non-default locales.
+	if locale := detectLocale(a, cfg); locale != "" {
+		parts := strings.SplitN(filepath.ToSlash(dir), "/", 2)
+		if len(parts) == 1 {
+			dir = "."
+		} else {
+			dir = filepath.FromSlash(parts[1])
+		}
+		if locale != cfg.I18n.DefaultLocale {
+			dir = filepath.Join(locale, dir)
+		}
 	}
 	return filepath.Join(cfg.Build.OutputDir, dir, base, "index.html")
 }
