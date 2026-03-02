@@ -119,3 +119,58 @@ func TestGenerateFeeds_SlugifiesTitle(t *testing.T) {
 		t.Errorf("expected slugified title in feed:\n%s", data)
 	}
 }
+
+func TestGenerateSitemap_HreflangAlternates(t *testing.T) {
+	newer := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+	articles := []*model.ProcessedArticle{
+		{
+			Article:      model.Article{FrontMatter: model.FrontMatter{Slug: "hello", Date: newer}},
+			Locale:       "en",
+			URL:          "/posts/hello/",
+			Translations: []model.LocaleRef{{Locale: "ja", URL: "/ja/posts/hello/"}},
+		},
+		{
+			Article:      model.Article{FrontMatter: model.FrontMatter{Slug: "hello", Date: newer}},
+			Locale:       "ja",
+			URL:          "/ja/posts/hello/",
+			Translations: []model.LocaleRef{{Locale: "en", URL: "/posts/hello/"}},
+		},
+	}
+	dir := t.TempDir()
+	if err := GenerateSitemap(dir, "https://example.com", articles); err != nil {
+		t.Fatalf("GenerateSitemap: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
+	s := string(data)
+	if !strings.Contains(s, `xmlns:xhtml=`) {
+		t.Error("expected xhtml namespace in sitemap")
+	}
+	if !strings.Contains(s, `hreflang="en"`) || !strings.Contains(s, `hreflang="ja"`) {
+		t.Errorf("missing hreflang attributes:\n%s", s)
+	}
+	if !strings.Contains(s, "/ja/posts/hello/") {
+		t.Errorf("missing ja URL in sitemap:\n%s", s)
+	}
+}
+
+func TestGenerateSitemap_UsesPrecomputedURL(t *testing.T) {
+	dir := t.TempDir()
+	articles := []*model.ProcessedArticle{
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{Slug: "slug", Date: time.Now()}},
+			URL:     "/ja/posts/my-url/",
+		},
+	}
+	if err := GenerateSitemap(dir, "https://example.com", articles); err != nil {
+		t.Fatalf("GenerateSitemap: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
+	s := string(data)
+	if !strings.Contains(s, "/ja/posts/my-url/") {
+		t.Errorf("sitemap should use pre-computed URL:\n%s", s)
+	}
+	if strings.Contains(s, "/posts/slug/") {
+		t.Errorf("sitemap should NOT use slug when URL is set:\n%s", s)
+	}
+}
+

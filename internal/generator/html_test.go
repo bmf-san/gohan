@@ -308,3 +308,44 @@ func TestFilterArticles(t *testing.T) {
 		t.Errorf("expected 0, got %d", len(none))
 	}
 }
+
+func TestGenerate_I18nLocalePrefixedArticlePage(t *testing.T) {
+	outDir := t.TempDir()
+	cfg := model.Config{
+		Build: model.BuildConfig{Parallelism: 1},
+		I18n:  model.I18nConfig{Locales: []string{"en", "ja"}, DefaultLocale: "en"},
+	}
+	site := &model.Site{
+		Config: cfg,
+		Articles: []*model.ProcessedArticle{
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{Slug: "hello"}},
+				Locale:  "en",
+			},
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{Slug: "hello"}},
+				Locale:  "ja",
+			},
+		},
+	}
+	g := NewHTMLGenerator(outDir, &mockEngine{}, cfg)
+	if err := g.Generate(site, nil); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	// Default locale article: no prefix
+	if _, err := os.Stat(filepath.Join(outDir, "posts", "hello", "index.html")); err != nil {
+		t.Errorf("missing en article page: %v", err)
+	}
+	// Non-default locale article: /ja/ prefix
+	if _, err := os.Stat(filepath.Join(outDir, "ja", "posts", "hello", "index.html")); err != nil {
+		t.Errorf("missing ja article page: %v", err)
+	}
+	// Per-locale index pages
+	if _, err := os.Stat(filepath.Join(outDir, "index.html")); err != nil {
+		t.Errorf("missing default locale index.html: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(outDir, "ja", "index.html")); err != nil {
+		t.Errorf("missing ja/index.html: %v", err)
+	}
+}
+

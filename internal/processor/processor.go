@@ -19,4 +19,8 @@ type Processor interface {
 	// BuildTaxonomyRegistry collects all tags and categories referenced across
 	// all articles and validates them against the configured taxonomy YAML files.
 	BuildTaxonomyRegistry(articles []*model.ProcessedArticle, cfg model.Config) (*model.TaxonomyRegistry, error)
+
+	// BuildTranslationMap links articles that share a TranslationKey by
+	// populating their Translations field. Should be called after Process.
+	BuildTranslationMap(articles []*model.ProcessedArticle)
 }

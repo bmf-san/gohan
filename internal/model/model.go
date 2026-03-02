@@ -20,9 +20,28 @@ type ProcessedArticle struct {
 	HTMLContent template.HTML
 	Summary     string
 	OutputPath  string
+	// ContentPath is the content-dir-relative path to the source Markdown file
+	// (e.g. "posts/hello-world.md"). Used to generate GitHub edit/view links.
+	ContentPath string
+	// Locale is the locale code detected from the content path (e.g. "en", "ja").
+	// Empty when i18n is not configured.
+	Locale string
+	// URL is the canonical URL path for this article (e.g. "/posts/hello/" or
+	// "/ja/posts/hello/"). Empty when i18n is not configured.
+	URL string
+	// Translations lists translated variants of this article, keyed by locale.
+	// Populated by BuildTranslationMap after article processing.
+	Translations []LocaleRef
 	// PluginData holds per-article data injected by enabled plugins.
 	// Access in templates: {{index .PluginData "amazon_books"}}
 	PluginData map[string]interface{}
+}
+
+// LocaleRef holds a locale code and the canonical URL for a translated variant
+// of an article. Used to generate language-switcher links in templates.
+type LocaleRef struct {
+	Locale string
+	URL    string
 }
 
 // FrontMatter holds the YAML metadata from the top of a Markdown file.
@@ -36,6 +55,10 @@ type FrontMatter struct {
 	Author      string    `yaml:"author"`
 	Slug        string    `yaml:"slug"`
 	Template    string    `yaml:"template"`
+	// TranslationKey links this article to its translations in other locales.
+	// Articles sharing the same key are treated as translations of each other,
+	// enabling language-switcher links via ProcessedArticle.Translations.
+	TranslationKey string `yaml:"translation_key"`
 	// Extra captures any front-matter keys not listed above.
 	// Plugins read their configuration from this field.
 	Extra map[string]interface{} `yaml:",inline"`
@@ -49,6 +72,7 @@ type Config struct {
 	SyntaxHighlight SyntaxHighlightConfig  `yaml:"syntax_highlight"`
 	OGP             OGPConfig              `yaml:"ogp"`
 	Plugins         map[string]interface{} `yaml:"plugins"`
+	I18n            I18nConfig             `yaml:"i18n"`
 }
 
 // SyntaxHighlightConfig holds settings for code-block syntax highlighting.
@@ -165,6 +189,19 @@ type Pagination struct {
 	TotalItems  int
 	PrevURL     string // empty string if no previous page
 	NextURL     string // empty string if no next page
+}
+
+// I18nConfig holds multi-language content configuration.
+type I18nConfig struct {
+	// Locales is the ordered list of locale codes present under the content
+	// directory (e.g. ["en", "ja"]). When empty, i18n is disabled and gohan
+	// behaves as a single-language site with no URL changes.
+	Locales []string `yaml:"locales"`
+	// DefaultLocale is the locale code served at the root URL (without a
+	// language prefix). Defaults to Site.Language when Locales is non-empty.
+	// Example: if DefaultLocale is "en", /posts/hello/ is English and
+	// /ja/posts/hello/ is Japanese.
+	DefaultLocale string `yaml:"default_locale"`
 }
 
 // OGPConfig holds settings for build-time OGP image generation.

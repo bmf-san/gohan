@@ -90,18 +90,42 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 	perPage := g.cfg.Build.PerPage
 	baseURL := g.cfg.Site.BaseURL
 
-	// Index pages (paginated)
-	jobs = append(jobs, paginatedJobs(site, site.Articles, g.outDir, "index.html", "", baseURL, perPage)...)
+	// Index pages (paginated) — one set per locale when i18n is active.
+	if len(g.cfg.I18n.Locales) > 0 {
+		for _, loc := range g.cfg.I18n.Locales {
+			locale := loc
+			locArticles := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
+				return a.Locale == locale
+			})
+			var basePath, baseURLPath string
+			if locale == g.cfg.I18n.DefaultLocale {
+				basePath = ""
+				baseURLPath = baseURL
+			} else {
+				basePath = locale
+				baseURLPath = baseURL + "/" + locale
+			}
+			jobs = append(jobs, paginatedJobs(site, locArticles, g.outDir, "index.html", basePath, baseURLPath, perPage)...)
+		}
+	} else {
+		jobs = append(jobs, paginatedJobs(site, site.Articles, g.outDir, "index.html", "", baseURL, perPage)...)
+	}
 
-	// Article pages: public/posts/<slug>/index.html
+	// Article pages: locale-aware output path.
 	for _, a := range site.Articles {
 		a := a
 		slug := a.FrontMatter.Slug
 		if slug == "" {
 			slug = slugify(a.FrontMatter.Title)
 		}
+		var articlePath string
+		if a.Locale != "" && a.Locale != g.cfg.I18n.DefaultLocale {
+			articlePath = filepath.Join(g.outDir, a.Locale, "posts", slug, "index.html")
+		} else {
+			articlePath = filepath.Join(g.outDir, "posts", slug, "index.html")
+		}
 		jobs = append(jobs, writeJob{
-			path: filepath.Join(g.outDir, "posts", slug, "index.html"),
+			path: articlePath,
 			tmpl: "article.html",
 			data: siteFor(site, []*model.ProcessedArticle{a}),
 		})
