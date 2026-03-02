@@ -83,11 +83,7 @@ func writeRSS(outDir, baseURL, title string, articles []*model.ProcessedArticle)
 		PubDate:     now,
 	}
 	for _, a := range articles {
-		s := a.FrontMatter.Slug
-		if s == "" {
-			s = slugify(a.FrontMatter.Title)
-		}
-		link := baseURL + "/posts/" + s + "/"
+		link := articleLink(baseURL, a)
 		ch.Items = append(ch.Items, rssItem{
 			Title:       a.FrontMatter.Title,
 			Link:        link,
@@ -112,18 +108,28 @@ func writeAtom(outDir, baseURL, title string, articles []*model.ProcessedArticle
 		Updated: updated,
 	}
 	for _, a := range articles {
-		s := a.FrontMatter.Slug
-		if s == "" {
-			s = slugify(a.FrontMatter.Title)
-		}
 		feed.Entries = append(feed.Entries, atomEntry{
 			Title:   a.FrontMatter.Title,
-			Link:    atomLink{Href: baseURL + "/posts/" + s + "/"},
+			Link:    atomLink{Href: articleLink(baseURL, a)},
 			Updated: a.FrontMatter.Date.UTC().Format(time.RFC3339),
 			Summary: a.Summary,
 		})
 	}
 	return writeXML(filepath.Join(outDir, "atom.xml"), feed)
+}
+
+// articleLink returns the full URL for an article.
+// When a.URL is set (i18n mode), it is appended to baseURL.
+// Otherwise the URL is constructed from the article slug.
+func articleLink(baseURL string, a *model.ProcessedArticle) string {
+	if a.URL != "" {
+		return baseURL + a.URL
+	}
+	s := a.FrontMatter.Slug
+	if s == "" {
+		s = slugify(a.FrontMatter.Title)
+	}
+	return baseURL + "/posts/" + s + "/"
 }
 
 func writeXML(path string, v interface{}) error {
