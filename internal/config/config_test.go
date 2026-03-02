@@ -87,6 +87,9 @@ site:
 	if cfg.Site.Language != "en" {
 		t.Errorf("site.language default: got %q, want %q", cfg.Site.Language, "en")
 	}
+	if cfg.Site.GitHubBranch != "main" {
+		t.Errorf("site.github_branch default: got %q, want \"main\"", cfg.Site.GitHubBranch)
+	}
 }
 
 func TestLoad_MissingTitle(t *testing.T) {

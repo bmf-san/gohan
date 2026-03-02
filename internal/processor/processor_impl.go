@@ -42,6 +42,7 @@ func (p *SiteProcessor) Process(articles []*model.Article, cfg model.Config) ([]
 			HTMLContent: html,
 			Summary:     extractSummary(a.RawContent, 200),
 			OutputPath:  computeOutputPath(a, cfg),
+			ContentPath: computeContentPath(a, cfg),
 		}
 		result = append(result, processed)
 	}
@@ -102,6 +103,17 @@ func (p *SiteProcessor) BuildTaxonomyRegistry(articles []*model.ProcessedArticle
 		}
 	}
 	return reg, nil
+}
+
+// computeContentPath returns the content-dir-relative path to the source file
+// (e.g. "posts/hello-world.md"), using forward slashes for URL compatibility.
+func computeContentPath(a *model.Article, cfg model.Config) string {
+	rel, err := filepath.Rel(cfg.Build.ContentDir, a.FilePath)
+	if err != nil {
+		return filepath.Base(a.FilePath)
+	}
+	// Normalise to forward slashes so the value is safe to embed in a URL.
+	return filepath.ToSlash(rel)
 }
 
 // computeOutputPath determines the output HTML path for an article.
