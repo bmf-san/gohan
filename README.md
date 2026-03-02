@@ -136,6 +136,12 @@ For architecture and design decisions see [docs/DESIGN_DOC.md](docs/DESIGN_DOC.m
 
 ---
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and contribution guidelines.

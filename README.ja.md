@@ -136,6 +136,12 @@ books:
 
 ---
 
+## 変更履歴
+
+リリース履歴については [CHANGELOG.md](CHANGELOG.md) を参照してください。
+
+---
+
 ## 貢献
 
 開発セットアップやコントリビュートの手順については [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
