@@ -14,11 +14,17 @@ import (
 // FileParser implements the Parser interface, reading Markdown files from disk.
 // Each file may optionally begin with a YAML front matter block delimited by
 // "---" lines. The remainder of the file is treated as the raw Markdown body.
-type FileParser struct{}
+//
+// ExcludeFiles holds glob patterns (relative to the content directory) that
+// should be skipped during ParseAll. Patterns use filepath.Match syntax.
+type FileParser struct {
+	excludeFiles []string
+}
 
-// NewFileParser returns a new FileParser.
-func NewFileParser() *FileParser {
-	return &FileParser{}
+// NewFileParser returns a new FileParser. Pass any number of glob patterns
+// (relative to the content directory) to exclude matching files from ParseAll.
+func NewFileParser(excludeFiles ...string) *FileParser {
+	return &FileParser{excludeFiles: excludeFiles}
 }
 
 // Parse reads the file at filePath, extracts any YAML front matter, and
@@ -49,6 +55,8 @@ func (p *FileParser) Parse(filePath string) (*model.Article, error) {
 
 // ParseAll walks contentDir recursively and returns one *model.Article per
 // Markdown file (.md or .markdown extension, case-insensitive).
+// Files whose path (relative to contentDir) matches any pattern in
+// FileParser.excludeFiles are silently skipped.
 func (p *FileParser) ParseAll(contentDir string) ([]*model.Article, error) {
 	var articles []*model.Article
 
@@ -62,6 +70,17 @@ func (p *FileParser) ParseAll(contentDir string) ([]*model.Article, error) {
 		ext := strings.ToLower(filepath.Ext(path))
 		if ext != ".md" && ext != ".markdown" {
 			return nil
+		}
+		// Check exclude patterns against the path relative to contentDir.
+		if len(p.excludeFiles) > 0 {
+			rel, relErr := filepath.Rel(contentDir, path)
+			if relErr == nil {
+				for _, pattern := range p.excludeFiles {
+					if matched, _ := filepath.Match(pattern, rel); matched {
+						return nil
+					}
+				}
+			}
 		}
 		a, parseErr := p.Parse(path)
 		if parseErr != nil {
