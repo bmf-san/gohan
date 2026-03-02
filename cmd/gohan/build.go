@@ -12,6 +12,7 @@ import (
 	"github.com/bmf-san/gohan/internal/generator"
 	"github.com/bmf-san/gohan/internal/model"
 	"github.com/bmf-san/gohan/internal/parser"
+	"github.com/bmf-san/gohan/internal/plugin"
 	"github.com/bmf-san/gohan/internal/processor"
 	gohantemplate "github.com/bmf-san/gohan/internal/template"
 )
@@ -114,6 +115,11 @@ func runBuild(args []string) error {
 		Articles:   processed,
 		Tags:       taxo.Tags,
 		Categories: taxo.Categories,
+	}
+
+	// Run plugins.
+	if err := plugin.DefaultRegistry().Enrich(site); err != nil {
+		return fmt.Errorf("plugin enrichment: %w", err)
 	}
 
 	if *dryRun {

@@ -1180,20 +1180,126 @@ type Config struct {
 
 ---
 
-## 19. 技術的負債の管理
+## 19. プラグインシステム
 
-### 19.1 継続的品質管理
+### 19.1 概要
+
+gohan は **ビルトインプラグインシステム** を備えており、オプション機能をプロジェクトごとに `config.yaml` で有効化できます。ユーザーが Go コードを書く必要はありません。
+
+プラグインは gohan バイナリにコンパイル済みで同梱されます。有効・無効の切り替えは設定変更のみで完結し、再コンパイルは不要です。
+
+### 19.2 アーキテクチャ
+
+```
+cmd/gohan/build.go
+  └── plugin.DefaultRegistry().Enrich(site)   ← Process() と Generate() の間で呼ばれる
+        └── 有効な各プラグインに対して:
+              plugin.TemplateData(article, cfg) → article.PluginData["<name>"] に格納
+```
+
+テンプレートでの参照パターン:
+```html
+{{with index .PluginData "amazon_books"}}
+  {{range .books}}
+    <a href="{{.LinkURL}}">{{.Title}}</a>
+  {{end}}
+{{end}}
+```
+
+### 19.3 Plugin インターフェース
+
+`internal/plugin/plugin.go` で定義:
+
+```go
+type Plugin interface {
+    Name() string
+    Enabled(cfg map[string]interface{}) bool
+    TemplateData(article *model.ProcessedArticle, cfg map[string]interface{}) (map[string]interface{}, error)
+}
+```
+
+- **`Name()`** — `config.yaml` の `plugins.<name>` および `ProcessedArticle.PluginData` のキーとなる一意識別子
+- **`Enabled()`** — プラグインの設定サブマップを受け取り、実行可否を返す
+- **`TemplateData()`** — テンプレートに公開する任意のデータを返す
+
+### 19.4 フロントマター拡張
+
+プラグインは `FrontMatter.Extra` から記事ごとのデータを読み取ります。このフィールドは `yaml:",inline"` により未知の YAML キーをすべてキャプチャします:
+
+```yaml
+---
+title: My Article
+tags: [go]
+# プラグイン固有のキー:
+books:
+  - asin: "4873119464"
+    title: "入門 Go"
+---
+```
+
+### 19.5 ビルトインプラグイン
+
+| プラグイン | パッケージ | 用途 |
+|--------|---------|-----|
+| `amazon_books` | `internal/plugin/amazonbooks` | Amazonアフィリエイト書籍カード |
+
+#### amazon_books
+
+記事フロントマターに記載された ASIN から書籍カードデータ（書影URL・商品URL・タイトル）を生成します。
+
+**config.yaml:**
+```yaml
+plugins:
+  amazon_books:
+    enabled: true
+    tag: "your-associate-tag-22"
+```
+
+**記事フロントマター:**
+```yaml
+books:
+  - asin: "4873119464"
+    title: "入門 Go"  # 任意。alt属性・キャプション用
+```
+
+**テンプレートデータ構造:**
+```
+.PluginData["amazon_books"].books → []BookCard
+  BookCard.ASIN      string
+  BookCard.Title     string
+  BookCard.ImageURL  string   # images-na.ssl-images-amazon.com CDN
+  BookCard.LinkURL   string   # amazon.co.jp/dp/{ASIN}?tag={tag}
+```
+
+### 19.6 新しいプラグインの追加方法
+
+1. `internal/plugin/<name>/<name>.go` を作成し `plugin.Plugin` を実装
+2. コンパイル時インターフェースチェックを追加: `var _ plugin.Plugin = (*MyPlugin)(nil)`
+3. `internal/plugin/registry.go` の `DefaultRegistry()` に登録
+4. 本セクションにドキュメントを追記
+
+### 19.7 スコープ
+
+- `plugin` パッケージによる動的ロードは意図的にスコープ外 — OS制約が多く、静的サイトジェネレーターには不要な複雑性をもたらすため
+- プラグインはHTMLを生成しない。データをテーマに提供するのみで、UIはテーマ側が完全制御する
+- プラグインから見た記事データは読み取り専用
+
+---
+
+## 20. 技術的負債の管理
+
+### 20.1 継続的品質管理
 
 - **依存関係の更新**: dependabot により週次でPRを自動作成
 - **静的解析・テスト**: PRごとに `golangci-lint` および `go test -race -cover` を CI で実行
 - **カバレッジ閾値**: `go test -coverprofile` の結果をスクリプトで検証し、80%未満の場合はCIを失敗させる
 
-### 19.2 パフォーマンス監視
+### 20.2 パフォーマンス監視
 
 - **ベンチマーク**: `go test -bench` でパーサー・レンダラー・差分ビルドの各処理時間を計測
 - **リグレッション検知**: ベンチマーク結果の前回比較を CI で記録し、大幅な悪化時にアラート
 
-### 19.3 既知の制限事項
+### 20.3 既知の制限事項
 
 - `gohan serve` のライブリロードは `fsnotify` に依存するため、一部のNFSやDockerボリューム環境でイベント検知が機能しない可能性がある
 - `os/exec` による Git 呼び出しは Git がインストールされていない環境では動作しない（差分ビルドのみ影響、フルビルドは動作する）

@@ -23,8 +23,7 @@ This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77
 - **タクソノミー** — タグ・カテゴリーページを自動生成
 - **Atom フィード / サイトマップ** — `atom.xml`・`sitemap.xml` を自動生成
 - **ライブリロード開発サーバー** — `gohan serve` でファイル変更を検知してブラウザを自動リロード
-- **カスタマイズ可能なテーマ** — Go `html/template` による完全制御
-
+- **カスタマイズ可能なテーマ** — Go `html/template` による完全制御- **プラグインシステム** — `config.yaml` で有効化できるビルトインプラグイン（Goコード不要）
 ---
 
 ## インストール
@@ -73,6 +72,49 @@ gohan build
 # 5. 開発サーバーでプレビュー
 gohan serve   # http://127.0.0.1:1313 を開く
 ```
+
+---
+
+## プラグイン
+
+プラグインは gohan バイナリに同梱されており、`config.yaml` で有効・無効を切り替えます。Goコードの記述は不要です。
+
+### amazon_books
+
+記事フロントマターに記載した ASIN から Amazon 書籍カードデータ（書影・商品URL・タイトル）を生成します。アフィリエイトリンクの導線改善を目的としています。
+
+**config.yaml:**
+```yaml
+plugins:
+  amazon_books:
+    enabled: true
+    tag: "your-associate-tag-22"   # Amazon アソシエイトのトラッキングタグ
+```
+
+**記事フロントマター:**
+```yaml
+books:
+  - asin: "4873119464"
+    title: "入門 Go"   # 任意。alt属性・キャプション用
+```
+
+**テンプレートでの利用例**（テーマの `article.html`）:
+```html
+{{with index .PluginData "amazon_books"}}
+{{if .books}}
+<section class="book-cards">
+  {{range .books}}
+  <a href="{{.LinkURL}}" target="_blank" rel="noopener">
+    <img src="{{.ImageURL}}" alt="{{.Title}}">
+    <span>{{.Title}}</span>
+  </a>
+  {{end}}
+</section>
+{{end}}
+{{end}}
+```
+
+プラグインアーキテクチャの詳細は [docs/DESIGN_DOC.ja.md §20](docs/DESIGN_DOC.ja.md) を参照してください。
 
 ---
 
