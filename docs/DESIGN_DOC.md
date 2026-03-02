@@ -1068,15 +1068,6 @@ type BuildConfig struct {
 - Each paginated page has its own canonical URL (`/page/2/`, etc.)
 - No redirect is required when migrating from query-parameter pagination (`?page=2`), since paginated listing pages are rarely indexed or externally linked
 
-### 17.7 Scope
-
-| Target | Phase 1 | Future |
-|---|---|---|
-| Index listing page | ✅ | — |
-| Tag listing pages | ✅ | — |
-| Category listing pages | ✅ | — |
-| Archive listing pages | — | ✅ |
-
 ---
 
 ## 18. OGP Image Generation
@@ -1186,16 +1177,6 @@ type Config struct {
 | `golang.org/x/image/math/fixed` | Fixed-point arithmetic for font rendering |
 
 `golang.org/x/image` is already transitively pulled in by many Go projects and adds negligible build overhead.
-
-### 18.7 Scope
-
-| Feature | Phase 1 | Future |
-|---|---|---|
-| Per-article OGP image (title text on solid background) | ✅ | — |
-| Logo overlay | ✅ | — |
-| Site-level default image (user-supplied, no generation) | ✅ | — |
-| Custom OGP layout templates | — | ✅ |
-| Dynamic generation via Cloudflare Workers | — | ✅ |
 
 ---
 
