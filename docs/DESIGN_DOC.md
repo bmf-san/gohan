@@ -963,33 +963,13 @@ testdata/
 
 ---
 
-## 17. Technical Debt Management
+## 17. Pagination
 
-### 17.1 Continuous Quality Management
-
-- **Dependency updates**: dependabot automatically creates PRs on a weekly basis
-- **Static analysis & testing**: Run `golangci-lint` and `go test -race -cover` in CI for every PR
-- **Coverage threshold**: Verify `go test -coverprofile` results with a script and fail CI if below 80%
-
-### 17.2 Performance Monitoring
-
-- **Benchmarks**: Measure processing time for parser, renderer, and differential build using `go test -bench`
-- **Regression detection**: Record benchmark result comparisons against the previous run in CI and alert on significant degradation
-
-### 17.3 Known Limitations
-
-- Live reload in `gohan serve` depends on `fsnotify`, so event detection may not work in some NFS or Docker volume environments
-- Git calls via `os/exec` do not work in environments where Git is not installed (only affects differential builds; full builds still work)
-
----
-
-## 18. Pagination
-
-### 18.1 Overview
+### 17.1 Overview
 
 gohan generates paginated listing pages using a path-based URL scheme, consistent with the conventions of major SSGs (Hugo, Jekyll, etc.) and compatible with static hosting (Cloudflare Pages, GitHub Pages).
 
-### 18.2 URL Scheme
+### 17.2 URL Scheme
 
 ```
 /              → Page 1 (public/index.html)
@@ -1004,7 +984,7 @@ gohan generates paginated listing pages using a path-based URL scheme, consisten
   - `/categories/architecture/` → Page 1
   - `/categories/architecture/page/2/` → Page 2
 
-### 18.3 Configuration
+### 17.3 Configuration
 
 `per_page` is added to `BuildConfig` in `config.yaml`:
 
@@ -1013,7 +993,7 @@ build:
   per_page: 10   # number of articles per page. 0 or omitted disables pagination
 ```
 
-### 18.4 Data Model
+### 17.4 Data Model
 
 Add `Pagination` struct and `PerPage` field to `model.go`:
 
@@ -1047,7 +1027,7 @@ type BuildConfig struct {
 }
 ```
 
-### 18.5 Implementation
+### 17.5 Implementation
 
 **`internal/model/model.go`**
 - Add `Pagination` struct
@@ -1082,13 +1062,13 @@ type BuildConfig struct {
 {{end}}
 ```
 
-### 18.6 SEO Considerations
+### 17.6 SEO Considerations
 
 - `<link rel="prev">` / `<link rel="next">` allows Google to discover and follow the pagination chain
 - Each paginated page has its own canonical URL (`/page/2/`, etc.)
 - No redirect is required when migrating from query-parameter pagination (`?page=2`), since paginated listing pages are rarely indexed or externally linked
 
-### 18.7 Scope
+### 17.7 Scope
 
 | Target | Phase 1 | Future |
 |---|---|---|
@@ -1099,13 +1079,13 @@ type BuildConfig struct {
 
 ---
 
-## 19. OGP Image Generation
+## 18. OGP Image Generation
 
-### 19.1 Overview
+### 18.1 Overview
 
 gohan generates OGP (Open Graph Protocol) thumbnail images at build time using pure Go. Each article gets a unique `og:image` derived from its title, eliminating the need for manual image creation.
 
-### 19.2 Output
+### 18.2 Output
 
 ```
 public/
@@ -1125,7 +1105,7 @@ Listing pages (index, tag, category) fall back to a user-supplied default image:
 {{.Config.Site.BaseURL}}/assets/images/ogp-default.png
 ```
 
-### 19.3 Configuration
+### 18.3 Configuration
 
 Add an `ogp` block to `config.yaml`:
 
@@ -1142,7 +1122,7 @@ ogp:
 
 The font file must be bundled by the user. Any TTF/OTF font is supported.
 
-### 19.4 Data Model
+### 18.4 Data Model
 
 Add `OGPConfig` to `model.go`:
 
@@ -1168,7 +1148,7 @@ type Config struct {
 }
 ```
 
-### 19.5 Implementation
+### 18.5 Implementation
 
 **`internal/generator/ogp.go`** (new file)
 - Implement `OGPGenerator` satisfying `OutputGenerator`
@@ -1196,7 +1176,7 @@ type Config struct {
   content="{{.Config.Site.BaseURL}}/assets/images/ogp-default.png">
 ```
 
-### 19.6 Dependencies
+### 18.6 Dependencies
 
 | Package | Purpose |
 |---|---|
@@ -1207,7 +1187,7 @@ type Config struct {
 
 `golang.org/x/image` is already transitively pulled in by many Go projects and adds negligible build overhead.
 
-### 19.7 Scope
+### 18.7 Scope
 
 | Feature | Phase 1 | Future |
 |---|---|---|
@@ -1216,6 +1196,26 @@ type Config struct {
 | Site-level default image (user-supplied, no generation) | ✅ | — |
 | Custom OGP layout templates | — | ✅ |
 | Dynamic generation via Cloudflare Workers | — | ✅ |
+
+---
+
+## 19. Technical Debt Management
+
+### 19.1 Continuous Quality Management
+
+- **Dependency updates**: dependabot automatically creates PRs on a weekly basis
+- **Static analysis & testing**: Run `golangci-lint` and `go test -race -cover` in CI for every PR
+- **Coverage threshold**: Verify `go test -coverprofile` results with a script and fail CI if below 80%
+
+### 19.2 Performance Monitoring
+
+- **Benchmarks**: Measure processing time for parser, renderer, and differential build using `go test -bench`
+- **Regression detection**: Record benchmark result comparisons against the previous run in CI and alert on significant degradation
+
+### 19.3 Known Limitations
+
+- Live reload in `gohan serve` depends on `fsnotify`, so event detection may not work in some NFS or Docker volume environments
+- Git calls via `os/exec` do not work in environments where Git is not installed (only affects differential builds; full builds still work)
 
 ---
 
