@@ -77,6 +77,22 @@ func ValidateArticleTaxonomies(articles []*model.ProcessedArticle, registry *mod
 	return errs
 }
 
+// ValidateOutputPaths checks that no two articles resolve to the same output
+// path, which would cause one page to silently overwrite the other during
+// HTML generation.  It returns one error per duplicate pair.
+func ValidateOutputPaths(articles []*model.ProcessedArticle) []error {
+	seen := make(map[string]string, len(articles)) // OutputPath -> FilePath
+	var errs []error
+	for _, a := range articles {
+		if prev, ok := seen[a.OutputPath]; ok {
+			errs = append(errs, fmt.Errorf("duplicate output path %q: %q and %q", a.OutputPath, prev, a.FilePath))
+		} else {
+			seen[a.OutputPath] = a.FilePath
+		}
+	}
+	return errs
+}
+
 // BuildTagIndex returns a map from tag name to the articles that use that tag.
 func BuildTagIndex(articles []*model.ProcessedArticle) map[string][]*model.ProcessedArticle {
 	idx := make(map[string][]*model.ProcessedArticle)
