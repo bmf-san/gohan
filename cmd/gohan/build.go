@@ -83,6 +83,11 @@ func runBuild(args []string) error {
 	// Parse content.
 	p := parser.NewFileParser(cfg.Build.ExcludeFiles...)
 	contentDir := filepath.Join(rootDir, cfg.Build.ContentDir)
+	// Resolve path fields to absolute so that processor functions that call
+	// filepath.Rel(cfg.Build.ContentDir, a.FilePath) work correctly when
+	// article FilePaths are absolute (as set by the file parser).
+	cfg.Build.ContentDir = contentDir
+	cfg.Build.OutputDir = filepath.Join(rootDir, cfg.Build.OutputDir)
 	articles, err := p.ParseAll(contentDir)
 	if err != nil {
 		return fmt.Errorf("parse content: %w", err)
@@ -163,7 +168,7 @@ func runBuild(args []string) error {
 	}
 
 	// Render HTML.
-	outDir := filepath.Join(rootDir, cfg.Build.OutputDir)
+	outDir := cfg.Build.OutputDir
 	templateDir := filepath.Join(rootDir, cfg.Theme.Dir, "templates")
 	tmpl := gohantemplate.NewEngine()
 	if loadErr := tmpl.Load(templateDir, nil); loadErr != nil {
