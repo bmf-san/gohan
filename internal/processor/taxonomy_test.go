@@ -95,6 +95,40 @@ func TestValidateArticleTaxonomies_UnknownCategory(t *testing.T) {
 	}
 }
 
+func TestValidateOutputPaths_NoDuplicates(t *testing.T) {
+	articles := []*model.ProcessedArticle{
+		{Article: *testArticle("a.md", "", "", nil, nil, time.Time{}), OutputPath: "public/posts/a/index.html"},
+		{Article: *testArticle("b.md", "", "", nil, nil, time.Time{}), OutputPath: "public/posts/b/index.html"},
+	}
+	if errs := ValidateOutputPaths(articles); len(errs) != 0 {
+		t.Errorf("expected no errors, got: %v", errs)
+	}
+}
+
+func TestValidateOutputPaths_Duplicate(t *testing.T) {
+	articles := []*model.ProcessedArticle{
+		{Article: *testArticle("a.md", "", "", nil, nil, time.Time{}), OutputPath: "public/posts/same/index.html"},
+		{Article: *testArticle("b.md", "", "", nil, nil, time.Time{}), OutputPath: "public/posts/same/index.html"},
+	}
+	errs := ValidateOutputPaths(articles)
+	if len(errs) != 1 {
+		t.Errorf("expected 1 error, got %d: %v", len(errs), errs)
+	}
+}
+
+func TestValidateOutputPaths_MultipleCollisions(t *testing.T) {
+	articles := []*model.ProcessedArticle{
+		{Article: *testArticle("a.md", "", "", nil, nil, time.Time{}), OutputPath: "public/posts/same/index.html"},
+		{Article: *testArticle("b.md", "", "", nil, nil, time.Time{}), OutputPath: "public/posts/same/index.html"},
+		{Article: *testArticle("c.md", "", "", nil, nil, time.Time{}), OutputPath: "public/posts/other/index.html"},
+		{Article: *testArticle("d.md", "", "", nil, nil, time.Time{}), OutputPath: "public/posts/other/index.html"},
+	}
+	errs := ValidateOutputPaths(articles)
+	if len(errs) != 2 {
+		t.Errorf("expected 2 errors, got %d: %v", len(errs), errs)
+	}
+}
+
 func TestBuildTagIndex(t *testing.T) {
 	articles := []*model.ProcessedArticle{
 		{Article: *testArticle("a.md", "", "", []string{"go", "ssg"}, nil, time.Time{})},

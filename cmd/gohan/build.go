@@ -124,6 +124,14 @@ func runBuild(args []string) error {
 	// Link translations across locales (no-op when i18n is not configured).
 	proc.BuildTranslationMap(processed)
 
+	// Validate that no two articles resolve to the same output path.
+	// Duplicate output paths cause silent page overwrites during HTML generation.
+	if errs := processor.ValidateOutputPaths(processed); len(errs) > 0 {
+		for _, e := range errs {
+			fmt.Fprintf(os.Stderr, "warn: output path: %v\n", e)
+		}
+	}
+
 	// Build taxonomy.
 	// If tags.yaml / categories.yaml exist in the content directory they are
 	// treated as the authoritative registry and every article is validated
