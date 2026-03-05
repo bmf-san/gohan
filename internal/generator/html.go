@@ -90,7 +90,6 @@ func (g *HTMLGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) e
 func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 	var jobs []writeJob
 	perPage := g.cfg.Build.PerPage
-	baseURL := g.cfg.Site.BaseURL
 
 	// Index pages (paginated) — one set per locale when i18n is active.
 	if len(g.cfg.I18n.Locales) > 0 {
@@ -103,10 +102,10 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			var basePath, baseURLPath string
 			if locale == g.cfg.I18n.DefaultLocale {
 				basePath = ""
-				baseURLPath = baseURL
+				baseURLPath = ""
 			} else {
 				basePath = locale
-				baseURLPath = baseURL + "/" + locale
+				baseURLPath = "/" + locale
 			}
 			jobs = append(jobs, paginatedJobs(site, locArticles, g.outDir, "index.html", basePath, baseURLPath, perPage)...)
 		}
@@ -114,7 +113,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		allArticles := make([]*model.ProcessedArticle, len(site.Articles))
 		copy(allArticles, site.Articles)
 		sortByDateDesc(allArticles)
-		jobs = append(jobs, paginatedJobs(site, allArticles, g.outDir, "index.html", "", baseURL, perPage)...)
+		jobs = append(jobs, paginatedJobs(site, allArticles, g.outDir, "index.html", "", "", perPage)...)
 	}
 
 	// Article pages: use pre-computed output path and respect FrontMatter.Template.
@@ -145,7 +144,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		})
 		sortByDateDesc(filtered)
 		basePath := filepath.Join("tags", t.Name)
-		baseURLPath := baseURL + "/tags/" + t.Name
+		baseURLPath := "/tags/" + t.Name
 		jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage)...)
 	}
 
@@ -162,7 +161,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		})
 		sortByDateDesc(filtered)
 		basePath := filepath.Join("categories", c.Name)
-		baseURLPath := baseURL + "/categories/" + c.Name
+		baseURLPath := "/categories/" + c.Name
 		jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage)...)
 	}
 
