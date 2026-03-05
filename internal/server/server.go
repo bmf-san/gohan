@@ -136,10 +136,11 @@ const sseScript = `<script>(function(){` +
 	`})()</script>`
 
 type injectingResponseWriter struct {
-	wrapped http.ResponseWriter
-	buf     bytes.Buffer
-	header  int
-	isHTML  bool
+	wrapped       http.ResponseWriter
+	buf           bytes.Buffer
+	header        int
+	isHTML        bool
+	headerWritten bool
 }
 
 func (w *injectingResponseWriter) Header() http.Header { return w.wrapped.Header() }
@@ -152,6 +153,13 @@ func (w *injectingResponseWriter) WriteHeader(code int) {
 
 func (w *injectingResponseWriter) Write(b []byte) (int, error) {
 	if !w.isHTML {
+		// Propagate non-200 status codes (e.g. 404) that were stored by
+		// WriteHeader but not yet forwarded to the underlying ResponseWriter.
+		// Without this, net/http implicitly sends 200 on the first Write.
+		if !w.headerWritten && w.header != 0 && w.header != http.StatusOK {
+			w.wrapped.WriteHeader(w.header)
+			w.headerWritten = true
+		}
 		return w.wrapped.Write(b)
 	}
 	return w.buf.Write(b)
@@ -167,6 +175,7 @@ func (w *injectingResponseWriter) flush() {
 	w.wrapped.Header().Del("Content-Length")
 	if w.header != 0 {
 		w.wrapped.WriteHeader(w.header)
+		w.headerWritten = true
 	}
 	body := w.buf.Bytes()
 	script := []byte(sseScript)
