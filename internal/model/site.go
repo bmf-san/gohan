@@ -2,11 +2,12 @@ package model
 
 // Site holds the full rendering context passed to templates.
 type Site struct {
-	Config     Config
-	Articles   []*ProcessedArticle
-	Tags       []Taxonomy
-	Categories []Taxonomy
-	Pagination *Pagination // nil when pagination is disabled or not a listing page
+	Config        Config
+	Articles      []*ProcessedArticle
+	Tags          []Taxonomy
+	Categories    []Taxonomy
+	Pagination    *Pagination // nil when pagination is disabled or not a listing page
+	CurrentLocale string      // locale for the current page; empty when i18n is not configured
 }
 
 // Pagination holds computed paging metadata for listing pages.

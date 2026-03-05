@@ -107,13 +107,13 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				basePath = locale
 				baseURLPath = "/" + locale
 			}
-			jobs = append(jobs, paginatedJobs(site, locArticles, g.outDir, "index.html", basePath, baseURLPath, perPage)...)
-		}
+jobs = append(jobs, paginatedJobs(site, locArticles, g.outDir, "index.html", basePath, baseURLPath, perPage, locale)...)
+	}
 	} else {
 		allArticles := make([]*model.ProcessedArticle, len(site.Articles))
 		copy(allArticles, site.Articles)
 		sortByDateDesc(allArticles)
-		jobs = append(jobs, paginatedJobs(site, allArticles, g.outDir, "index.html", "", "", perPage)...)
+		jobs = append(jobs, paginatedJobs(site, allArticles, g.outDir, "index.html", "", "", perPage, "")...)
 	}
 
 	// Article pages: use pre-computed output path and respect FrontMatter.Template.
@@ -124,45 +124,119 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		if a.FrontMatter.Template != "" {
 			tmplName = a.FrontMatter.Template
 		}
+		d := siteFor(site, []*model.ProcessedArticle{a})
+		d.CurrentLocale = a.Locale
 		jobs = append(jobs, writeJob{
 			path: articlePath,
 			tmpl: tmplName,
-			data: siteFor(site, []*model.ProcessedArticle{a}),
+			data: d,
 		})
 	}
 
-	// Tag pages (paginated)
-	for _, tag := range site.Tags {
-		t := tag
-		filtered := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
-			for _, tt := range a.FrontMatter.Tags {
-				if tt == t.Name {
-					return true
+	// Tag pages (paginated) — locale-aware when i18n is active
+	if len(g.cfg.I18n.Locales) > 0 {
+		for _, loc := range g.cfg.I18n.Locales {
+			locale := loc
+			for _, tag := range site.Tags {
+				t := tag
+				filtered := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
+					if a.Locale != locale {
+						return false
+					}
+					for _, tt := range a.FrontMatter.Tags {
+						if tt == t.Name {
+							return true
+						}
+					}
+					return false
+				})
+				if len(filtered) == 0 {
+					continue
 				}
+				sortByDateDesc(filtered)
+				var basePath, baseURLPath string
+				if locale == g.cfg.I18n.DefaultLocale {
+					basePath = filepath.Join("tags", t.Name)
+					baseURLPath = "/tags/" + t.Name
+				} else {
+					basePath = filepath.Join(locale, "tags", t.Name)
+					baseURLPath = "/" + locale + "/tags/" + t.Name
+				}
+				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, locale)...)
 			}
-			return false
-		})
-		sortByDateDesc(filtered)
-		basePath := filepath.Join("tags", t.Name)
-		baseURLPath := "/tags/" + t.Name
-		jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage)...)
+		}
+	} else {
+		for _, tag := range site.Tags {
+			t := tag
+			filtered := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
+				for _, tt := range a.FrontMatter.Tags {
+					if tt == t.Name {
+						return true
+					}
+				}
+				return false
+			})
+			if len(filtered) == 0 {
+				continue
+			}
+			sortByDateDesc(filtered)
+			basePath := filepath.Join("tags", t.Name)
+			baseURLPath := "/tags/" + t.Name
+			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, "")...)
+		}
 	}
 
-	// Category pages (paginated)
-	for _, cat := range site.Categories {
-		c := cat
-		filtered := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
-			for _, cc := range a.FrontMatter.Categories {
-				if cc == c.Name {
-					return true
+	// Category pages (paginated) — locale-aware when i18n is active
+	if len(g.cfg.I18n.Locales) > 0 {
+		for _, loc := range g.cfg.I18n.Locales {
+			locale := loc
+			for _, cat := range site.Categories {
+				c := cat
+				filtered := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
+					if a.Locale != locale {
+						return false
+					}
+					for _, cc := range a.FrontMatter.Categories {
+						if cc == c.Name {
+							return true
+						}
+					}
+					return false
+				})
+				if len(filtered) == 0 {
+					continue
 				}
+				sortByDateDesc(filtered)
+				var basePath, baseURLPath string
+				if locale == g.cfg.I18n.DefaultLocale {
+					basePath = filepath.Join("categories", c.Name)
+					baseURLPath = "/categories/" + c.Name
+				} else {
+					basePath = filepath.Join(locale, "categories", c.Name)
+					baseURLPath = "/" + locale + "/categories/" + c.Name
+				}
+				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, locale)...)
 			}
-			return false
-		})
-		sortByDateDesc(filtered)
-		basePath := filepath.Join("categories", c.Name)
-		baseURLPath := "/categories/" + c.Name
-		jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage)...)
+		}
+	} else {
+		for _, cat := range site.Categories {
+			c := cat
+			filtered := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
+				for _, cc := range a.FrontMatter.Categories {
+					if cc == c.Name {
+						return true
+					}
+				}
+				return false
+			})
+			if len(filtered) == 0 {
+				continue
+			}
+			sortByDateDesc(filtered)
+			basePath := filepath.Join("categories", c.Name)
+			baseURLPath := "/categories/" + c.Name
+			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, "")...)
+		}
 	}
 
 	// Archive pages: public/archives/<year>/<month>/index.html
@@ -206,6 +280,7 @@ func paginatedJobs(
 	articles []*model.ProcessedArticle,
 	outDir, tmpl, basePath, baseURLPath string,
 	perPage int,
+	currentLocale string,
 ) []writeJob {
 	if perPage <= 0 {
 		var path string
@@ -214,7 +289,9 @@ func paginatedJobs(
 		} else {
 			path = filepath.Join(outDir, basePath, "index.html")
 		}
-		return []writeJob{{path: path, tmpl: tmpl, data: siteFor(site, articles)}}
+		d := siteFor(site, articles)
+		d.CurrentLocale = currentLocale
+		return []writeJob{{path: path, tmpl: tmpl, data: d}}
 	}
 
 	total := len(articles)
@@ -271,10 +348,12 @@ func paginatedJobs(
 			}
 		}
 
+		d := siteWithPagination(site, slice, pg)
+		d.CurrentLocale = currentLocale
 		jobs = append(jobs, writeJob{
 			path: path,
 			tmpl: tmpl,
-			data: siteWithPagination(site, slice, pg),
+			data: d,
 		})
 	}
 	return jobs

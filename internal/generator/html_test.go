@@ -150,7 +150,7 @@ func makePaginatedArticles(n int) []*model.ProcessedArticle {
 func TestPaginatedJobs_Disabled(t *testing.T) {
 	site := makeSite()
 	articles := makePaginatedArticles(5)
-	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 0)
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 0, "")
 	if len(jobs) != 1 {
 		t.Fatalf("expected 1 job when pagination disabled, got %d", len(jobs))
 	}
@@ -165,7 +165,7 @@ func TestPaginatedJobs_Disabled(t *testing.T) {
 func TestPaginatedJobs_SinglePage(t *testing.T) {
 	site := makeSite()
 	articles := makePaginatedArticles(3)
-	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 10)
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 10, "")
 	if len(jobs) != 1 {
 		t.Fatalf("expected 1 job for 3 articles with perPage=10, got %d", len(jobs))
 	}
@@ -184,7 +184,7 @@ func TestPaginatedJobs_SinglePage(t *testing.T) {
 func TestPaginatedJobs_MultiPage_Paths(t *testing.T) {
 	site := makeSite()
 	articles := makePaginatedArticles(5)
-	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "", 2)
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "", 2, "")
 	// 5 articles / perPage 2 → pages 1,2,3
 	if len(jobs) != 3 {
 		t.Fatalf("expected 3 jobs, got %d", len(jobs))
@@ -206,7 +206,7 @@ func TestPaginatedJobs_MultiPage_Paths(t *testing.T) {
 func TestPaginatedJobs_MultiPage_PrevNext(t *testing.T) {
 	site := makeSite()
 	articles := makePaginatedArticles(5)
-	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/blog", 2)
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/blog", 2, "")
 
 	pg1 := jobs[0].data.Pagination
 	if pg1.PrevURL != "" {
@@ -236,7 +236,7 @@ func TestPaginatedJobs_MultiPage_PrevNext(t *testing.T) {
 func TestPaginatedJobs_WithBasePath(t *testing.T) {
 	site := makeSite()
 	articles := makePaginatedArticles(3)
-	jobs := paginatedJobs(site, articles, "/out", "tag.html", "tags/go", "/tags/go", 2)
+	jobs := paginatedJobs(site, articles, "/out", "tag.html", "tags/go", "/tags/go", 2, "")
 	// 3 articles / perPage 2 → 2 pages
 	if len(jobs) != 2 {
 		t.Fatalf("expected 2 jobs, got %d", len(jobs))
