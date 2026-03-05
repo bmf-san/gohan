@@ -161,6 +161,10 @@ func (w *injectingResponseWriter) flush() {
 	if !w.isHTML {
 		return
 	}
+	// Remove Content-Length set by http.FileServer: the injected SSE script
+	// makes the actual body larger, so the original value is wrong.
+	// Deleting it lets net/http use chunked transfer encoding instead.
+	w.wrapped.Header().Del("Content-Length")
 	if w.header != 0 {
 		w.wrapped.WriteHeader(w.header)
 	}
