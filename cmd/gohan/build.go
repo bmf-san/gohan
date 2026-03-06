@@ -188,7 +188,7 @@ func runBuild(args []string) error {
 	}
 
 	// Sitemap + feeds.
-	if err := generator.GenerateSitemap(outDir, cfg.Site.BaseURL, processed, *cfg); err != nil {
+	if err := generator.GenerateSitemap(outDir, cfg.Site.BaseURL, processed); err != nil {
 		fmt.Fprintf(os.Stderr, "warn: sitemap: %v\n", err)
 	}
 	if err := generator.GenerateFeeds(outDir, cfg.Site.BaseURL, cfg.Site.Title, processed); err != nil {

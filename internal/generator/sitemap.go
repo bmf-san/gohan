@@ -14,9 +14,7 @@ import (
 // When articles have Translations populated (i18n), xhtml:link hreflang
 // alternates are included for SEO.
 // Articles are sorted newest-first. baseURL must not have a trailing slash.
-// When cfg has I18n.Locales configured, the locale index pages (/ and /ja/
-// etc.) are prepended to the sitemap as important entry points.
-func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle, cfg model.Config) error {
+func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle) error {
 	sorted := make([]*model.ProcessedArticle, len(articles))
 	copy(sorted, articles)
 	sort.Slice(sorted, func(i, j int) bool {
@@ -38,21 +36,6 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle,
 		buf.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">` + "\n")
 	} else {
 		buf.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + "\n")
-	}
-
-	// Prepend locale index pages (/, /ja/, ...) when i18n is configured.
-	if len(cfg.I18n.Locales) > 0 {
-		for _, loc := range cfg.I18n.Locales {
-			var indexURL string
-			if loc == cfg.I18n.DefaultLocale {
-				indexURL = baseURL + "/"
-			} else {
-				indexURL = baseURL + "/" + loc + "/"
-			}
-			buf.WriteString("  <url>\n")
-			buf.WriteString("    <loc>" + indexURL + "</loc>\n")
-			buf.WriteString("  </url>\n")
-		}
 	}
 
 	for _, a := range sorted {

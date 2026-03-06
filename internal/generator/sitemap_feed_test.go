@@ -22,7 +22,7 @@ func makeArticles() []*model.ProcessedArticle {
 
 func TestGenerateSitemap_Valid(t *testing.T) {
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", makeArticles(), model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", makeArticles()); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -40,7 +40,7 @@ func TestGenerateSitemap_Valid(t *testing.T) {
 
 func TestGenerateSitemap_Empty(t *testing.T) {
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", nil, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", nil); err != nil {
 		t.Fatalf("GenerateSitemap empty: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -51,7 +51,7 @@ func TestGenerateSitemap_Empty(t *testing.T) {
 
 func TestGenerateSitemap_WellFormedXML(t *testing.T) {
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", makeArticles(), model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", makeArticles()); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -137,7 +137,7 @@ func TestGenerateSitemap_HreflangAlternates(t *testing.T) {
 		},
 	}
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", articles, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", articles); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -153,24 +153,6 @@ func TestGenerateSitemap_HreflangAlternates(t *testing.T) {
 	}
 }
 
-func TestGenerateSitemap_I18nIndexPages(t *testing.T) {
-	dir := t.TempDir()
-	cfg := model.Config{}
-	cfg.I18n.DefaultLocale = "en"
-	cfg.I18n.Locales = []string{"en", "ja"}
-	if err := GenerateSitemap(dir, "https://example.com", nil, cfg); err != nil {
-		t.Fatalf("GenerateSitemap: %v", err)
-	}
-	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
-	s := string(data)
-	if !strings.Contains(s, "https://example.com/") {
-		t.Errorf("expected EN index URL https://example.com/ in sitemap:\n%s", s)
-	}
-	if !strings.Contains(s, "https://example.com/ja/") {
-		t.Errorf("expected JA index URL https://example.com/ja/ in sitemap:\n%s", s)
-	}
-}
-
 func TestGenerateSitemap_UsesPrecomputedURL(t *testing.T) {
 	dir := t.TempDir()
 	articles := []*model.ProcessedArticle{
@@ -179,7 +161,7 @@ func TestGenerateSitemap_UsesPrecomputedURL(t *testing.T) {
 			URL:     "/ja/posts/my-url/",
 		},
 	}
-	if err := GenerateSitemap(dir, "https://example.com", articles, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", articles); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
