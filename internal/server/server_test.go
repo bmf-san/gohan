@@ -94,6 +94,22 @@ func TestInjectScript_NotHTML(t *testing.T) {
 	}
 }
 
+func TestInjectScript_NonHTMLStatusPropagated(t *testing.T) {
+	// When http.FileServer returns a 404 (text/plain, not text/html),
+	// the status code must be forwarded to the client, not silently become 200.
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "404 page not found", http.StatusNotFound)
+	})
+
+	handler := injectingHandler(inner)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest("GET", "/missing/", nil))
+
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected status 404, got %d", rec.Code)
+	}
+}
+
 func TestInjectingResponseWriter_Buffer(t *testing.T) {
 	rec := httptest.NewRecorder()
 	iw := &injectingResponseWriter{wrapped: rec}
