@@ -122,3 +122,54 @@ func TestInjectingResponseWriter_Buffer(t *testing.T) {
 		t.Error("expected SSE script in flushed response")
 	}
 }
+
+// mockWatcher is a FileWatcher stub for testing.
+type mockWatcher struct {
+	events chan string
+}
+
+func (m *mockWatcher) Add(_ string) error    { return nil }
+func (m *mockWatcher) Events() <-chan string  { return m.events }
+func (m *mockWatcher) Close() error          { close(m.events); return nil }
+
+func TestWatchLoop_Debounce(t *testing.T) {
+	// Verify that multiple rapid events are coalesced into a single rebuild.
+	watcher := &mockWatcher{events: make(chan string, 20)}
+
+	rebuildCount := 0
+	broadcastCount := 0
+
+	b := newSSEBroadcaster()
+	ch := b.subscribe()
+	go func() {
+		for range ch {
+			broadcastCount++
+		}
+	}()
+
+	srv := &DevServer{
+		Watcher: watcher,
+		RebuildFunc: func() error {
+			rebuildCount++
+			return nil
+		},
+	}
+
+	go srv.watchLoop(b)
+
+	// Send 5 events in rapid succession (well within debounce window).
+	for i := 0; i < 5; i++ {
+		watcher.events <- "content/post.md"
+	}
+
+	// Wait longer than the debounce delay for the single rebuild to complete.
+	time.Sleep(debounceDelay*3 + 50*time.Millisecond)
+
+	if rebuildCount != 1 {
+		t.Errorf("expected 1 rebuild, got %d (debounce not working)", rebuildCount)
+	}
+	if broadcastCount != 1 {
+		t.Errorf("expected 1 broadcast, got %d", broadcastCount)
+	}
+	b.unsubscribe(ch)
+}
