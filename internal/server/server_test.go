@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -121,4 +122,55 @@ func TestInjectingResponseWriter_Buffer(t *testing.T) {
 	if !bytes.Contains(rec.Body.Bytes(), []byte(sseScript)) {
 		t.Error("expected SSE script in flushed response")
 	}
+}
+
+// mockWatcher is a FileWatcher stub for testing.
+type mockWatcher struct {
+	events chan string
+}
+
+func (m *mockWatcher) Add(_ string) error    { return nil }
+func (m *mockWatcher) Events() <-chan string  { return m.events }
+func (m *mockWatcher) Close() error          { close(m.events); return nil }
+
+func TestWatchLoop_Debounce(t *testing.T) {
+	// Verify that multiple rapid events are coalesced into a single rebuild.
+	watcher := &mockWatcher{events: make(chan string, 20)}
+
+	var rebuildCount atomic.Int32
+	var broadcastCount atomic.Int32
+
+	b := newSSEBroadcaster()
+	ch := b.subscribe()
+	go func() {
+		for range ch {
+			broadcastCount.Add(1)
+		}
+	}()
+
+	srv := &DevServer{
+		Watcher: watcher,
+		RebuildFunc: func() error {
+			rebuildCount.Add(1)
+			return nil
+		},
+	}
+
+	go srv.watchLoop(b)
+
+	// Send 5 events in rapid succession (well within debounce window).
+	for i := 0; i < 5; i++ {
+		watcher.events <- "content/post.md"
+	}
+
+	// Wait longer than the debounce delay for the single rebuild to complete.
+	time.Sleep(debounceDelay*3 + 50*time.Millisecond)
+
+	if got := rebuildCount.Load(); got != 1 {
+		t.Errorf("expected 1 rebuild, got %d (debounce not working)", got)
+	}
+	if got := broadcastCount.Load(); got != 1 {
+		t.Errorf("expected 1 broadcast, got %d", got)
+	}
+	b.unsubscribe(ch)
 }

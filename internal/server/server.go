@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -287,11 +288,38 @@ func (s *DevServer) Start() error {
 }
 
 // watchLoop listens for file change events and triggers rebuild + SSE broadcast.
+// Events within debounceDelay are coalesced into a single rebuild to avoid
+// multiple rapid reloads when an editor emits several write/rename events for
+// one logical save.
+const debounceDelay = 100 * time.Millisecond
+
 func (s *DevServer) watchLoop(b *sseBroadcaster) {
-	for path := range s.Watcher.Events() {
-		if s.RebuildFunc != nil {
-			_ = s.RebuildFunc() // best-effort; errors go to stderr via rebuild
+	var pending string
+	timer := time.NewTimer(0)
+	<-timer.C // drain the initial tick so it doesn't fire immediately
+	for {
+		select {
+		case path, ok := <-s.Watcher.Events():
+			if !ok {
+				return
+			}
+			pending = path
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			timer.Reset(debounceDelay)
+		case <-timer.C:
+			if pending == "" {
+				continue
+			}
+			if s.RebuildFunc != nil {
+				_ = s.RebuildFunc() // best-effort; errors go to stderr via rebuild
+			}
+			b.broadcast(pending)
+			pending = ""
 		}
-		b.broadcast(path)
 	}
 }
