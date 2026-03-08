@@ -18,6 +18,7 @@ type Pagination struct {
 	TotalItems  int
 	PrevURL     string // empty string if no previous page
 	NextURL     string // empty string if no next page
+	BaseURL     string // URL path prefix used to construct PrevURL/NextURL (e.g. "/tags/go")
 }
 
 // FileWatcher is the interface for watching file system changes.
