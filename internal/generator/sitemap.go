@@ -90,5 +90,5 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle,
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(outDir, "sitemap.xml"), []byte(buf.String()), 0o644)
+	return writeFileAtomic(filepath.Join(outDir, "sitemap.xml"), []byte(buf.String()), 0o644)
 }

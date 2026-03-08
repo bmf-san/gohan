@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"bytes"
 	"encoding/xml"
 	"os"
 	"path/filepath"
@@ -133,18 +134,17 @@ func articleLink(baseURL string, a *model.ProcessedArticle) string {
 }
 
 func writeXML(path string, v interface{}) error {
-	f, err := os.Create(path)
-	if err != nil {
+	var buf bytes.Buffer
+	if _, err := buf.WriteString(xml.Header); err != nil {
 		return err
 	}
-	defer func() { _ = f.Close() }()
-	if _, err := f.WriteString(xml.Header); err != nil {
-		return err
-	}
-	enc := xml.NewEncoder(f)
+	enc := xml.NewEncoder(&buf)
 	enc.Indent("", "  ")
 	if err := enc.Encode(v); err != nil {
 		return err
 	}
-	return enc.Flush()
+	if err := enc.Flush(); err != nil {
+		return err
+	}
+	return writeFileAtomic(path, buf.Bytes(), 0o644)
 }
