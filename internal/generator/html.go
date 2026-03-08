@@ -107,8 +107,8 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				basePath = locale
 				baseURLPath = "/" + locale
 			}
-jobs = append(jobs, paginatedJobs(site, locArticles, g.outDir, "index.html", basePath, baseURLPath, perPage, locale)...)
-	}
+			jobs = append(jobs, paginatedJobs(site, locArticles, g.outDir, "index.html", basePath, baseURLPath, perPage, locale)...)
+		}
 	} else {
 		allArticles := make([]*model.ProcessedArticle, len(site.Articles))
 		copy(allArticles, site.Articles)
@@ -282,6 +282,10 @@ func paginatedJobs(
 	perPage int,
 	currentLocale string,
 ) []writeJob {
+	// Build a locale-specific base so that listing pages see only the
+	// tags/categories present in the locale's articles (all of them,
+	// not just the current page slice).
+	base := localeTaxonomyBase(site, articles)
 	if perPage <= 0 {
 		var path string
 		if basePath == "" {
@@ -289,7 +293,7 @@ func paginatedJobs(
 		} else {
 			path = filepath.Join(outDir, basePath, "index.html")
 		}
-		d := siteFor(site, articles)
+		d := siteFor(base, articles)
 		d.CurrentLocale = currentLocale
 		return []writeJob{{path: path, tmpl: tmpl, data: d}}
 	}
@@ -317,6 +321,7 @@ func paginatedJobs(
 			TotalPages:  totalPages,
 			PerPage:     perPage,
 			TotalItems:  total,
+			BaseURL:     baseURLPath,
 		}
 		if page > 1 {
 			if page == 2 {
@@ -348,7 +353,7 @@ func paginatedJobs(
 			}
 		}
 
-		d := siteWithPagination(site, slice, pg)
+		d := siteWithPagination(base, slice, pg)
 		d.CurrentLocale = currentLocale
 		jobs = append(jobs, writeJob{
 			path: path,
@@ -445,6 +450,45 @@ func siteFor(base *model.Site, articles []*model.ProcessedArticle) *model.Site {
 		Articles:   articles,
 		Tags:       base.Tags,
 		Categories: base.Categories,
+	}
+}
+
+// localeTaxonomyBase returns a copy of base whose Tags and Categories are
+// derived from the unique values found in the given articles' frontmatter.
+// This ensures that locale-specific listing pages (e.g. /ja/ index) only
+// expose taxonomy entries that exist in that locale's articles.
+func localeTaxonomyBase(base *model.Site, articles []*model.ProcessedArticle) *model.Site {
+	tagSeen := make(map[string]bool)
+	catSeen := make(map[string]bool)
+	var tags []model.Taxonomy
+	var cats []model.Taxonomy
+	for _, a := range articles {
+		for _, t := range a.FrontMatter.Tags {
+			if !tagSeen[t] {
+				tagSeen[t] = true
+				tags = append(tags, model.Taxonomy{Name: t})
+			}
+		}
+		for _, c := range a.FrontMatter.Categories {
+			if !catSeen[c] {
+				catSeen[c] = true
+				cats = append(cats, model.Taxonomy{Name: c})
+			}
+		}
+	}
+	sort.Slice(tags, func(i, j int) bool { return tags[i].Name < tags[j].Name })
+	sort.Slice(cats, func(i, j int) bool { return cats[i].Name < cats[j].Name })
+	if len(tags) == 0 {
+		tags = base.Tags
+	}
+	if len(cats) == 0 {
+		cats = base.Categories
+	}
+	return &model.Site{
+		Config:     base.Config,
+		Articles:   base.Articles,
+		Tags:       tags,
+		Categories: cats,
 	}
 }
 
