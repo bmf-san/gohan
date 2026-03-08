@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -136,21 +137,21 @@ func TestWatchLoop_Debounce(t *testing.T) {
 	// Verify that multiple rapid events are coalesced into a single rebuild.
 	watcher := &mockWatcher{events: make(chan string, 20)}
 
-	rebuildCount := 0
-	broadcastCount := 0
+	var rebuildCount atomic.Int32
+	var broadcastCount atomic.Int32
 
 	b := newSSEBroadcaster()
 	ch := b.subscribe()
 	go func() {
 		for range ch {
-			broadcastCount++
+			broadcastCount.Add(1)
 		}
 	}()
 
 	srv := &DevServer{
 		Watcher: watcher,
 		RebuildFunc: func() error {
-			rebuildCount++
+			rebuildCount.Add(1)
 			return nil
 		},
 	}
@@ -165,11 +166,11 @@ func TestWatchLoop_Debounce(t *testing.T) {
 	// Wait longer than the debounce delay for the single rebuild to complete.
 	time.Sleep(debounceDelay*3 + 50*time.Millisecond)
 
-	if rebuildCount != 1 {
-		t.Errorf("expected 1 rebuild, got %d (debounce not working)", rebuildCount)
+	if got := rebuildCount.Load(); got != 1 {
+		t.Errorf("expected 1 rebuild, got %d (debounce not working)", got)
 	}
-	if broadcastCount != 1 {
-		t.Errorf("expected 1 broadcast, got %d", broadcastCount)
+	if got := broadcastCount.Load(); got != 1 {
+		t.Errorf("expected 1 broadcast, got %d", got)
 	}
 	b.unsubscribe(ch)
 }
