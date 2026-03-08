@@ -3,7 +3,6 @@ package generator
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -387,7 +386,7 @@ func (g *HTMLGenerator) writePage(path, tmplName string, data *model.Site) error
 	if bytes.Contains(pageBytes, []byte(mermaid.MermaidMarker)) {
 		pageBytes = mermaid.InjectScript(pageBytes)
 	}
-	if err := os.WriteFile(path, pageBytes, 0o644); err != nil {
+	if err := writeFileAtomic(path, pageBytes, 0o644); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	return nil
@@ -412,18 +411,15 @@ func copyFile(src, dst string) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
-	in, err := os.Open(src)
+	data, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = in.Close() }()
-	out, err := os.Create(dst)
+	info, err := os.Stat(src)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = out.Close() }()
-	_, err = io.Copy(out, in)
-	return err
+	return writeFileAtomic(dst, data, info.Mode().Perm())
 }
 
 // slugify converts s to a lowercase hyphen-separated URL slug.
