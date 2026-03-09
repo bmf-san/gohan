@@ -92,6 +92,40 @@ func builtinFuncs() template.FuncMap {
 		"markdownify": func(s string) (template.HTML, error) {
 			return conv.Convert([]byte(s))
 		},
+		// paginationPages returns a slice of page numbers (and -1 for ellipsis)
+		// suitable for rendering a pagination control. For example, for
+		// current=5 total=10 it returns [1 -1 4 5 6 -1 10].
+		"paginationPages": func(current, total int) []int {
+			if total <= 1 {
+				return nil
+			}
+			pages := []int{}
+			addPage := func(p int) {
+				if len(pages) > 0 && pages[len(pages)-1] == -1 && p == -1 {
+					return
+				}
+				pages = append(pages, p)
+			}
+			for p := 1; p <= total; p++ {
+				if p == 1 || p == total || (p >= current-2 && p <= current+2) {
+					addPage(p)
+				} else if len(pages) > 0 && pages[len(pages)-1] != -1 {
+					addPage(-1) // ellipsis
+				}
+			}
+			return pages
+		},
+		// pageURL returns the URL for page number p within a base URL path.
+		// Page 1 returns baseURL+"/" (or "/" when baseURL is empty).
+		"pageURL": func(baseURL string, p int) string {
+			if p <= 1 {
+				if baseURL == "" {
+					return "/"
+				}
+				return baseURL + "/"
+			}
+			return fmt.Sprintf("%s/page/%d/", baseURL, p)
+		},
 	}
 }
 

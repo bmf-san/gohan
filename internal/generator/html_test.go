@@ -53,7 +53,8 @@ func TestGenerate_WritesExpectedFiles(t *testing.T) {
 		t.Fatalf("Generate: %v", err)
 	}
 	for _, rel := range []string{"index.html", "posts/hello-world/index.html",
-		"tags/go/index.html", "categories/tech/index.html", "archives/2024/03/index.html"} {
+		"tags/go/index.html", "categories/tech/index.html", "archives/2024/03/index.html",
+		"archives/2024/index.html"} {
 		if _, err := os.Stat(filepath.Join(outDir, rel)); err != nil {
 			t.Errorf("missing %s: %v", rel, err)
 		}
@@ -384,6 +385,10 @@ func TestGenerate_SkipsDateZeroArchive(t *testing.T) {
 	badArchive := filepath.Join(outDir, "archives", "0001", "01")
 	if _, err := os.Stat(badArchive); err == nil {
 		t.Errorf("archives/0001/01 should NOT be created for date-zero articles")
+	}
+	badYearArchive := filepath.Join(outDir, "archives", "0001")
+	if _, err := os.Stat(badYearArchive); err == nil {
+		t.Errorf("archives/0001 should NOT be created for date-zero articles")
 	}
 }
 

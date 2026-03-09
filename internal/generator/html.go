@@ -267,6 +267,28 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		})
 	}
 
+	// Year-level archive pages: public/archives/<year>/index.html
+	yearArchives := map[int][]*model.ProcessedArticle{}
+	for _, a := range site.Articles {
+		if a.FrontMatter.Date.IsZero() {
+			continue
+		}
+		yearArchives[a.FrontMatter.Date.Year()] = append(yearArchives[a.FrontMatter.Date.Year()], a)
+	}
+	for year, articles := range yearArchives {
+		as := make([]*model.ProcessedArticle, len(articles))
+		copy(as, articles)
+		sortByDateDesc(as)
+		y := year
+		jobs = append(jobs, writeJob{
+			path: filepath.Join(g.outDir, "archives",
+				fmt.Sprintf("%04d", y),
+				"index.html"),
+			tmpl: "archive.html",
+			data: siteFor(site, as),
+		})
+	}
+
 	return jobs
 }
 

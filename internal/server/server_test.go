@@ -130,7 +130,7 @@ type mockWatcher struct {
 }
 
 func (m *mockWatcher) Add(_ string) error    { return nil }
-func (m *mockWatcher) Events() <-chan string  { return m.events }
+func (m *mockWatcher) Events() <-chan string { return m.events }
 func (m *mockWatcher) Close() error          { close(m.events); return nil }
 
 func TestWatchLoop_Debounce(t *testing.T) {
