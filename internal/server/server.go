@@ -175,6 +175,13 @@ func (w *injectingResponseWriter) Write(b []byte) (int, error) {
 
 func (w *injectingResponseWriter) flush() {
 	if !w.isHTML {
+		// Forward any stored status code that was never written to the underlying
+		// ResponseWriter (e.g. 304 Not Modified, where Write is never called).
+		// Without this, Go's net/http falls back to an implicit 200 OK with an
+		// empty body, causing the browser to show a blank page on reload.
+		if !w.headerWritten && w.header != 0 && w.header != http.StatusOK {
+			w.wrapped.WriteHeader(w.header)
+		}
 		return
 	}
 	// Remove Content-Length set by http.FileServer: the injected SSE script
