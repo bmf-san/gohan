@@ -2,19 +2,18 @@ package generator
 
 import (
 	"fmt"
+	"hash/fnv"
 	"image"
 	"image/color"
 	"image/draw"
 	_ "image/jpeg" // register JPEG decoder
 	"image/png"    // also self-registers PNG decoder
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 
 	xdraw "golang.org/x/image/draw"
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/opentype"
-	"golang.org/x/image/math/fixed"
 
 	"github.com/bmf-san/gohan/internal/model"
 )
@@ -52,25 +51,9 @@ func (g *OGPGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) er
 		h = ogpDefaultHeight
 	}
 
-	bgColor, err := parseHexColor(g.cfg.BackgroundColor)
-	if err != nil {
-		bgColor = color.RGBA{R: 30, G: 30, B: 46, A: 255}
-	}
-	textColor, err := parseHexColor(g.cfg.TextColor)
-	if err != nil {
-		textColor = color.RGBA{R: 205, G: 214, B: 244, A: 255}
-	}
-
-	var face font.Face
-	if g.cfg.FontFile != "" {
-		face, err = loadFontFace(g.cfg.FontFile, 64)
-		if err != nil {
-			return fmt.Errorf("ogp: load font %q: %w", g.cfg.FontFile, err)
-		}
-	}
-
 	var logoImg image.Image
 	if g.cfg.LogoFile != "" {
+		var err error
 		logoImg, err = loadImage(g.cfg.LogoFile)
 		if err != nil {
 			return fmt.Errorf("ogp: load logo %q: %w", g.cfg.LogoFile, err)
@@ -98,24 +81,23 @@ func (g *OGPGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) er
 			}
 		}
 
-		if err := g.renderImage(outPath, a.FrontMatter.Title, w, h, bgColor, textColor, face, logoImg); err != nil {
+		if err := g.renderImage(outPath, slug, w, h, logoImg); err != nil {
 			return fmt.Errorf("ogp: render %q: %w", slug, err)
 		}
 	}
 	return nil
 }
 
-func (g *OGPGenerator) renderImage(
-	outPath, title string,
-	w, h int,
-	bg, fg color.Color,
-	face font.Face,
-	logo image.Image,
-) error {
+func (g *OGPGenerator) renderImage(outPath, slug string, w, h int, logo image.Image) error {
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 
-	// Fill background
-	draw.Draw(img, img.Bounds(), &image.Uniform{bg}, image.Point{}, draw.Src)
+	seed := ogpHash(slug)
+
+	// Draw diagonal gradient background derived from slug hash
+	drawGradientBackground(img, seed, w, h)
+
+	// Draw geometric decorations seeded by slug hash
+	drawGeometricShapes(img, seed, w, h)
 
 	// Draw logo (top-left, with padding)
 	if logo != nil {
@@ -123,11 +105,6 @@ func (g *OGPGenerator) renderImage(
 		bounds := logo.Bounds()
 		dstRect := image.Rect(logoPad, logoPad, logoPad+bounds.Dx(), logoPad+bounds.Dy())
 		xdraw.BiLinear.Scale(img, dstRect, logo, bounds, draw.Over, nil)
-	}
-
-	// Draw title text (centered, word-wrapped) only when a font face is available
-	if face != nil {
-		drawCenteredText(img, title, face, fg, w, h)
 	}
 
 	f, err := os.Create(outPath)
@@ -138,68 +115,143 @@ func (g *OGPGenerator) renderImage(
 	return png.Encode(f, img)
 }
 
-// drawCenteredText renders word-wrapped text centered in the image.
-func drawCenteredText(img *image.RGBA, text string, face font.Face, fg color.Color, w, h int) {
-	metrics := face.Metrics()
-	lineHeight := metrics.Height.Ceil()
-	maxWidth := w - 120 // horizontal padding
-
-	words := strings.Fields(text)
-	var lines []string
-	current := ""
-	for _, word := range words {
-		candidate := word
-		if current != "" {
-			candidate = current + " " + word
+// drawGradientBackground fills img with a diagonal two-colour gradient whose
+// hues are derived deterministically from the article slug hash.
+func drawGradientBackground(img *image.RGBA, seed uint64, w, h int) {
+	h1 := float64(seed % 360)
+	offset := float64(80 + (seed>>16)%100) // 80–180 degree hue offset for contrast
+	h2 := h1 + offset
+	if h2 >= 360 {
+		h2 -= 360
+	}
+	c1 := hsvToRGBA(h1, 0.60, 0.22, 255)
+	c2 := hsvToRGBA(h2, 0.55, 0.14, 255)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			t := (float64(x)/float64(w) + float64(y)/float64(h)) / 2
+			img.SetRGBA(x, y, color.RGBA{
+				R: uint8(float64(c1.R)*(1-t) + float64(c2.R)*t),
+				G: uint8(float64(c1.G)*(1-t) + float64(c2.G)*t),
+				B: uint8(float64(c1.B)*(1-t) + float64(c2.B)*t),
+				A: 255,
+			})
 		}
-		if measureText(face, candidate) > maxWidth && current != "" {
-			lines = append(lines, current)
-			current = word
-		} else {
-			current = candidate
-		}
-	}
-	if current != "" {
-		lines = append(lines, current)
-	}
-
-	totalHeight := len(lines) * lineHeight
-	startY := (h - totalHeight) / 2
-
-	d := &font.Drawer{
-		Dst:  img,
-		Src:  &image.Uniform{fg},
-		Face: face,
-	}
-	for i, line := range lines {
-		lineW := measureText(face, line)
-		x := (w - lineW) / 2
-		y := startY + (i+1)*lineHeight
-		d.Dot = fixed.P(x, y)
-		d.DrawString(line)
 	}
 }
 
-func measureText(face font.Face, s string) int {
-	advance := font.MeasureString(face, s)
-	return advance.Ceil()
+// drawGeometricShapes overlays semi-transparent filled circles and accent rings
+// whose positions, sizes and hues are deterministically derived from seed.
+func drawGeometricShapes(img *image.RGBA, seed uint64, w, h int) {
+	rng := rand.New(rand.NewSource(int64(seed))) //nolint:gosec
+
+	// Large filled circles (very low alpha)
+	for i := 0; i < 5; i++ {
+		cx := rng.Intn(w)
+		cy := rng.Intn(h)
+		r := w/7 + rng.Intn(w/4)
+		hue := float64((seed + uint64(i)*73) % 360)
+		c := hsvToRGBA(hue, 0.75, 0.90, 28)
+		drawFilledCircle(img, cx, cy, r, c)
+	}
+
+	// Accent rings (higher alpha)
+	for i := 0; i < 3; i++ {
+		cx := rng.Intn(w)
+		cy := rng.Intn(h)
+		r := w/9 + rng.Intn(w/5)
+		hue := float64((seed + uint64(i+5)*97) % 360)
+		c := hsvToRGBA(hue, 0.80, 0.95, 65)
+		drawRing(img, cx, cy, r, 4, c)
+	}
 }
 
-// loadFontFace loads a TTF/OTF file and returns a font.Face at the given size.
-func loadFontFace(path string, size float64) (font.Face, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
+// ogpHash returns a deterministic 64-bit FNV-1a hash of s.
+func ogpHash(s string) uint64 {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(s))
+	return h.Sum64()
+}
+
+// hsvToRGBA converts HSV (h∈[0,360), s∈[0,1], v∈[0,1]) to color.RGBA with
+// the given alpha value.
+func hsvToRGBA(h, s, v float64, a uint8) color.RGBA {
+	if h >= 360 {
+		h -= 360
 	}
-	tt, err := opentype.Parse(data)
-	if err != nil {
-		return nil, err
+	i := int(h / 60)
+	f := h/60 - float64(i)
+	p := v * (1 - s)
+	q := v * (1 - s*f)
+	tt := v * (1 - s*(1-f))
+	var r, g, b float64
+	switch i {
+	case 0:
+		r, g, b = v, tt, p
+	case 1:
+		r, g, b = q, v, p
+	case 2:
+		r, g, b = p, v, tt
+	case 3:
+		r, g, b = p, q, v
+	case 4:
+		r, g, b = tt, p, v
+	default:
+		r, g, b = v, p, q
 	}
-	return opentype.NewFace(tt, &opentype.FaceOptions{
-		Size:    size,
-		DPI:     72,
-		Hinting: font.HintingFull,
+	return color.RGBA{
+		R: uint8(r * 255),
+		G: uint8(g * 255),
+		B: uint8(b * 255),
+		A: a,
+	}
+}
+
+// blendPixel alpha-composites c over the pixel at (x, y). Out-of-bounds
+// pixels are silently ignored.
+func blendPixel(img *image.RGBA, x, y int, c color.RGBA) {
+	b := img.Bounds()
+	if x < b.Min.X || x >= b.Max.X || y < b.Min.Y || y >= b.Max.Y {
+		return
+	}
+	dst := img.RGBAAt(x, y)
+	a := float64(c.A) / 255.0
+	ia := 1 - a
+	img.SetRGBA(x, y, color.RGBA{
+		R: uint8(float64(c.R)*a + float64(dst.R)*ia),
+		G: uint8(float64(c.G)*a + float64(dst.G)*ia),
+		B: uint8(float64(c.B)*a + float64(dst.B)*ia),
+		A: 255,
 	})
+}
+
+// drawFilledCircle draws a solid filled circle using alpha compositing.
+func drawFilledCircle(img *image.RGBA, cx, cy, r int, c color.RGBA) {
+	for y := cy - r; y <= cy+r; y++ {
+		for x := cx - r; x <= cx+r; x++ {
+			dx, dy := x-cx, y-cy
+			if dx*dx+dy*dy <= r*r {
+				blendPixel(img, x, y, c)
+			}
+		}
+	}
+}
+
+// drawRing draws a ring (annulus) of the given pixel thickness using alpha
+// compositing.
+func drawRing(img *image.RGBA, cx, cy, r, thickness int, c color.RGBA) {
+	inner := r - thickness
+	if inner < 0 {
+		inner = 0
+	}
+	for y := cy - r; y <= cy+r; y++ {
+		for x := cx - r; x <= cx+r; x++ {
+			dx, dy := x-cx, y-cy
+			dist2 := dx*dx + dy*dy
+			if dist2 <= r*r && dist2 >= inner*inner {
+				blendPixel(img, x, y, c)
+			}
+		}
+	}
 }
 
 // loadImage loads a PNG/JPEG image from path.
