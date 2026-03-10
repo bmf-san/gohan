@@ -153,6 +153,13 @@ func (w *injectingResponseWriter) WriteHeader(code int) {
 }
 
 func (w *injectingResponseWriter) Write(b []byte) (int, error) {
+	// http.FileServer may call Write without calling WriteHeader first (implicit
+	// 200). Detect HTML from Content-Type at first Write if not yet determined.
+	if w.header == 0 {
+		ct := w.Header().Get("Content-Type")
+		w.isHTML = strings.Contains(ct, "text/html")
+		w.header = http.StatusOK
+	}
 	if !w.isHTML {
 		// Propagate non-200 status codes (e.g. 404) that were stored by
 		// WriteHeader but not yet forwarded to the underlying ResponseWriter.
