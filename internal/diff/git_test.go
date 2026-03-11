@@ -147,3 +147,39 @@ func TestParseNameStatus(t *testing.T) {
 		t.Errorf("deleted: %v", cs.DeletedFiles)
 	}
 }
+
+func TestGitDiffEngine_Hash(t *testing.T) {
+	content := "gohan hash test"
+	path := writeTemp(t, content)
+	defer func() { _ = os.Remove(path) }()
+
+	eng := NewGitDiffEngine(filepath.Dir(path))
+	got, err := eng.Hash(path)
+	if err != nil {
+		t.Fatalf("Hash: %v", err)
+	}
+	sum := sha256.Sum256([]byte(content))
+	want := hex.EncodeToString(sum[:])
+	if got != want {
+		t.Errorf("Hash: got %s, want %s", got, want)
+	}
+}
+
+func TestGitDiffEngine_Hash_Missing(t *testing.T) {
+	eng := NewGitDiffEngine(t.TempDir())
+	_, err := eng.Hash("/no/such/file.txt")
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+}
+
+func TestDetectChanges_NonGitDir(t *testing.T) {
+	dir := t.TempDir()
+	cs, err := DetectChanges(dir, "HEAD~1", "HEAD")
+	if err != nil {
+		t.Fatalf("DetectChanges on non-git dir: %v", err)
+	}
+	if len(cs.AddedFiles)+len(cs.ModifiedFiles)+len(cs.DeletedFiles) != 0 {
+		t.Errorf("expected empty ChangeSet for non-git dir, got %+v", cs)
+	}
+}
