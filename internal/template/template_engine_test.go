@@ -214,3 +214,97 @@ func TestToSlug(t *testing.T) {
 		}
 	}
 }
+
+func TestEngine_Builtin_PaginationPages(t *testing.T) {
+	fns := builtinFuncs()
+	fn, ok := fns["paginationPages"].(func(int, int) []int)
+	if !ok {
+		t.Fatal("paginationPages not found in builtinFuncs")
+	}
+
+	// total <= 1 returns nil
+	if got := fn(1, 0); got != nil {
+		t.Errorf("paginationPages(1,0): got %v, want nil", got)
+	}
+	if got := fn(1, 1); got != nil {
+		t.Errorf("paginationPages(1,1): got %v, want nil", got)
+	}
+
+	// small range: all pages shown
+	got := fn(2, 3)
+	want := []int{1, 2, 3}
+	if len(got) != len(want) {
+		t.Errorf("paginationPages(2,3): got %v, want %v", got, want)
+	} else {
+		for i := range want {
+			if got[i] != want[i] {
+				t.Errorf("paginationPages(2,3)[%d]: got %d, want %d", i, got[i], want[i])
+			}
+		}
+	}
+
+	// large range: ellipsis inserted
+	got = fn(5, 10)
+	if len(got) == 0 {
+		t.Fatal("paginationPages(5,10): got empty slice")
+	}
+	if got[0] != 1 {
+		t.Errorf("paginationPages(5,10): first page should be 1, got %d", got[0])
+	}
+	if got[len(got)-1] != 10 {
+		t.Errorf("paginationPages(5,10): last page should be 10, got %d", got[len(got)-1])
+	}
+	hasEllipsis := false
+	for _, p := range got {
+		if p == -1 {
+			hasEllipsis = true
+			break
+		}
+	}
+	if !hasEllipsis {
+		t.Errorf("paginationPages(5,10): expected ellipsis (-1) in %v", got)
+	}
+
+	// current at start: ellipsis only at end
+	got = fn(1, 10)
+	if got[0] != 1 {
+		t.Errorf("paginationPages(1,10): got[0]=%d", got[0])
+	}
+	if got[len(got)-1] != 10 {
+		t.Errorf("paginationPages(1,10): last=%d", got[len(got)-1])
+	}
+
+	// no consecutive -1
+	for i := 1; i < len(got); i++ {
+		if got[i] == -1 && got[i-1] == -1 {
+			t.Errorf("paginationPages(1,10): consecutive ellipsis at %d", i)
+		}
+	}
+}
+
+func TestEngine_Builtin_PageURL(t *testing.T) {
+	fns := builtinFuncs()
+	fn, ok := fns["pageURL"].(func(string, int) string)
+	if !ok {
+		t.Fatal("pageURL not found in builtinFuncs")
+	}
+
+	cases := []struct {
+		baseURL string
+		p       int
+		want    string
+	}{
+		{"", 1, "/"},
+		{"", 0, "/"},
+		{"/tags/go", 1, "/tags/go/"},
+		{"/tags/go", 0, "/tags/go/"},
+		{"/tags/go", 2, "/tags/go/page/2/"},
+		{"/categories/web", 3, "/categories/web/page/3/"},
+	}
+	for _, c := range cases {
+		got := fn(c.baseURL, c.p)
+		if got != c.want {
+			t.Errorf("pageURL(%q, %d): got %q, want %q", c.baseURL, c.p, got, c.want)
+		}
+	}
+}
