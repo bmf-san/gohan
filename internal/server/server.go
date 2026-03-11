@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -63,10 +65,11 @@ func (fw *FsnotifyWatcher) loop() {
 				default: // drop if buffer full
 				}
 			}
-		case _, ok := <-fw.watcher.Errors:
+		case err, ok := <-fw.watcher.Errors:
 			if !ok {
 				return
 			}
+			fmt.Fprintf(os.Stderr, "warn: file watcher: %v\n", err)
 		case <-fw.done:
 			return
 		}
@@ -224,6 +227,7 @@ type DevServer struct {
 	Host        string
 	Port        int
 	OutDir      string
+	RootDir     string // project root; WatchDirs are resolved relative to this when set
 	Watcher     FileWatcher
 	RebuildFunc func() error // called on file change; may be nil
 }
@@ -292,7 +296,13 @@ func (s *DevServer) Start() error {
 	}
 	if s.Watcher != nil {
 		for _, dir := range WatchDirs {
-			_ = s.Watcher.Add(dir) // ignore missing dirs
+			path := dir
+			if s.RootDir != "" {
+				path = filepath.Join(s.RootDir, dir)
+			}
+			if err := s.Watcher.Add(path); err != nil {
+				fmt.Fprintf(os.Stderr, "warn: watch %s: %v\n", path, err)
+			}
 		}
 		go s.watchLoop(broadcaster)
 	}
