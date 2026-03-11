@@ -2,6 +2,7 @@ package generator
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -62,10 +63,14 @@ func (g *HTMLGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) e
 	wg.Wait()
 	close(errc)
 
+	var errs []error
 	for err := range errc {
 		if err != nil {
-			return err
+			errs = append(errs, err)
 		}
+	}
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 
 	if g.cfg.Build.AssetsDir != "" {
@@ -155,11 +160,11 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				sortByDateDesc(filtered)
 				var basePath, baseURLPath string
 				if locale == g.cfg.I18n.DefaultLocale {
-					basePath = filepath.Join("tags", t.Name)
-					baseURLPath = "/tags/" + t.Name
+					basePath = filepath.Join("tags", tagNorm(t.Name))
+					baseURLPath = "/tags/" + tagNorm(t.Name)
 				} else {
-					basePath = filepath.Join(locale, "tags", t.Name)
-					baseURLPath = "/" + locale + "/tags/" + t.Name
+					basePath = filepath.Join(locale, "tags", tagNorm(t.Name))
+					baseURLPath = "/" + locale + "/tags/" + tagNorm(t.Name)
 				}
 				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, locale)...)
 			}
@@ -179,8 +184,8 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				continue
 			}
 			sortByDateDesc(filtered)
-			basePath := filepath.Join("tags", t.Name)
-			baseURLPath := "/tags/" + t.Name
+			basePath := filepath.Join("tags", tagNorm(t.Name))
+			baseURLPath := "/tags/" + tagNorm(t.Name)
 			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, "")...)
 		}
 	}
@@ -208,11 +213,11 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				sortByDateDesc(filtered)
 				var basePath, baseURLPath string
 				if locale == g.cfg.I18n.DefaultLocale {
-					basePath = filepath.Join("categories", c.Name)
-					baseURLPath = "/categories/" + c.Name
+					basePath = filepath.Join("categories", tagNorm(c.Name))
+					baseURLPath = "/categories/" + tagNorm(c.Name)
 				} else {
-					basePath = filepath.Join(locale, "categories", c.Name)
-					baseURLPath = "/" + locale + "/categories/" + c.Name
+					basePath = filepath.Join(locale, "categories", tagNorm(c.Name))
+					baseURLPath = "/" + locale + "/categories/" + tagNorm(c.Name)
 				}
 				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, locale)...)
 			}
@@ -232,8 +237,8 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				continue
 			}
 			sortByDateDesc(filtered)
-			basePath := filepath.Join("categories", c.Name)
-			baseURLPath := "/categories/" + c.Name
+			basePath := filepath.Join("categories", tagNorm(c.Name))
+			baseURLPath := "/categories/" + tagNorm(c.Name)
 			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, "")...)
 		}
 	}
@@ -445,6 +450,9 @@ func copyFile(src, dst string) error {
 }
 
 // slugify converts s to a lowercase hyphen-separated URL slug.
+// Only ASCII letters, digits, and hyphens are kept; spaces and underscores
+// become hyphens. Returns "untitled" when the input produces an empty result
+// (e.g. all non-ASCII characters with no slug in front-matter).
 func slugify(s string) string {
 	var out []byte
 	for i := 0; i < len(s); i++ {
@@ -458,7 +466,29 @@ func slugify(s string) string {
 			out = append(out, c)
 		}
 	}
+	if len(out) == 0 {
+		return "untitled"
+	}
 	return string(out)
+}
+
+// tagNorm normalises a tag or category name for use in URL paths and
+// filesystem directories. ASCII letters are lowercased and spaces become
+// hyphens; non-ASCII characters (e.g. Japanese) are left intact.
+// This keeps tagNorm consistent with the tagURL / categoryURL template helpers.
+func tagNorm(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			b.WriteRune(r + 32)
+		case r == ' ':
+			b.WriteByte('-')
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // siteFor creates a site copy with a custom article list.

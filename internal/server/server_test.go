@@ -21,6 +21,9 @@ func TestNewDevServer(t *testing.T) {
 	if srv.OutDir != "public" {
 		t.Errorf("expected outDir public, got %s", srv.OutDir)
 	}
+	if srv.RootDir != "" {
+		t.Errorf("expected empty RootDir by default, got %s", srv.RootDir)
+	}
 }
 
 func TestSSEBroadcaster(t *testing.T) {

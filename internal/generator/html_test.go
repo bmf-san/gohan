@@ -112,9 +112,24 @@ func TestSlugify(t *testing.T) {
 	for _, c := range []struct{ in, want string }{
 		{"Hello World", "hello-world"}, {"My Post", "my-post"},
 		{"already-fine", "already-fine"}, {"CamelCase", "camelcase"},
+		{"", "untitled"}, {"コードレビュー", "untitled"}, // non-ASCII → "untitled" fallback
 	} {
 		if got := slugify(c.in); got != c.want {
 			t.Errorf("slugify(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestTagNorm(t *testing.T) {
+	for _, c := range []struct{ in, want string }{
+		{"Go Programming", "go-programming"},
+		{"コードレビュー", "コードレビュー"},
+		{"Machine Learning", "machine-learning"},
+		{"already-fine", "already-fine"},
+		{"CamelCase", "camelcase"},
+	} {
+		if got := tagNorm(c.in); got != c.want {
+			t.Errorf("tagNorm(%q) = %q, want %q", c.in, got, c.want)
 		}
 	}
 }
