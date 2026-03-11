@@ -29,9 +29,6 @@ jobs:
       - name: Build
         run: make build
 
-      - name: Vet
-        run: make vet
-
       - name: Test
         run: make test
 

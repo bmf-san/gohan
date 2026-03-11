@@ -11,7 +11,7 @@ BIN      = gohan
 CMD      = ./cmd/gohan
 COVERAGE = coverage.out
 
-.PHONY: all build test lint vet tidy vuln serve clean install coverage check help
+.PHONY: all build test lint tidy vuln serve clean install coverage check help
 
 ## all: build the binary (default target)
 all: build
@@ -36,10 +36,6 @@ coverage:
 lint:
 	golangci-lint run ./...
 
-## vet: run go vet
-vet:
-	go vet ./...
-
 ## tidy: verify go.mod and go.sum are tidy
 tidy:
 	go mod tidy
@@ -49,8 +45,8 @@ tidy:
 vuln:
 	govulncheck ./...
 
-## check: run all checks locally (build vet test lint tidy vuln)
-check: build vet test lint tidy vuln
+## check: run all checks locally (build test lint tidy vuln)
+check: build test lint tidy vuln
 
 ## serve: start the development server (requires config.yaml in current directory)
 serve: build
