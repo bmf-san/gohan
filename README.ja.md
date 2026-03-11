@@ -1,6 +1,7 @@
 # gohan
 
 [![CI](https://github.com/bmf-san/gohan/actions/workflows/ci.yml/badge.svg)](https://github.com/bmf-san/gohan/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/bmf-san/gohan/branch/main/graph/badge.svg)](https://codecov.io/gh/bmf-san/gohan)
 [![Go Reference](https://pkg.go.dev/badge/github.com/bmf-san/gohan.svg)](https://pkg.go.dev/github.com/bmf-san/gohan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -19,7 +20,7 @@ This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77
 - **差分ビルド** — 変更されたファイルのみを再生成し、ビルド時間を最小化
 - **Markdown + Front Matter** — GFM (GitHub Flavored Markdown) 対応
 - **シンタックスハイライト** — [chroma](https://github.com/alecthomas/chroma) によるコードブロックのスタイリング
-- **Mermaid 図** — ` + "`mermaid`" + ` フェンスコードブロックをインタラクティブな図に変換
+- **Mermaid 図** — `mermaid` フェンスコードブロックをインタラクティブな図に変換
 - **タクソノミー** — タグ・カテゴリーページを自動生成
 - **Atom フィード / サイトマップ** — `atom.xml`・`sitemap.xml` を自動生成
 - **ライブリロード開発サーバー** — `gohan serve` でファイル変更を検知してブラウザを自動リロード
