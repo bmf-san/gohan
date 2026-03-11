@@ -11,8 +11,8 @@
 | `gohan build` | Build the site (incremental by default) |
 | `gohan build --full` | Force a full rebuild |
 | `gohan build --dry-run` | Simulate a build without writing files |
-| `gohan new post --slug=<s> --title=<t>` | Create a new post skeleton |
-| `gohan new page --slug=<s> --title=<t>` | Create a new page skeleton |
+| `gohan new [--type=post] [--title=<t>] <slug>` | Create a new post skeleton |
+| `gohan new --type=page [--title=<t>] <slug>` | Create a new page skeleton |
 | `gohan serve` | Start the live-reload development server |
 | `gohan version` | Print version information |
 
@@ -37,12 +37,19 @@ By default, only files that have changed since the last build are regenerated (i
 
 Creates a new content skeleton with pre-filled Front Matter.
 
-**Subcommands**
+**Flags**
 
-| Subcommand | Description |
+| Flag | Description |
 |---|---|
-| `gohan new post --slug=<s> [--title=<t>]` | Create `content/posts/<slug>.md` |
-| `gohan new page --slug=<s> [--title=<t>]` | Create `content/pages/<slug>.md` |
+| `--type` | Content type: `post` (default) or `page` |
+| `--title` | Article title (defaults to slug converted to title case) |
+
+**Usage**
+
+| Usage | Description |
+|---|---|
+| `gohan new [--type=post] [--title=<t>] <slug>` | Create `content/posts/<slug>.md` |
+| `gohan new --type=page [--title=<t>] <slug>` | Create `content/pages/<slug>.md` |
 
 If `--title` is omitted, gohan derives a title from the slug (e.g. `my-post` → `My Post`).
 

@@ -11,8 +11,8 @@
 | `gohan build` | サイトをビルド（デフォルトで差分ビルド） |
 | `gohan build --full` | フルビルドを強制実行 |
 | `gohan build --dry-run` | ファイルを書き出さずにビルドをシミュレート |
-| `gohan new post --slug=<s> --title=<t>` | 新規記事スケルトンを作成 |
-| `gohan new page --slug=<s> --title=<t>` | 新規ページスケルトンを作成 |
+| `gohan new [--type=post] [--title=<t>] <slug>` | 新規記事スケルトンを作成 |
+| `gohan new --type=page [--title=<t>] <slug>` | 新規ページスケルトンを作成 |
 | `gohan serve` | ライブリロード付き開発サーバーを起動 |
 | `gohan version` | バージョン情報を表示 |
 
@@ -37,12 +37,19 @@
 
 Front Matter が事前入力されたコンテンツスケルトンを作成します。
 
-**サブコマンド**
+**フラグ**
 
-| サブコマンド | 説明 |
+| フラグ | 説明 |
 |---|---|
-| `gohan new post --slug=<s> [--title=<t>]` | `content/posts/<slug>.md` を作成 |
-| `gohan new page --slug=<s> [--title=<t>]` | `content/pages/<slug>.md` を作成 |
+| `--type` | コンテンツタイプ: `post`（デフォルト）または `page` |
+| `--title` | 記事タイトル（省略時はスラッグをタイトルケースに変換） |
+
+**使用例**
+
+| 使用例 | 説明 |
+|---|---|
+| `gohan new [--type=post] [--title=<t>] <slug>` | `content/posts/<slug>.md` を作成 |
+| `gohan new --type=page [--title=<t>] <slug>` | `content/pages/<slug>.md` を作成 |
 
 `--title` を省略した場合、スラッグからタイトルが自動生成されます（例: `my-post` → `My Post`）。
 
