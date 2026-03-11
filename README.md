@@ -1,7 +1,10 @@
 # gohan
 
+[![GitHub release](https://img.shields.io/github/release/bmf-san/gohan.svg)](https://github.com/bmf-san/gohan/releases)
 [![CI](https://github.com/bmf-san/gohan/actions/workflows/ci.yml/badge.svg)](https://github.com/bmf-san/gohan/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/bmf-san/gohan)](https://goreportcard.com/report/github.com/bmf-san/gohan)
 [![Go Reference](https://pkg.go.dev/badge/github.com/bmf-san/gohan.svg)](https://pkg.go.dev/github.com/bmf-san/gohan)
+[![Sourcegraph](https://sourcegraph.com/github.com/bmf-san/gohan/-/badge.svg)](https://sourcegraph.com/github.com/bmf-san/gohan?badge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A simple, fast static site generator written in Go — featuring incremental builds, syntax highlighting, Mermaid diagrams, and a live-reload dev server.
