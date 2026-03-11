@@ -55,13 +55,14 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install tools
+        run: make tools
+
       - name: Check go mod tidy
         run: make tidy
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: v2.10.1
+      - name: Lint
+        run: make lint
 
   vuln:
     name: Vulnerability Check
@@ -76,10 +77,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install tools
+        run: make tools
+
       - name: Run govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          make vuln
+        run: make vuln
 
   goreleaser:
     name: GoReleaser Check

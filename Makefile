@@ -6,12 +6,16 @@ COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE    ?= $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 LDFLAGS  = -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
+# ─── Tool versions ───────────────────────────────────────────────────────────
+GOLANGCI_LINT_VERSION ?= v2.10.1
+GOVULNCHECK_VERSION   ?= latest
+
 # ─── Paths ────────────────────────────────────────────────────────────────────
 BIN      = gohan
 CMD      = ./cmd/gohan
 COVERAGE = coverage.out
 
-.PHONY: all build test lint tidy vuln serve clean install coverage check help
+.PHONY: all build test lint serve clean install coverage tidy vuln tools help
 
 ## all: build the binary (default target)
 all: build
@@ -32,6 +36,11 @@ test:
 coverage:
 	@go tool cover -func=$(COVERAGE) | grep total
 
+## tools: install development tools (golangci-lint, govulncheck)
+tools:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
+
 ## lint: run golangci-lint
 lint:
 	golangci-lint run ./...
@@ -41,7 +50,7 @@ tidy:
 	go mod tidy
 	git diff --exit-code go.mod go.sum
 
-## vuln: run govulncheck (requires: go install golang.org/x/vuln/cmd/govulncheck@latest)
+## vuln: run govulncheck
 vuln:
 	govulncheck ./...
 
