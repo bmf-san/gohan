@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/bmf-san/gohan/internal/config"
@@ -53,20 +52,12 @@ func runBuild(args []string) error {
 	}
 	_ = os.MkdirAll(gohanDir, 0o755)
 	lockPath := filepath.Join(gohanDir, "build.lock")
-	lockFile, lockErr := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0o644)
-	if lockErr != nil {
-		fmt.Fprintf(os.Stderr, "warn: build lock unavailable (%v); concurrent builds are not protected\n", lockErr)
-	} else {
-		if flockErr := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); flockErr != nil {
-			_ = lockFile.Close()
-			fmt.Println("build: another build is already running — skipping")
-			return nil
-		}
-		defer func() {
-			_ = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-			_ = lockFile.Close()
-		}()
+	unlock, acquired := tryLockBuildFile(lockPath)
+	if !acquired {
+		fmt.Println("build: another build is already running — skipping")
+		return nil
 	}
+	defer unlock()
 
 	loader := config.New(rootDir)
 	cfg, err := loader.Load()

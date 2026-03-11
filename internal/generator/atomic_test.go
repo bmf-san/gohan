@@ -3,6 +3,7 @@ package generator
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -63,6 +64,9 @@ func TestWriteFileAtomic_NoTempLeftBehind(t *testing.T) {
 }
 
 func TestWriteFileAtomic_Permissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows does not support Unix file permissions")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "out.html")
 

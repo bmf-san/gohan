@@ -188,6 +188,7 @@ func TestPaginatedJobs_SinglePage(t *testing.T) {
 	pg := jobs[0].data.Pagination
 	if pg == nil {
 		t.Fatal("Pagination should not be nil")
+		return
 	}
 	if pg.TotalPages != 1 || pg.CurrentPage != 1 {
 		t.Errorf("unexpected pagination: %+v", pg)
