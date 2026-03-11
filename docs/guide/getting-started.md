@@ -77,7 +77,7 @@ See [Configuration](configuration.md) for all available fields.
 ### Step 3: Create your first article
 
 ```bash
-gohan new post --slug=hello-world --title="Hello, World!"
+gohan new --title="Hello, World!" hello-world
 ```
 
 This creates `content/posts/hello-world.md`. Edit it to add body content:
