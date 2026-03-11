@@ -64,7 +64,7 @@ theme:
 EOF
 
 # 3. 最初の記事を作成
-gohan new post --slug=hello-world --title="Hello, World!"
+gohan new --title="Hello, World!" hello-world
 
 # 4. サイトをビルド
 gohan build
@@ -133,6 +133,14 @@ books:
 ## 設計
 
 アーキテクチャと設計方針については [docs/DESIGN_DOC.ja.md](docs/DESIGN_DOC.ja.md) を参照してください。
+
+---
+
+## gohan を使っているサイト
+
+| サイト | 説明 |
+|---|---|
+| [bmf-tech.com](https://bmf-tech.com) ([ソース](https://github.com/bmf-san/bmf-tech)) | 個人テックブログ — i18n (EN/JA)・700+ 記事・Cloudflare Pages 配信 |
 
 ---
 
