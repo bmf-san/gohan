@@ -27,13 +27,13 @@ jobs:
         run: go mod download
 
       - name: Build
-        run: go build ./...
+        run: make build
 
       - name: Vet
-        run: go vet ./...
+        run: make vet
 
       - name: Test
-        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+        run: make test
 
       - name: Check coverage threshold
         if: matrix.os == 'ubuntu-latest'
@@ -59,9 +59,7 @@ jobs:
           cache: true
 
       - name: Check go mod tidy
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
+        run: make tidy
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
@@ -84,7 +82,7 @@ jobs:
       - name: Run govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./...
+          make vuln
 
   goreleaser:
     name: GoReleaser Check
