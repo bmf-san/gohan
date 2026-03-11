@@ -35,12 +35,13 @@ builds:
 
 archives:
   - id: gohan
-    builds:
+    ids:
       - gohan
     # .tar.gz for Unix; .zip for Windows
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - README.md

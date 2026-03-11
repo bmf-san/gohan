@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/bmf-san/gohan/internal/config"
@@ -49,18 +48,12 @@ func runBuild(args []string) error {
 	lockDir := filepath.Join(rootDir, ".gohan")
 	_ = os.MkdirAll(lockDir, 0o755)
 	lockPath := filepath.Join(lockDir, "build.lock")
-	lockFile, lockErr := os.OpenFile(lockPath, os.O_CREATE|os.O_WRONLY, 0o644)
-	if lockErr == nil {
-		if flockErr := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); flockErr != nil {
-			_ = lockFile.Close()
-			fmt.Println("build: another build is already running — skipping")
-			return nil
-		}
-		defer func() {
-			_ = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-			_ = lockFile.Close()
-		}()
+	unlock, acquired := tryLockBuildFile(lockPath)
+	if !acquired {
+		fmt.Println("build: another build is already running — skipping")
+		return nil
 	}
+	defer unlock()
 
 	loader := config.New(rootDir)
 	cfg, err := loader.Load()
