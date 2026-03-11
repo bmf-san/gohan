@@ -209,6 +209,32 @@ func (w *injectingResponseWriter) flush() {
 	_, _ = w.wrapped.Write(body)
 }
 
+// noListFS wraps http.Dir and disables directory listings.
+// Directories without an index.html return os.ErrNotExist so that
+// http.FileServer responds with 404 instead of showing a file list.
+type noListFS struct{ base http.Dir }
+
+func (fs noListFS) Open(name string) (http.File, error) {
+	f, err := fs.base.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	info, err := f.Stat()
+	if err != nil {
+		_ = f.Close()
+		return nil, err
+	}
+	if info.IsDir() {
+		idx, err := fs.base.Open(strings.TrimSuffix(name, "/") + "/index.html")
+		if err != nil {
+			_ = f.Close()
+			return nil, os.ErrNotExist
+		}
+		_ = idx.Close()
+	}
+	return f, nil
+}
+
 // injectingHandler wraps handler and injects the SSE script into HTML responses.
 func injectingHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -282,8 +308,9 @@ func (s *DevServer) Start() error {
 		}
 	})
 
-	// Static file server with script injection
-	fileHandler := injectingHandler(http.FileServer(http.Dir(s.OutDir)))
+	// Static file server with script injection.
+	// noListFS disables directory listings: directories without index.html return 404.
+	fileHandler := injectingHandler(http.FileServer(noListFS{http.Dir(s.OutDir)}))
 	mux.Handle("/", fileHandler)
 
 	// Start file watcher if available
