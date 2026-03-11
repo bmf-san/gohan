@@ -2,6 +2,7 @@
 
 [![GitHub release](https://img.shields.io/github/release/bmf-san/gohan.svg)](https://github.com/bmf-san/gohan/releases)
 [![CI](https://github.com/bmf-san/gohan/actions/workflows/ci.yml/badge.svg)](https://github.com/bmf-san/gohan/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/bmf-san/gohan/branch/main/graph/badge.svg)](https://codecov.io/gh/bmf-san/gohan)
 [![CodeQL](https://github.com/bmf-san/gohan/actions/workflows/codeql.yml/badge.svg)](https://github.com/bmf-san/gohan/actions/workflows/codeql.yml)
 [![Dependabot Updates](https://github.com/bmf-san/gohan/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/bmf-san/gohan/actions/workflows/dependabot/dependabot-updates)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bmf-san/gohan)](https://goreportcard.com/report/github.com/bmf-san/gohan)
@@ -24,7 +25,7 @@ This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77
 - **差分ビルド** — 変更されたファイルのみを再生成し、ビルド時間を最小化
 - **Markdown + Front Matter** — GFM (GitHub Flavored Markdown) 対応
 - **シンタックスハイライト** — [chroma](https://github.com/alecthomas/chroma) によるコードブロックのスタイリング
-- **Mermaid 図** — ` + "`mermaid`" + ` フェンスコードブロックをインタラクティブな図に変換
+- **Mermaid 図** — `mermaid` フェンスコードブロックをインタラクティブな図に変換
 - **タクソノミー** — タグ・カテゴリーページを自動生成
 - **Atom フィード / サイトマップ** — `atom.xml`・`sitemap.xml` を自動生成
 - **ライブリロード開発サーバー** — `gohan serve` でファイル変更を検知してブラウザを自動リロード
