@@ -2,6 +2,8 @@
 
 [![GitHub release](https://img.shields.io/github/release/bmf-san/gohan.svg)](https://github.com/bmf-san/gohan/releases)
 [![CI](https://github.com/bmf-san/gohan/actions/workflows/ci.yml/badge.svg)](https://github.com/bmf-san/gohan/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/bmf-san/gohan/actions/workflows/codeql.yml/badge.svg)](https://github.com/bmf-san/gohan/actions/workflows/codeql.yml)
+[![Dependabot Updates](https://github.com/bmf-san/gohan/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/bmf-san/gohan/actions/workflows/dependabot/dependabot-updates)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bmf-san/gohan)](https://goreportcard.com/report/github.com/bmf-san/gohan)
 [![Go Reference](https://pkg.go.dev/badge/github.com/bmf-san/gohan.svg)](https://pkg.go.dev/github.com/bmf-san/gohan)
 [![Sourcegraph](https://sourcegraph.com/github.com/bmf-san/gohan/-/badge.svg)](https://sourcegraph.com/github.com/bmf-san/gohan?badge)
