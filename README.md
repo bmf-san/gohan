@@ -1,7 +1,6 @@
 # gohan
 
 [![CI](https://github.com/bmf-san/gohan/actions/workflows/ci.yml/badge.svg)](https://github.com/bmf-san/gohan/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/bmf-san/gohan/branch/main/graph/badge.svg)](https://codecov.io/gh/bmf-san/gohan)
 [![Go Reference](https://pkg.go.dev/badge/github.com/bmf-san/gohan.svg)](https://pkg.go.dev/github.com/bmf-san/gohan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -20,7 +19,7 @@ This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77
 - **Incremental builds** — Regenerate only changed files, minimising build time
 - **Markdown + Front Matter** — GitHub Flavored Markdown with YAML metadata
 - **Syntax highlighting** — Code blocks styled with [chroma](https://github.com/alecthomas/chroma)
-- **Mermaid diagrams** — Fenced `mermaid` blocks render as interactive diagrams
+- **Mermaid diagrams** — Fenced ` + "`" + `mermaid` + "`" + ` blocks render as interactive diagrams
 - **Taxonomy** — Tag and category pages generated automatically
 - **Atom feed & sitemap** — `atom.xml` and `sitemap.xml` generated automatically
 - **Live-reload dev server** — `gohan serve` watches files and reloads the browser
