@@ -28,6 +28,7 @@ package amazonbooks
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/bmf-san/gohan/internal/model"
 )
@@ -105,7 +106,7 @@ func (a *AmazonBooks) TemplateData(article *model.ProcessedArticle, cfg map[stri
 			ASIN:     asin,
 			Title:    title,
 			ImageURL: fmt.Sprintf(imageURLTemplate, asin),
-			LinkURL:  fmt.Sprintf(linkURLTemplate, asin, tag),
+			LinkURL:  fmt.Sprintf(linkURLTemplate, asin, url.QueryEscape(tag)),
 		})
 	}
 

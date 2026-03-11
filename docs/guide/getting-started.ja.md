@@ -77,7 +77,7 @@ syntax_highlight:
 ### ステップ 3: 最初の記事を作成する
 
 ```bash
-gohan new post --slug=hello-world --title="Hello, World!"
+gohan new --title="Hello, World!" hello-world
 ```
 
 `content/posts/hello-world.md` が作成されます。編集して本文を追加しましょう:

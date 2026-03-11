@@ -64,7 +64,7 @@ theme:
 EOF
 
 # 3. Create your first article
-gohan new post --slug=hello-world --title="Hello, World!"
+gohan new --title="Hello, World!" hello-world
 
 # 4. Build the site
 gohan build
@@ -133,6 +133,14 @@ See [docs/DESIGN_DOC.md §20](docs/DESIGN_DOC.md) for the full plugin architectu
 ## Design
 
 For architecture and design decisions see [docs/DESIGN_DOC.md](docs/DESIGN_DOC.md).
+
+---
+
+## Sites Built with gohan
+
+| Site | Description |
+|---|---|
+| [bmf-tech.com](https://bmf-tech.com) ([source](https://github.com/bmf-san/bmf-tech)) | Personal tech blog — i18n (EN/JA), 700+ articles, Cloudflare Pages |
 
 ---
 

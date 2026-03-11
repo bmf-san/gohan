@@ -45,9 +45,13 @@ func runBuild(args []string) error {
 	// exclusive non-blocking flock on .gohan/build.lock.  If the lock is
 	// already held by another process we print a notice and skip this run
 	// so that public/ is never written by two processes at once.
-	lockDir := filepath.Join(rootDir, ".gohan")
-	_ = os.MkdirAll(lockDir, 0o755)
-	lockPath := filepath.Join(lockDir, "build.lock")
+	gohanDir := filepath.Join(rootDir, ".gohan")
+	// Print .gitignore hint on first run (before creating the directory).
+	if _, statErr := os.Stat(gohanDir); os.IsNotExist(statErr) {
+		fmt.Println("hint: add '.gohan/' to your .gitignore to exclude build cache")
+	}
+	_ = os.MkdirAll(gohanDir, 0o755)
+	lockPath := filepath.Join(gohanDir, "build.lock")
 	unlock, acquired := tryLockBuildFile(lockPath)
 	if !acquired {
 		fmt.Println("build: another build is already running — skipping")
@@ -69,15 +73,9 @@ func runBuild(args []string) error {
 
 	cacheDir := filepath.Join(rootDir, ".gohan", "cache")
 
-	// Print .gitignore hint on first run.
-	gohanDir := filepath.Join(rootDir, ".gohan")
-	if _, statErr := os.Stat(gohanDir); os.IsNotExist(statErr) {
-		fmt.Println("hint: add '.gohan/' to your .gitignore to exclude build cache")
-	}
-
 	// Hash config for cache invalidation.
 	cfgHasher := diff.NewGitDiffEngine(rootDir)
-	configHash, _ := cfgHasher.Hash(cfgAbs)
+	configHash, configHashErr := cfgHasher.Hash(cfgAbs)
 
 	// Load manifest.
 	manifest, err := diff.ReadManifest(cacheDir)
@@ -85,8 +83,9 @@ func runBuild(args []string) error {
 		return fmt.Errorf("read manifest: %w", err)
 	}
 
-	// Full build when: --full flag, config changed, or no manifest yet.
-	forceFullBuild := *full || diff.CheckConfigChange(manifest, configHash)
+	// Full build when: --full flag, config hashing failed, config changed, or no manifest yet.
+	// If we cannot hash the config, we must assume it has changed to avoid stale output.
+	forceFullBuild := *full || configHashErr != nil || diff.CheckConfigChange(manifest, configHash)
 	if forceFullBuild && manifest != nil {
 		if clearErr := diff.ClearCache(cacheDir); clearErr != nil {
 			return fmt.Errorf("clear cache: %w", clearErr)
@@ -102,6 +101,7 @@ func runBuild(args []string) error {
 	// article FilePaths are absolute (as set by the file parser).
 	cfg.Build.ContentDir = contentDir
 	cfg.Build.OutputDir = filepath.Join(rootDir, cfg.Build.OutputDir)
+	cfg.Build.AssetsDir = filepath.Join(rootDir, cfg.Build.AssetsDir)
 	articles, err := p.ParseAll(contentDir)
 	if err != nil {
 		return fmt.Errorf("parse content: %w", err)
@@ -207,12 +207,6 @@ func runBuild(args []string) error {
 	}
 	if err := generator.GenerateFeeds(outDir, cfg.Site.BaseURL, cfg.Site.Title, processed); err != nil {
 		fmt.Fprintf(os.Stderr, "warn: feeds: %v\n", err)
-	}
-
-	// Copy assets.
-	assetsDir := filepath.Join(rootDir, cfg.Build.AssetsDir)
-	if err := generator.CopyAssets(assetsDir, outDir); err != nil {
-		fmt.Fprintf(os.Stderr, "warn: copy assets: %v\n", err)
 	}
 
 	// Update manifest.

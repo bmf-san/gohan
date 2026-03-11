@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/bmf-san/gohan/internal/config"
 	"github.com/bmf-san/gohan/internal/server"
 )
 
@@ -25,9 +26,18 @@ func runServe(args []string) error {
 		fmt.Printf("serve: initial build warning: %v\n", err)
 	}
 
-	// Determine output directory from config (best-effort; fallback to "public")
-	rootDir := filepath.Dir(*configPath)
+	// Determine project root and output directory from config.
+	cfgAbs, err := filepath.Abs(*configPath)
+	if err != nil {
+		return fmt.Errorf("resolve config path: %w", err)
+	}
+	rootDir := filepath.Dir(cfgAbs)
+
+	// Load config to get the actual output directory; fall back to "public".
 	outDir := filepath.Join(rootDir, "public")
+	if cfg, cfgErr := config.New(rootDir).Load(); cfgErr == nil {
+		outDir = filepath.Join(rootDir, cfg.Build.OutputDir)
+	}
 
 	// rebuildFn triggers a differential build on file change
 	rebuildFn := func() error {
@@ -35,6 +45,7 @@ func runServe(args []string) error {
 	}
 
 	srv := server.NewDevServer(*host, *port, outDir, rebuildFn)
+	srv.RootDir = rootDir // resolve watch dirs relative to project root (M-6)
 	fmt.Printf("serve: listening on http://%s:%d\n", *host, *port)
 	return srv.Start()
 }

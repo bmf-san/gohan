@@ -23,9 +23,9 @@ func runNew(args []string) error {
 	}
 	slug := fs.Arg(0)
 
-	// Validate slug: no path separators, no spaces
-	if strings.ContainsAny(slug, "/\\") {
-		return fmt.Errorf("slug must not contain path separators: %q", slug)
+	// Validate slug: no path separators, no whitespace
+	if strings.ContainsAny(slug, "/\\ \t") {
+		return fmt.Errorf("slug must not contain path separators or whitespace: %q", slug)
 	}
 
 	// Determine directory
