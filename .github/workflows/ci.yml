@@ -42,6 +42,14 @@ jobs:
             exit 1
           fi
 
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.out
+          fail_ci_if_error: true
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
