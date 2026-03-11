@@ -4,7 +4,7 @@
 
 | Version | Supported |
 | ------- | --------- |
-| Latest (`v0.1.x`) | ✅ |
+| Latest | ✅ |
 | Older versions | ❌ |
 
 Only the latest release is actively maintained and receives security fixes.
