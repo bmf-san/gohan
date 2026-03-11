@@ -81,8 +81,8 @@ site:
 	if cfg.Theme.Name != "default" {
 		t.Errorf("theme.name default: got %q, want %q", cfg.Theme.Name, "default")
 	}
-	if cfg.Theme.Dir != "themes/default" {
-		t.Errorf("theme.dir default: got %q, want %q", cfg.Theme.Dir, "themes/default")
+	if cfg.Theme.Dir != filepath.FromSlash("themes/default") {
+		t.Errorf("theme.dir default: got %q, want %q", cfg.Theme.Dir, filepath.FromSlash("themes/default"))
 	}
 	if cfg.Site.Language != "en" {
 		t.Errorf("site.language default: got %q, want %q", cfg.Site.Language, "en")
@@ -171,7 +171,7 @@ theme:
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if cfg.Theme.Dir != "themes/mytheme" {
-		t.Errorf("theme.dir: got %q, want %q", cfg.Theme.Dir, "themes/mytheme")
+	if cfg.Theme.Dir != filepath.FromSlash("themes/mytheme") {
+		t.Errorf("theme.dir: got %q, want %q", cfg.Theme.Dir, filepath.FromSlash("themes/mytheme"))
 	}
 }
