@@ -29,7 +29,14 @@ This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77
 - **タクソノミー** — タグ・カテゴリーページを自動生成
 - **Atom フィード / サイトマップ** — `atom.xml`・`sitemap.xml` を自動生成
 - **ライブリロード開発サーバー** — `gohan serve` でファイル変更を検知してブラウザを自動リロード
-- **カスタマイズ可能なテーマ** — Go `html/template` による完全制御- **プラグインシステム** — `config.yaml` で有効化できるビルトインプラグイン（Goコード不要）
+- **カスタマイズ可能なテーマ** — Go `html/template` による完全制御
+- **プラグインシステム** — `config.yaml` で有効化できるビルトインプラグイン（Goコード不要）
+- **i18n** — 多言語コンテンツ、翻訳リンク・`hreflang` 対応
+- **OGP 画像生成** — ビルド時に記事ごとの `1200×630` Open Graph 画像を自動生成
+- **ページネーション** — `per_page` 設定と前後ページナビゲーションの自動生成
+- **GitHub ソースリンク** — 記事ごとに GitHub 上のソースファイルへのリンクを自動付与
+- **関連記事** — 記事ページに同カテゴリーの関連記事を自動表示
+
 ---
 
 ## インストール
@@ -134,6 +141,17 @@ books:
 | [Taxonomy](docs/guide/taxonomy.ja.md) | タグ・カテゴリー・アーカイブページ |
 | [CLI リファレンス](docs/guide/cli.ja.md) | 全コマンドとフラグ |
 
+## 機能一覧
+
+| 機能 | 内容 |
+|---|---|
+| [i18n](docs/features/i18n.ja.md) | 多言語コンテンツ、翻訳リンク・`hreflang` 対応 |
+| [OGP 画像生成](docs/features/ogp.ja.md) | ビルド時に記事ごとの Open Graph 画像を自動生成 |
+| [ページネーション](docs/features/pagination.ja.md) | `per_page` 設定とページナビゲーション |
+| [GitHub ソースリンク](docs/features/github-source-link.ja.md) | 記事ごとに GitHub ソースファイルへのリンクを付与 |
+| [プラグインシステム](docs/features/plugin-system.ja.md) | ビルトインプラグイン（`amazon_books` など）を `config.yaml` で管理 |
+| [関連記事](docs/features/related-articles.ja.md) | 記事ページに同カテゴリーの関連記事を自動表示 |
+
 ---
 
 ## 設計
@@ -158,11 +176,11 @@ books:
 
 ## スポンサー
 
-私の活動を支援していただける場合は、スポンサーへの登録をなに卒お願いします！
+私の活動を支援していただける場合は、スポンサーへの登録を何卒お願いします！
 
 [GitHub Sponsors – bmf-san](https://github.com/sponsors/bmf-san)
 
-GitHubで⭐をつけていただくだけでも大変慕びです—モチベーションになります！ :D
+GitHubで⭐をつけていただくだけでも大変喜びです—モチベーションになります！ :D
 
 ---
 

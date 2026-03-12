@@ -29,7 +29,14 @@ This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77
 - **Taxonomy** — Tag and category pages generated automatically
 - **Atom feed & sitemap** — `atom.xml` and `sitemap.xml` generated automatically
 - **Live-reload dev server** — `gohan serve` watches files and reloads the browser
-- **Customisable themes** — Full control via Go `html/template`- **Plugin system** — Built-in plugins enabled per-project via `config.yaml` (no Go code required)
+- **Customisable themes** — Full control via Go `html/template`
+- **Plugin system** — Built-in plugins enabled per-project via `config.yaml` (no Go code required)
+- **i18n** — Multi-locale content with per-article translation links and `hreflang` support
+- **OGP image generation** — Build-time `1200×630` Open Graph images, one per article
+- **Pagination** — Configurable `per_page` with automatic next/previous page links
+- **GitHub source link** — Per-article link to the source file on GitHub for easy editing
+- **Related articles** — Automatic same-category article recommendations on article pages
+
 ---
 
 ## Installation
@@ -133,6 +140,17 @@ See [docs/DESIGN_DOC.md §20](docs/DESIGN_DOC.md) for the full plugin architectu
 | [Templates](docs/guide/templates.md) | Theme templates, variables, built-in functions |
 | [Taxonomy](docs/guide/taxonomy.md) | Tags, categories, and archive pages |
 | [CLI Reference](docs/guide/cli.md) | All commands and flags |
+
+## Feature Documentation
+
+| Feature | Description |
+|---|---|
+| [i18n](docs/features/i18n.md) | Multi-locale content with translation links and `hreflang` |
+| [OGP Image Generation](docs/features/ogp.md) | Build-time Open Graph images per article |
+| [Pagination](docs/features/pagination.md) | Configurable `per_page` and page navigation |
+| [GitHub Source Link](docs/features/github-source-link.md) | Per-article link to the source file on GitHub |
+| [Plugin System](docs/features/plugin-system.md) | Built-in plugins (`amazon_books`, …) via `config.yaml` |
+| [Related Articles](docs/features/related-articles.md) | Same-category article recommendations on article pages |
 
 ---
 
