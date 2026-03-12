@@ -102,6 +102,9 @@ func runBuild(args []string) error {
 	cfg.Build.ContentDir = contentDir
 	cfg.Build.OutputDir = filepath.Join(rootDir, cfg.Build.OutputDir)
 	cfg.Build.AssetsDir = filepath.Join(rootDir, cfg.Build.AssetsDir)
+	if cfg.Build.StaticDir != "" {
+		cfg.Build.StaticDir = filepath.Join(rootDir, cfg.Build.StaticDir)
+	}
 	articles, err := p.ParseAll(contentDir)
 	if err != nil {
 		return fmt.Errorf("parse content: %w", err)

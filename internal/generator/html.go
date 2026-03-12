@@ -74,9 +74,17 @@ func (g *HTMLGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) e
 	}
 
 	if g.cfg.Build.AssetsDir != "" {
-		if err := CopyAssets(g.cfg.Build.AssetsDir, filepath.Join(g.outDir, "assets")); err != nil {
+		if err := CopyDir(g.cfg.Build.AssetsDir, filepath.Join(g.outDir, "assets")); err != nil {
 			if !os.IsNotExist(err) {
 				return fmt.Errorf("copy assets: %w", err)
+			}
+		}
+	}
+
+	if g.cfg.Build.StaticDir != "" {
+		if err := CopyDir(g.cfg.Build.StaticDir, g.outDir); err != nil {
+			if !os.IsNotExist(err) {
+				return fmt.Errorf("copy static: %w", err)
 			}
 		}
 	}
@@ -420,8 +428,8 @@ func (g *HTMLGenerator) writePage(path, tmplName string, data *model.Site) error
 	return nil
 }
 
-// CopyAssets recursively copies all files from srcDir into dstDir.
-func CopyAssets(srcDir, dstDir string) error {
+// CopyDir recursively copies all files from srcDir into dstDir.
+func CopyDir(srcDir, dstDir string) error {
 	return filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
