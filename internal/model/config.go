@@ -30,6 +30,7 @@ type BuildConfig struct {
 	ContentDir   string   `yaml:"content_dir"`
 	OutputDir    string   `yaml:"output_dir"`
 	AssetsDir    string   `yaml:"assets_dir"`
+	StaticDir    string   `yaml:"static_dir"`
 	ExcludeFiles []string `yaml:"exclude_files"`
 	Parallelism  int      `yaml:"parallelism"`
 	PerPage      int      `yaml:"per_page"`

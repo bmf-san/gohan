@@ -456,7 +456,7 @@ type Site struct {
 
 type OutputGenerator interface {
     Write(articles []*ProcessedArticle, site *Site) error
-    CopyAssets(srcDir, dstDir string) error
+    CopyDir(srcDir, dstDir string) error
     GenerateSitemap(pages []string) error
     GenerateFeeds(articles []*ProcessedArticle) error
 }

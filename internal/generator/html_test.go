@@ -90,7 +90,28 @@ func TestGenerate_CopiesAssets(t *testing.T) {
 	}
 }
 
-func TestCopyAssets_PreservesStructure(t *testing.T) {
+func TestGenerate_CopiesStatic(t *testing.T) {
+	staticDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(staticDir, "robots.txt"), []byte("User-agent: *"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(staticDir, "ads.txt"), []byte("google.com, pub-123, DIRECT, abc"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	outDir := t.TempDir()
+	cfg := model.Config{Build: model.BuildConfig{Parallelism: 1, StaticDir: staticDir}}
+	if err := NewHTMLGenerator(outDir, &mockEngine{}, cfg).Generate(makeSite(), nil); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(outDir, "robots.txt")); err != nil {
+		t.Errorf("expected robots.txt at output root: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(outDir, "ads.txt")); err != nil {
+		t.Errorf("expected ads.txt at output root: %v", err)
+	}
+}
+
+func TestCopyDir_PreservesStructure(t *testing.T) {
 	src := t.TempDir()
 	sub := filepath.Join(src, "css")
 	if err := os.MkdirAll(sub, 0o755); err != nil {
@@ -100,8 +121,8 @@ func TestCopyAssets_PreservesStructure(t *testing.T) {
 		t.Fatal(err)
 	}
 	dst := t.TempDir()
-	if err := CopyAssets(src, dst); err != nil {
-		t.Fatalf("CopyAssets: %v", err)
+	if err := CopyDir(src, dst); err != nil {
+		t.Fatalf("CopyDir: %v", err)
 	}
 	if got, _ := os.ReadFile(filepath.Join(dst, "css", "main.css")); string(got) != ".a{}" {
 		t.Errorf("unexpected content: %s", got)
