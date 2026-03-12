@@ -32,12 +32,31 @@ Every template receives a value of type `model.Site`.
 
 ```go
 type Site struct {
-    Config     Config              // Settings from config.yaml
-    Articles   []*ProcessedArticle // Articles for the current page (filtered)
-    Tags       []Taxonomy          // All tags across the site
-    Categories []Taxonomy          // All categories across the site
+    Config          Config              // Settings from config.yaml
+    Articles        []*ProcessedArticle // Articles for the current page (filtered)
+    Tags            []Taxonomy          // All tags across the site
+    Categories      []Taxonomy          // All categories across the site
+    Pagination      *Pagination         // Paging metadata; nil when pagination is disabled or for non-listing pages
+    CurrentLocale   string              // Locale for the current page (e.g. "en", "ja"); empty when i18n is not configured
+    RelatedArticles []*ProcessedArticle // Articles sharing at least one category with the current article (article pages only; nil on all other pages)
 }
 ```
+
+### Pagination
+
+```go
+type Pagination struct {
+    CurrentPage int
+    TotalPages  int
+    PerPage     int
+    TotalItems  int
+    PrevURL     string // empty string if no previous page
+    NextURL     string // empty string if no next page
+    BaseURL     string // URL path prefix used to construct PrevURL/NextURL
+}
+```
+
+See [docs/features/pagination.md](../features/pagination.md) for the full pagination guide.
 
 ### Config
 
@@ -72,18 +91,31 @@ type ProcessedArticle struct {
     OutputPath   string         // Output file path
     FilePath     string         // Source Markdown file path
     LastModified time.Time      // Last modified time
+    ContentPath  string         // Content-dir-relative Markdown path (e.g. "posts/hello.md"); used for GitHub edit links
+    Locale       string         // Locale code (e.g. "en", "ja"); empty when i18n is not configured
+    URL          string         // Canonical URL path (e.g. "/posts/hello/" or "/ja/posts/hello/")
+    Translations []LocaleRef    // Translated variants; populated by BuildTranslationMap; empty when not i18n
+    PluginData   map[string]interface{} // Per-article data injected by enabled plugins; access via {{index .PluginData "plugin_name"}}
+}
+
+// LocaleRef holds the locale code and canonical URL for a translated variant.
+type LocaleRef struct {
+    Locale string
+    URL    string
 }
 
 type FrontMatter struct {
-    Title       string
-    Date        time.Time
-    Draft       bool
-    Tags        []string
-    Categories  []string
-    Description string
-    Author      string
-    Slug        string
-    Template    string
+    Title          string
+    Date           time.Time
+    Draft          bool
+    Tags           []string
+    Categories     []string
+    Description    string
+    Author         string
+    Slug           string
+    Template       string
+    TranslationKey string                 // Links this article to its translations in other locales
+    Extra          map[string]interface{} // Any front-matter keys not listed above; used by plugins
 }
 ```
 
@@ -100,13 +132,15 @@ type Taxonomy struct {
 
 ## `.Articles` contents per template
 
-| Template | `.Articles` contains |
-|---|---|
-| `index.html` | All articles on the site |
-| `article.html` | The single article being rendered |
-| `tag.html` | Articles that have this tag |
-| `category.html` | Articles that belong to this category |
-| `archive.html` | Articles published in this year |
+| Template | `.Articles` contains | Extra fields available |
+|---|---|---|
+| `index.html` | All articles on the site | `.Pagination` |
+| `article.html` | The single article being rendered | `.RelatedArticles`, `.CurrentLocale` |
+| `tag.html` | Articles that have this tag | `.Pagination` |
+| `category.html` | Articles that belong to this category | `.Pagination` |
+| `archive.html` | Articles published in this year | — |
+
+> **Note on `article.html`:** inside a `{{range .Articles}}` loop, use `$` to access root-level fields — e.g. `$.RelatedArticles`, `$.CurrentLocale`, `$.Config`.
 
 ---
 

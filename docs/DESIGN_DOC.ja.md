@@ -972,6 +972,9 @@ testdata/
 | ページネーション | [docs/features/pagination.ja.md](features/pagination.ja.md) |
 | OGP画像生成 | [docs/features/ogp.ja.md](features/ogp.ja.md) |
 | プラグインシステム | [docs/features/plugin-system.ja.md](features/plugin-system.ja.md) |
+| GitHub ソースリンク | [docs/features/github-source-link.ja.md](features/github-source-link.ja.md) |
+| i18n（多言語対応） | [docs/features/i18n.ja.md](features/i18n.ja.md) |
+| 関連記事 | [docs/features/related-articles.ja.md](features/related-articles.ja.md) |
 
 ## 20. 技術的負債の管理
 
