@@ -141,7 +141,7 @@ See [docs/DESIGN_DOC.md §20](docs/DESIGN_DOC.md) for the full plugin architectu
 | [Taxonomy](docs/guide/taxonomy.md) | Tags, categories, and archive pages |
 | [CLI Reference](docs/guide/cli.md) | All commands and flags |
 
-## Features
+## Feature Documentation
 
 | Feature | Description |
 |---|---|
