@@ -385,6 +385,75 @@ func TestSortByDateDesc(t *testing.T) {
 	}
 }
 
+func TestRelatedArticles(t *testing.T) {
+	t0 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	t1 := time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)
+	t2 := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+
+	target := &model.ProcessedArticle{Article: model.Article{FrontMatter: model.FrontMatter{
+		Title: "Target", Slug: "target", Categories: []string{"go", "web"}, Date: t1,
+	}}, Locale: "en"}
+	same1 := &model.ProcessedArticle{Article: model.Article{FrontMatter: model.FrontMatter{
+		Title: "Same1", Slug: "same1", Categories: []string{"go"}, Date: t2,
+	}}, Locale: "en"}
+	same2 := &model.ProcessedArticle{Article: model.Article{FrontMatter: model.FrontMatter{
+		Title: "Same2", Slug: "same2", Categories: []string{"web"}, Date: t0,
+	}}, Locale: "en"}
+	diffLocale := &model.ProcessedArticle{Article: model.Article{FrontMatter: model.FrontMatter{
+		Title: "JA", Slug: "ja", Categories: []string{"go"}, Date: t2,
+	}}, Locale: "ja"}
+	unrelated := &model.ProcessedArticle{Article: model.Article{FrontMatter: model.FrontMatter{
+		Title: "Unrelated", Slug: "unrelated", Categories: []string{"rust"}, Date: t2,
+	}}, Locale: "en"}
+
+	all := []*model.ProcessedArticle{target, same1, same2, diffLocale, unrelated}
+
+	t.Run("returns same-locale same-category articles sorted newest first", func(t *testing.T) {
+		got := relatedArticles(all, target, 5)
+		if len(got) != 2 {
+			t.Fatalf("expected 2 related, got %d", len(got))
+		}
+		if got[0].FrontMatter.Title != "Same1" {
+			t.Errorf("expected Same1 first (newer), got %q", got[0].FrontMatter.Title)
+		}
+		if got[1].FrontMatter.Title != "Same2" {
+			t.Errorf("expected Same2 second (older), got %q", got[1].FrontMatter.Title)
+		}
+	})
+
+	t.Run("excludes the target article itself", func(t *testing.T) {
+		got := relatedArticles(all, target, 5)
+		for _, a := range got {
+			if a == target {
+				t.Error("target article should not appear in related")
+			}
+		}
+	})
+
+	t.Run("excludes different locale", func(t *testing.T) {
+		got := relatedArticles(all, target, 5)
+		for _, a := range got {
+			if a.Locale != target.Locale {
+				t.Errorf("got article with locale %q, expected %q", a.Locale, target.Locale)
+			}
+		}
+	})
+
+	t.Run("respects n limit", func(t *testing.T) {
+		got := relatedArticles(all, target, 1)
+		if len(got) != 1 {
+			t.Fatalf("expected 1 with n=1, got %d", len(got))
+		}
+	})
+
+	t.Run("returns empty when no categories match", func(t *testing.T) {
+		got := relatedArticles(all, unrelated, 5)
+		if len(got) != 0 {
+			t.Errorf("expected 0 related for unrelated article, got %d", len(got))
+		}
+	})
+}
+
 func TestGenerate_SkipsDateZeroArchive(t *testing.T) {
 	outDir := t.TempDir()
 	site := &model.Site{

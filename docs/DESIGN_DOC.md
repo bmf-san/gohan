@@ -974,6 +974,7 @@ Detailed feature specifications are maintained as separate documents:
 | Plugin System | [docs/features/plugin-system.md](features/plugin-system.md) |
 | GitHub Source Link | [docs/features/github-source-link.md](features/github-source-link.md) |
 | i18n (Multi-language) | [docs/features/i18n.md](features/i18n.md) |
+| Related Articles | [docs/features/related-articles.md](features/related-articles.md) |
 
 ## 22. Technical Debt Management
 

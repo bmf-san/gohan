@@ -130,6 +130,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		}
 		d := siteFor(site, []*model.ProcessedArticle{a})
 		d.CurrentLocale = a.Locale
+		d.RelatedArticles = relatedArticles(site.Articles, a, 5)
 		jobs = append(jobs, writeJob{
 			path: articlePath,
 			tmpl: tmplName,
@@ -552,6 +553,32 @@ func sortByDateDesc(articles []*model.ProcessedArticle) {
 	sort.Slice(articles, func(i, j int) bool {
 		return articles[i].FrontMatter.Date.After(articles[j].FrontMatter.Date)
 	})
+}
+
+// relatedArticles returns up to n articles that share at least one category
+// with a (same locale), excluding a itself, sorted newest-first.
+func relatedArticles(all []*model.ProcessedArticle, a *model.ProcessedArticle, n int) []*model.ProcessedArticle {
+	catSet := make(map[string]bool, len(a.FrontMatter.Categories))
+	for _, c := range a.FrontMatter.Categories {
+		catSet[c] = true
+	}
+	var related []*model.ProcessedArticle
+	for _, candidate := range all {
+		if candidate == a || candidate.Locale != a.Locale {
+			continue
+		}
+		for _, c := range candidate.FrontMatter.Categories {
+			if catSet[c] {
+				related = append(related, candidate)
+				break
+			}
+		}
+	}
+	sortByDateDesc(related)
+	if len(related) > n {
+		related = related[:n]
+	}
+	return related
 }
 
 // articleOutputPath returns the absolute filesystem path for an article page.
