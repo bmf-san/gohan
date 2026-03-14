@@ -412,12 +412,24 @@ func TestGenerate_ArchiveCurrentArchivePath(t *testing.T) {
 		switch {
 		case locale == "en" && path == "/archives/2024/03/":
 			enMonthPath = path
+			if !r.data.CurrentArchiveIsMonth {
+				t.Error("EN month archive: CurrentArchiveIsMonth should be true")
+			}
 		case locale == "en" && path == "/archives/2024/":
 			enYearPath = path
-		case locale == "ja" && path == "/archives/2024/03/":
+			if r.data.CurrentArchiveIsMonth {
+				t.Error("EN year archive: CurrentArchiveIsMonth should be false")
+			}
+		case locale == "ja" && path == "/ja/archives/2024/03/":
 			jaMonthPath = path
-		case locale == "ja" && path == "/archives/2024/":
+			if !r.data.CurrentArchiveIsMonth {
+				t.Error("JA month archive: CurrentArchiveIsMonth should be true")
+			}
+		case locale == "ja" && path == "/ja/archives/2024/":
 			jaYearPath = path
+			if r.data.CurrentArchiveIsMonth {
+				t.Error("JA year archive: CurrentArchiveIsMonth should be false")
+			}
 		}
 	}
 	if enMonthPath == "" {
@@ -427,10 +439,10 @@ func TestGenerate_ArchiveCurrentArchivePath(t *testing.T) {
 		t.Error("EN year archive: CurrentArchivePath not set to /archives/2024/")
 	}
 	if jaMonthPath == "" {
-		t.Error("JA month archive: CurrentArchivePath not set to /archives/2024/03/")
+		t.Error("JA month archive: CurrentArchivePath not set to /ja/archives/2024/03/")
 	}
 	if jaYearPath == "" {
-		t.Error("JA year archive: CurrentArchivePath not set to /archives/2024/")
+		t.Error("JA year archive: CurrentArchivePath not set to /ja/archives/2024/")
 	}
 }
 
@@ -877,5 +889,105 @@ func TestArticleOutputPath_FallbackWhenEmpty(t *testing.T) {
 	want := filepath.Join(outDir, "posts", "hello", "index.html")
 	if got != want {
 		t.Errorf("articleOutputPath fallback: got %q, want %q", got, want)
+	}
+}
+
+// TestArchive_PaginationJobs verifies that archive pages are paginated when the
+// article count exceeds perPage, and that CurrentArchivePath is set on all pages.
+func TestArchive_PaginationJobs(t *testing.T) {
+	date := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	var articles []*model.ProcessedArticle
+	for i := 0; i < 25; i++ {
+		articles = append(articles, &model.ProcessedArticle{
+			Article: model.Article{FrontMatter: model.FrontMatter{
+				Title: fmt.Sprintf("Article %d", i),
+				Slug:  fmt.Sprintf("article-%d", i),
+				Date:  date,
+			}},
+		})
+	}
+	site := &model.Site{
+		Config: model.Config{
+			Build: model.BuildConfig{Parallelism: 1, PerPage: 10},
+		},
+		Articles: articles,
+	}
+	g := NewHTMLGenerator(t.TempDir(), &mockEngine{}, site.Config)
+	jobs := g.buildJobs(site)
+
+	var archiveJobs []writeJob
+	for _, j := range jobs {
+		if j.tmpl == "archive.html" {
+			archiveJobs = append(archiveJobs, j)
+		}
+	}
+
+	// 25 articles / 10 per page = 3 pages for month + year archives (month same count)
+	monthJobs := 0
+	yearJobs := 0
+	for _, j := range archiveJobs {
+		if j.data.CurrentArchivePath == "/archives/2024/03/" {
+			monthJobs++
+			if j.data.CurrentArchivePath == "" {
+				t.Error("CurrentArchivePath must be set on paginated archive pages")
+			}
+		} else if j.data.CurrentArchivePath == "/archives/2024/" {
+			yearJobs++
+		}
+	}
+	if monthJobs != 3 {
+		t.Errorf("expected 3 paginated month-archive jobs for 25 articles with perPage=10, got %d", monthJobs)
+	}
+	if yearJobs != 3 {
+		t.Errorf("expected 3 paginated year-archive jobs for 25 articles with perPage=10, got %d", yearJobs)
+	}
+}
+
+// TestArchive_PaginationJobs_I18n verifies locale-aware archive pagination.
+func TestArchive_PaginationJobs_I18n(t *testing.T) {
+	date := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	var articles []*model.ProcessedArticle
+	for i := 0; i < 15; i++ {
+		articles = append(articles, &model.ProcessedArticle{
+			Article: model.Article{FrontMatter: model.FrontMatter{
+				Title: fmt.Sprintf("EN %d", i), Slug: fmt.Sprintf("en-%d", i), Date: date,
+			}},
+			Locale: "en",
+		})
+		articles = append(articles, &model.ProcessedArticle{
+			Article: model.Article{FrontMatter: model.FrontMatter{
+				Title: fmt.Sprintf("JA %d", i), Slug: fmt.Sprintf("ja-%d", i), Date: date,
+			}},
+			Locale: "ja",
+		})
+	}
+	site := &model.Site{
+		Config: model.Config{
+			Build: model.BuildConfig{Parallelism: 1, PerPage: 10},
+			I18n:  model.I18nConfig{Locales: []string{"en", "ja"}, DefaultLocale: "en"},
+		},
+		Articles: articles,
+	}
+	g := NewHTMLGenerator(t.TempDir(), &mockEngine{}, site.Config)
+	jobs := g.buildJobs(site)
+
+	enMonthJobs, jaMonthJobs := 0, 0
+	for _, j := range jobs {
+		if j.tmpl != "archive.html" {
+			continue
+		}
+		switch {
+		case j.data.CurrentLocale == "en" && j.data.CurrentArchivePath == "/archives/2024/03/":
+			enMonthJobs++
+		case j.data.CurrentLocale == "ja" && j.data.CurrentArchivePath == "/ja/archives/2024/03/":
+			jaMonthJobs++
+		}
+	}
+	// 15 articles each locale, perPage=10 → 2 pages each
+	if enMonthJobs != 2 {
+		t.Errorf("expected 2 EN month-archive pages, got %d", enMonthJobs)
+	}
+	if jaMonthJobs != 2 {
+		t.Errorf("expected 2 JA month-archive pages, got %d", jaMonthJobs)
 	}
 }

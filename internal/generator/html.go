@@ -284,17 +284,16 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				copy(as, articles)
 				sortByDateDesc(as)
 				k := key
-				d := siteFor(site, as)
-				d.CurrentLocale = locale
-				d.CurrentArchivePath = fmt.Sprintf("/archives/%04d/%02d/", k.year, int(k.month))
-				jobs = append(jobs, writeJob{
-					path: filepath.Join(g.outDir, archivePrefix, "archives",
-						fmt.Sprintf("%04d", k.year),
-						fmt.Sprintf("%02d", int(k.month)),
-						"index.html"),
-					tmpl: "archive.html",
-					data: d,
-				})
+				basePath := filepath.Join(archivePrefix, "archives", fmt.Sprintf("%04d", k.year), fmt.Sprintf("%02d", int(k.month)))
+				var baseURLPath, archivePath string
+				if archivePrefix == "" {
+					baseURLPath = fmt.Sprintf("/archives/%04d/%02d", k.year, int(k.month))
+					archivePath = fmt.Sprintf("/archives/%04d/%02d/", k.year, int(k.month))
+				} else {
+					baseURLPath = fmt.Sprintf("/%s/archives/%04d/%02d", archivePrefix, k.year, int(k.month))
+					archivePath = fmt.Sprintf("/%s/archives/%04d/%02d/", archivePrefix, k.year, int(k.month))
+				}
+				jobs = append(jobs, paginatedArchiveJobs(site, as, g.outDir, basePath, baseURLPath, perPage, locale, archivePath, true)...)
 			}
 
 			for year, articles := range yearArchives {
@@ -302,16 +301,16 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				copy(as, articles)
 				sortByDateDesc(as)
 				y := year
-				d := siteFor(site, as)
-				d.CurrentLocale = locale
-				d.CurrentArchivePath = fmt.Sprintf("/archives/%04d/", y)
-				jobs = append(jobs, writeJob{
-					path: filepath.Join(g.outDir, archivePrefix, "archives",
-						fmt.Sprintf("%04d", y),
-						"index.html"),
-					tmpl: "archive.html",
-					data: d,
-				})
+				basePath := filepath.Join(archivePrefix, "archives", fmt.Sprintf("%04d", y))
+				var baseURLPath, archivePath string
+				if archivePrefix == "" {
+					baseURLPath = fmt.Sprintf("/archives/%04d", y)
+					archivePath = fmt.Sprintf("/archives/%04d/", y)
+				} else {
+					baseURLPath = fmt.Sprintf("/%s/archives/%04d", archivePrefix, y)
+					archivePath = fmt.Sprintf("/%s/archives/%04d/", archivePrefix, y)
+				}
+				jobs = append(jobs, paginatedArchiveJobs(site, as, g.outDir, basePath, baseURLPath, perPage, locale, archivePath, false)...)
 			}
 		}
 	} else {
@@ -329,14 +328,10 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			copy(as, articles)
 			sortByDateDesc(as)
 			k := key
-			jobs = append(jobs, writeJob{
-				path: filepath.Join(g.outDir, "archives",
-					fmt.Sprintf("%04d", k.year),
-					fmt.Sprintf("%02d", int(k.month)),
-					"index.html"),
-				tmpl: "archive.html",
-				data: siteFor(site, as),
-			})
+			basePath := filepath.Join("archives", fmt.Sprintf("%04d", k.year), fmt.Sprintf("%02d", int(k.month)))
+			baseURLPath := fmt.Sprintf("/archives/%04d/%02d", k.year, int(k.month))
+			archivePath := fmt.Sprintf("/archives/%04d/%02d/", k.year, int(k.month))
+			jobs = append(jobs, paginatedArchiveJobs(site, as, g.outDir, basePath, baseURLPath, perPage, "", archivePath, true)...)
 		}
 
 		yearArchives := map[int][]*model.ProcessedArticle{}
@@ -351,13 +346,10 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			copy(as, articles)
 			sortByDateDesc(as)
 			y := year
-			jobs = append(jobs, writeJob{
-				path: filepath.Join(g.outDir, "archives",
-					fmt.Sprintf("%04d", y),
-					"index.html"),
-				tmpl: "archive.html",
-				data: siteFor(site, as),
-			})
+			basePath := filepath.Join("archives", fmt.Sprintf("%04d", y))
+			baseURLPath := fmt.Sprintf("/archives/%04d", y)
+			archivePath := fmt.Sprintf("/archives/%04d/", y)
+			jobs = append(jobs, paginatedArchiveJobs(site, as, g.outDir, basePath, baseURLPath, perPage, "", archivePath, false)...)
 		}
 	}
 
@@ -463,6 +455,27 @@ func paginatedJobs(
 			tmpl: tmpl,
 			data: d,
 		})
+	}
+	return jobs
+}
+
+// paginatedArchiveJobs is like paginatedJobs but also sets CurrentArchivePath
+// and CurrentArchiveIsMonth on every job so archive templates can render
+// locale-aware language-switcher links and display the correct date granularity.
+// archivePath is the locale-aware path, e.g. "/archives/2024/03/" or "/ja/archives/2024/03/".
+// isMonth is true for month-granularity archives, false for year-granularity.
+func paginatedArchiveJobs(
+	site *model.Site,
+	articles []*model.ProcessedArticle,
+	outDir, basePath, baseURLPath string,
+	perPage int,
+	currentLocale, archivePath string,
+	isMonth bool,
+) []writeJob {
+	jobs := paginatedJobs(site, articles, outDir, "archive.html", basePath, baseURLPath, perPage, currentLocale, nil)
+	for i := range jobs {
+		jobs[i].data.CurrentArchivePath = archivePath
+		jobs[i].data.CurrentArchiveIsMonth = isMonth
 	}
 	return jobs
 }
