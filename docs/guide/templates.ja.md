@@ -131,8 +131,8 @@ type Taxonomy struct {
 | 関数 | 使用例 | 説明 |
 |---|---|---|
 | `formatDate` | `{{formatDate "2006-01-02" .FrontMatter.Date}}` | 日付フォーマット |
-| `tagURL` | `{{tagURL "go"}}` → `/tags/go/` | タグページの URL |
-| `categoryURL` | `{{categoryURL "tech"}}` → `/categories/tech/` | カテゴリーページの URL |
+| `tagURL` | `{{tagURL .CurrentLocale "go"}}` → `/tags/go/`（EN）または `/ja/tags/go/`（JA） | ロケール対応のタグページ URL |
+| `categoryURL` | `{{categoryURL .CurrentLocale "tech"}}` → `/categories/tech/`（EN） | ロケール対応のカテゴリーページ URL |
 | `markdownify` | `{{markdownify "**bold**"}}` | Markdown を HTML に変換 |
 
 `formatDate` のレイアウト文字列は [Go の time フォーマット](https://pkg.go.dev/time#Layout) に従います:

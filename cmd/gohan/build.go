@@ -200,7 +200,7 @@ func runBuild(args []string) error {
 	outDir := cfg.Build.OutputDir
 	templateDir := filepath.Join(rootDir, cfg.Theme.Dir, "templates")
 	tmpl := gohantemplate.NewEngine()
-	if loadErr := tmpl.Load(templateDir, nil); loadErr != nil {
+	if loadErr := tmpl.Load(templateDir, nil, cfg.I18n.DefaultLocale); loadErr != nil {
 		fmt.Fprintf(os.Stderr, "warn: load templates: %v\n", loadErr)
 	}
 	gen := generator.NewHTMLGenerator(outDir, tmpl, *cfg)

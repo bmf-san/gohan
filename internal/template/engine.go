@@ -12,7 +12,10 @@ import (
 // the standard library html/template package.
 type TemplateEngine interface {
 	// Load parses all template files rooted at templateDir (e.g. theme/templates).
-	Load(templateDir string, funcs template.FuncMap) error
+	// defaultLocale is the site's primary locale (e.g. "en"); pass "" for
+	// non-i18n sites. tagURL and categoryURL use it to decide when to omit the
+	// locale prefix.
+	Load(templateDir string, funcs template.FuncMap, defaultLocale string) error
 
 	// Render executes the named template with the given data, writing the result
 	// to w.  templateName corresponds to a file base name such as "article.html".
