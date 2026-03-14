@@ -13,7 +13,6 @@ import (
 
 const (
 	cacheManifestFile = "manifest.json"
-	cacheHTMLDir      = "html"
 	configHashKey     = "__config__"
 	manifestVersion   = "1"
 )
@@ -51,33 +50,6 @@ func WriteManifest(cacheDir string, m *model.BuildManifest) error {
 	path := filepath.Join(cacheDir, cacheManifestFile)
 	if err := writeAtomicFile(path, data, 0644); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
-	}
-	return nil
-}
-
-// ReadCachedHTML returns the cached HTML for slug from cacheDir/html/<slug>.html.
-// Returns ("", nil) when not present.
-func ReadCachedHTML(cacheDir, slug string) (string, error) {
-	path := filepath.Join(cacheDir, cacheHTMLDir, slug+".html")
-	data, err := os.ReadFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return "", nil
-	}
-	if err != nil {
-		return "", fmt.Errorf("read cached html: %w", err)
-	}
-	return string(data), nil
-}
-
-// WriteCachedHTML stores html under cacheDir/html/<slug>.html.
-func WriteCachedHTML(cacheDir, slug, html string) error {
-	dir := filepath.Join(cacheDir, cacheHTMLDir)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("mkdir html cache: %w", err)
-	}
-	path := filepath.Join(dir, slug+".html")
-	if err := writeAtomicFile(path, []byte(html), 0644); err != nil {
-		return fmt.Errorf("write cached html: %w", err)
 	}
 	return nil
 }

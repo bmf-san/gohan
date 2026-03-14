@@ -53,13 +53,10 @@ type SyntaxHighlightConfig struct {
 
 // OGPConfig holds settings for build-time OGP image generation.
 type OGPConfig struct {
-	Enabled         bool   `yaml:"enabled"`
-	BackgroundColor string `yaml:"background_color"`
-	TextColor       string `yaml:"text_color"`
-	FontFile        string `yaml:"font_file"`
-	LogoFile        string `yaml:"logo_file"` // empty means no logo
-	Width           int    `yaml:"width"`
-	Height          int    `yaml:"height"`
+	Enabled  bool   `yaml:"enabled"`
+	LogoFile string `yaml:"logo_file"` // empty means no logo
+	Width    int    `yaml:"width"`
+	Height   int    `yaml:"height"`
 }
 
 // I18nConfig holds multi-language content configuration.

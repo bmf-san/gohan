@@ -32,23 +32,6 @@ func writeTemp(t *testing.T, content string) string {
 	return f.Name()
 }
 
-func TestIsGitRepo_NonGit(t *testing.T) {
-	dir := t.TempDir()
-	if IsGitRepo(dir) {
-		t.Error("expected false for plain temp dir")
-	}
-}
-
-func TestIsGitRepo_GitDir(t *testing.T) {
-	root, err := filepath.Abs("../..")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !IsGitRepo(root) {
-		t.Errorf("expected true for project root %s", root)
-	}
-}
-
 func TestHash_ValidFile(t *testing.T) {
 	content := "hello gohan"
 	path := writeTemp(t, content)
@@ -134,35 +117,6 @@ func TestDetect_DeletedFile(t *testing.T) {
 	}
 }
 
-func TestParseNameStatus(t *testing.T) {
-	output := "M\tinternal/foo.go\nA\tinternal/bar.go\nD\tinternal/old.go\n"
-	cs := parseNameStatus(output)
-	if len(cs.ModifiedFiles) != 1 {
-		t.Errorf("modified: %v", cs.ModifiedFiles)
-	}
-	if len(cs.AddedFiles) != 1 {
-		t.Errorf("added: %v", cs.AddedFiles)
-	}
-	if len(cs.DeletedFiles) != 1 {
-		t.Errorf("deleted: %v", cs.DeletedFiles)
-	}
-}
-
-func TestParseNameStatus_Rename(t *testing.T) {
-	// git diff --name-status emits "R<score>\told\tnew" for renames.
-	output := "R100\tinternal/old.go\tinternal/new.go\n"
-	cs := parseNameStatus(output)
-	if len(cs.DeletedFiles) != 1 || cs.DeletedFiles[0] != "internal/old.go" {
-		t.Errorf("expected old path in DeletedFiles, got %v", cs.DeletedFiles)
-	}
-	if len(cs.AddedFiles) != 1 || cs.AddedFiles[0] != "internal/new.go" {
-		t.Errorf("expected new path in AddedFiles, got %v", cs.AddedFiles)
-	}
-	if len(cs.ModifiedFiles) != 0 {
-		t.Errorf("expected no ModifiedFiles, got %v", cs.ModifiedFiles)
-	}
-}
-
 func TestGitDiffEngine_Hash(t *testing.T) {
 	content := "gohan hash test"
 	path := writeTemp(t, content)
@@ -188,13 +142,4 @@ func TestGitDiffEngine_Hash_Missing(t *testing.T) {
 	}
 }
 
-func TestDetectChanges_NonGitDir(t *testing.T) {
-	dir := t.TempDir()
-	cs, err := DetectChanges(dir, "HEAD~1", "HEAD")
-	if err != nil {
-		t.Fatalf("DetectChanges on non-git dir: %v", err)
-	}
-	if len(cs.AddedFiles)+len(cs.ModifiedFiles)+len(cs.DeletedFiles) != 0 {
-		t.Errorf("expected empty ChangeSet for non-git dir, got %+v", cs)
-	}
-}
+

@@ -12,7 +12,6 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 
 	xdraw "golang.org/x/image/draw"
 
@@ -276,19 +275,6 @@ func loadImage(path string) (image.Image, error) {
 	defer func() { _ = f.Close() }()
 	img, _, err := image.Decode(f)
 	return img, err
-}
-
-// parseHexColor parses a "#rrggbb" string into color.RGBA.
-func parseHexColor(s string) (color.RGBA, error) {
-	s = strings.TrimPrefix(s, "#")
-	if len(s) != 6 {
-		return color.RGBA{}, fmt.Errorf("invalid hex color: %q", s)
-	}
-	var r, g, b uint8
-	if _, err := fmt.Sscanf(s, "%02x%02x%02x", &r, &g, &b); err != nil {
-		return color.RGBA{}, err
-	}
-	return color.RGBA{R: r, G: g, B: b, A: 255}, nil
 }
 
 // changedSet converts a ChangeSet slice into a map for O(1) lookup.

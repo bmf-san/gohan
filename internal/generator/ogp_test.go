@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"image/color"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -17,36 +16,6 @@ func ogpSite(articles ...*model.ProcessedArticle) *model.Site {
 		s.Articles = articles
 	}
 	return s
-}
-
-func TestParseHexColor_Valid(t *testing.T) {
-	cases := []struct {
-		in   string
-		want color.RGBA
-	}{
-		{"#ffffff", color.RGBA{255, 255, 255, 255}},
-		{"#000000", color.RGBA{0, 0, 0, 255}},
-		{"#1a2b3c", color.RGBA{0x1a, 0x2b, 0x3c, 255}},
-		{"#AABBCC", color.RGBA{0xaa, 0xbb, 0xcc, 255}},
-	}
-	for _, c := range cases {
-		got, err := parseHexColor(c.in)
-		if err != nil {
-			t.Errorf("parseHexColor(%q) unexpected error: %v", c.in, err)
-			continue
-		}
-		if got != c.want {
-			t.Errorf("parseHexColor(%q) = %v, want %v", c.in, got, c.want)
-		}
-	}
-}
-
-func TestParseHexColor_Invalid(t *testing.T) {
-	for _, s := range []string{"", "fff", "gggggg", "#12345", "#1234567"} {
-		if _, err := parseHexColor(s); err == nil {
-			t.Errorf("parseHexColor(%q) expected error, got nil", s)
-		}
-	}
 }
 
 func TestOGPGenerator_Disabled(t *testing.T) {
@@ -68,12 +37,9 @@ func TestOGPGenerator_NoFontFile_ProducesImage(t *testing.T) {
 	// Even without a font, a background image should be generated (text skipped gracefully)
 	outDir := t.TempDir()
 	cfg := model.OGPConfig{
-		Enabled:         true,
-		Width:           120,
-		Height:          63,
-		BackgroundColor: "#1e1e2e",
-		TextColor:       "#cdd6f4",
-		FontFile:        "", // no font
+		Enabled: true,
+		Width:   120,
+		Height:  63,
 	}
 	gen := NewOGPGenerator(outDir, "", cfg)
 	article := &model.ProcessedArticle{
@@ -112,10 +78,9 @@ func TestOGPGenerator_NoFontFile_ProducesImage(t *testing.T) {
 func TestOGPGenerator_SkipsUnchanged(t *testing.T) {
 	outDir := t.TempDir()
 	cfg := model.OGPConfig{
-		Enabled:         true,
-		Width:           120,
-		Height:          63,
-		BackgroundColor: "#000000",
+		Enabled: true,
+		Width:   120,
+		Height:  63,
 	}
 	gen := NewOGPGenerator(outDir, "", cfg)
 
@@ -160,10 +125,9 @@ func TestOGPGenerator_SkipsUnchanged(t *testing.T) {
 func TestOGPGenerator_NilChangeSet_GeneratesAll(t *testing.T) {
 	outDir := t.TempDir()
 	cfg := model.OGPConfig{
-		Enabled:         true,
-		Width:           120,
-		Height:          63,
-		BackgroundColor: "#0f0f0f",
+		Enabled: true,
+		Width:   120,
+		Height:  63,
 	}
 	gen := NewOGPGenerator(outDir, "", cfg)
 
@@ -186,8 +150,7 @@ func TestOGPGenerator_DefaultDimensions(t *testing.T) {
 	outDir := t.TempDir()
 	// Width/Height = 0 should use defaults (1200x630)
 	cfg := model.OGPConfig{
-		Enabled:         true,
-		BackgroundColor: "#ffffff",
+		Enabled: true,
 	}
 	gen := NewOGPGenerator(outDir, "", cfg)
 	article := &model.ProcessedArticle{

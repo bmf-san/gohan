@@ -663,7 +663,7 @@ func localeTaxonomyBase(base *model.Site, articles []*model.ProcessedArticle) *m
 	// Falling back to all-locale data would expose cross-locale entries in the sidebar.
 	return &model.Site{
 		Config:       base.Config,
-		Articles:     base.Articles,
+		Articles:     articles,
 		Tags:         tags,
 		Categories:   cats,
 		ArchiveYears: archiveYears(articles),
@@ -751,13 +751,4 @@ func articleOutputPath(a *model.ProcessedArticle, outDir string, cfg model.Confi
 	return filepath.Join(outDir, "posts", slug, "index.html")
 }
 
-// filteredSite creates a site copy with articles matching pred.
-func filteredSite(base *model.Site, pred func(*model.ProcessedArticle) bool) *model.Site {
-	var filtered []*model.ProcessedArticle
-	for _, a := range base.Articles {
-		if pred(a) {
-			filtered = append(filtered, a)
-		}
-	}
-	return siteFor(base, filtered)
-}
+

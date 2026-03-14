@@ -177,18 +177,6 @@ func TestTagNorm(t *testing.T) {
 	}
 }
 
-func TestFilteredSite(t *testing.T) {
-	site := makeSite()
-	got := filteredSite(site, func(a *model.ProcessedArticle) bool { return true })
-	if len(got.Articles) != 1 {
-		t.Errorf("expected 1, got %d", len(got.Articles))
-	}
-	empty := filteredSite(site, func(a *model.ProcessedArticle) bool { return false })
-	if len(empty.Articles) != 0 {
-		t.Errorf("expected 0, got %d", len(empty.Articles))
-	}
-}
-
 // ---- Pagination tests ----
 
 func makePaginatedArticles(n int) []*model.ProcessedArticle {

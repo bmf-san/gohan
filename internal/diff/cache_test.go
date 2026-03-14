@@ -30,22 +30,6 @@ func TestReadManifest_NotExist(t *testing.T) {
 	if m != nil { t.Error("expected nil") }
 }
 
-func TestWriteReadCachedHTML(t *testing.T) {
-	dir := t.TempDir()
-	html := "<h1>hello</h1>"
-	if err := WriteCachedHTML(dir, "my-post", html); err != nil { t.Fatalf("write: %v", err) }
-	got, err := ReadCachedHTML(dir, "my-post")
-	if err != nil { t.Fatalf("read: %v", err) }
-	if got != html { t.Errorf("got %q, want %q", got, html) }
-}
-
-func TestReadCachedHTML_NotExist(t *testing.T) {
-	dir := t.TempDir()
-	got, err := ReadCachedHTML(dir, "nope")
-	if err != nil { t.Fatalf("unexpected error: %v", err) }
-	if got != "" { t.Error("expected empty string") }
-}
-
 func TestClearCache(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "cache")
