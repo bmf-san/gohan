@@ -991,6 +991,7 @@ func TestArchive_PaginationJobs_I18n(t *testing.T) {
 		t.Errorf("expected 2 JA month-archive pages, got %d", jaMonthJobs)
 	}
 }
+
 // TestLocaleTaxonomyBase_NoFallback verifies that localeTaxonomyBase does NOT
 // fall back to cross-locale tags/categories when a locale's articles have none.
 // Previously the function returned base.Tags for locales with untagged articles,
@@ -1021,7 +1022,7 @@ func TestLocaleTaxonomyBase_NoFallback(t *testing.T) {
 	}
 	base := &model.Site{
 		Articles: []*model.ProcessedArticle{enArticle, jaArticle},
-		Tags: []model.Taxonomy{{Name: "golang"}, {Name: "書評"}},
+		Tags:     []model.Taxonomy{{Name: "golang"}, {Name: "書評"}},
 	}
 
 	// EN locale has no tags — must return empty, not JA tags.

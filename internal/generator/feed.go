@@ -59,11 +59,11 @@ type atomAuthor struct {
 }
 
 type atomEntry struct {
-	ID      string     `xml:"id"`
-	Title   string     `xml:"title"`
-	Link    atomLink   `xml:"link"`
-	Updated string     `xml:"updated"`
-	Summary string     `xml:"summary"`
+	ID      string   `xml:"id"`
+	Title   string   `xml:"title"`
+	Link    atomLink `xml:"link"`
+	Updated string   `xml:"updated"`
+	Summary string   `xml:"summary"`
 }
 
 // GenerateFeeds writes feed.xml (RSS 2.0) and atom.xml (Atom 1.0) to outDir.
@@ -174,9 +174,9 @@ func writeAtomWithChannelURL(outDir, itemBaseURL, channelURL, title string, arti
 	author := cfg.Theme.Params["author"]
 	baseAtomURL := channelURL + "atom.xml"
 	feed := atomFeed{
-		Xmlns:   "http://www.w3.org/2005/Atom",
-		ID:      baseAtomURL,
-		Title:   title,
+		Xmlns: "http://www.w3.org/2005/Atom",
+		ID:    baseAtomURL,
+		Title: title,
 		Links: []atomLink{
 			{Rel: "alternate", Type: "text/html", Href: channelURL},
 			{Rel: "self", Type: "application/atom+xml", Href: baseAtomURL},
