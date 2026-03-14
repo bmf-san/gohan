@@ -129,12 +129,23 @@ func builtinFuncs() template.FuncMap {
 	}
 }
 
-// toSlug converts a display name to a URL-friendly slug by lowercasing and
-// replacing spaces with hyphens.
+// toSlug converts a display name to a URL-friendly slug by lowercasing ASCII
+// letters and replacing spaces with hyphens. Non-ASCII characters (e.g.
+// Japanese, accented Latin) are kept intact, matching the behaviour of
+// tagNorm in the generator so template links are consistent with page paths.
 func toSlug(s string) string {
-	s = strings.ToLower(s)
-	s = strings.ReplaceAll(s, " ", "-")
-	return s
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			b.WriteRune(r + 32)
+		case r == ' ':
+			b.WriteRune('-')
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // Ensure Engine implements TemplateEngine at compile time.
