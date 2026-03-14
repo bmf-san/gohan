@@ -756,5 +756,3 @@ func articleOutputPath(a *model.ProcessedArticle, outDir string, cfg model.Confi
 	}
 	return filepath.Join(outDir, "posts", slug, "index.html")
 }
-
-

@@ -141,5 +141,3 @@ func TestGitDiffEngine_Hash_Missing(t *testing.T) {
 		t.Error("expected error for missing file")
 	}
 }
-
-
