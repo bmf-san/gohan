@@ -378,6 +378,12 @@ func paginatedJobs(
 	// Build a locale-specific base so that listing pages see only the
 	// tags/categories present in the locale's articles (all of them,
 	// not just the current page slice).
+	// Attach locale-aware URL to taxonomy so templates can build language-switcher links.
+	if taxonomy != nil && baseURLPath != "" {
+		taxCopy := *taxonomy
+		taxCopy.URL = baseURLPath + "/"
+		taxonomy = &taxCopy
+	}
 	base := localeTaxonomyBase(site, articles)
 	if perPage <= 0 {
 		var path string
