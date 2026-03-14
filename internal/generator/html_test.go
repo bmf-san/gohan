@@ -926,12 +926,10 @@ func TestArchive_PaginationJobs(t *testing.T) {
 	monthJobs := 0
 	yearJobs := 0
 	for _, j := range archiveJobs {
-		if j.data.CurrentArchivePath == "/archives/2024/03/" {
+		switch j.data.CurrentArchivePath {
+		case "/archives/2024/03/":
 			monthJobs++
-			if j.data.CurrentArchivePath == "" {
-				t.Error("CurrentArchivePath must be set on paginated archive pages")
-			}
-		} else if j.data.CurrentArchivePath == "/archives/2024/" {
+		case "/archives/2024/":
 			yearJobs++
 		}
 	}
