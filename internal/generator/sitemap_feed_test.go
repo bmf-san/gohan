@@ -368,9 +368,9 @@ func TestGenerateFeeds_I18n_LocaleFilter(t *testing.T) {
 		if strings.Contains(s, "/ja/ja/") {
 			t.Errorf("ja/%s: double locale prefix /ja/ja/ detected:\n%s", name, s)
 		}
-		// Channel link should point to locale root
-		if !strings.Contains(s, "https://example.com/ja") {
-			t.Errorf("ja/%s: channel link should be https://example.com/ja", name)
+		// Channel link should point to locale root (with trailing slash)
+		if !strings.Contains(s, "https://example.com/ja/") {
+			t.Errorf("ja/%s: channel link should be https://example.com/ja/", name)
 		}
 	}
 }

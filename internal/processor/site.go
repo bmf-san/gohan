@@ -181,6 +181,11 @@ func (p *SiteProcessor) BuildTranslationMap(articles []*model.ProcessedArticle) 
 			if sibling == a {
 				continue
 			}
+			// Skip siblings with no locale or URL (non-i18n sites where
+			// translation_key is used without an i18n configuration).
+			if sibling.Locale == "" || sibling.URL == "" {
+				continue
+			}
 			a.Translations = append(a.Translations, model.LocaleRef{
 				Locale: sibling.Locale,
 				URL:    sibling.URL,
@@ -218,16 +223,20 @@ func computeOutputPath(a *model.Article, cfg model.Config) string {
 	return filepath.Join(cfg.Build.OutputDir, dir, base, "index.html")
 }
 
-// extractSummary returns the first paragraph of content, truncated to maxChars.
+// extractSummary returns the first paragraph of content, truncated to maxChars runes.
 func extractSummary(content string, maxChars int) string {
 	content = strings.TrimSpace(content)
-	if idx := strings.Index(content, "\n\n"); idx > 0 && idx <= maxChars {
-		return strings.TrimSpace(content[:idx])
+	runes := []rune(content)
+	if idx := strings.Index(content, "\n\n"); idx > 0 {
+		paragraph := strings.TrimSpace(content[:idx])
+		if len([]rune(paragraph)) <= maxChars {
+			return paragraph
+		}
 	}
-	if len(content) <= maxChars {
+	if len(runes) <= maxChars {
 		return content
 	}
-	return content[:maxChars] + "..."
+	return string(runes[:maxChars]) + "..."
 }
 
 // Ensure SiteProcessor implements the Processor interface at compile time.

@@ -51,6 +51,9 @@ func (g *GitDiffEngine) Detect(manifest *model.BuildManifest) (*model.ChangeSet,
 		}
 	}
 	for path := range manifest.FileHashes {
+		if path == configHashKey {
+			continue // sentinel key — not a real content file
+		}
 		if _, ok := current[path]; !ok {
 			cs.DeletedFiles = append(cs.DeletedFiles, path)
 		}

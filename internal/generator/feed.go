@@ -100,9 +100,9 @@ func GenerateFeeds(outDir, baseURL, siteTitle string, articles []*model.Processe
 			// includes the locale prefix (e.g. /ja/posts/hello/).
 			var channelURL string
 			if baseURL != "" {
-				channelURL = baseURL + "/" + loc
+				channelURL = baseURL + "/" + loc + "/"
 			} else {
-				channelURL = "/" + loc
+				channelURL = "/" + loc + "/"
 			}
 			if err := writeRSSWithChannelURL(locDir, baseURL, channelURL, siteTitle, locArticles); err != nil {
 				return err
@@ -133,6 +133,9 @@ func writeRSSWithChannelURL(outDir, itemBaseURL, channelURL, title string, artic
 		PubDate:     now,
 	}
 	for _, a := range articles {
+		if a.FrontMatter.Date.IsZero() {
+			continue // skip articles with no publication date
+		}
 		link := articleLink(itemBaseURL, a)
 		ch.Items = append(ch.Items, rssItem{
 			Title:       a.FrontMatter.Title,
@@ -152,8 +155,11 @@ func writeAtom(outDir, baseURL, title string, articles []*model.ProcessedArticle
 
 func writeAtomWithChannelURL(outDir, itemBaseURL, channelURL, title string, articles []*model.ProcessedArticle) error {
 	updated := time.Now().UTC().Format(time.RFC3339)
-	if len(articles) > 0 {
-		updated = articles[0].FrontMatter.Date.UTC().Format(time.RFC3339)
+	for _, a := range articles {
+		if !a.FrontMatter.Date.IsZero() {
+			updated = a.FrontMatter.Date.UTC().Format(time.RFC3339)
+			break
+		}
 	}
 	feed := atomFeed{
 		Xmlns:   "http://www.w3.org/2005/Atom",
@@ -162,6 +168,9 @@ func writeAtomWithChannelURL(outDir, itemBaseURL, channelURL, title string, arti
 		Updated: updated,
 	}
 	for _, a := range articles {
+		if a.FrontMatter.Date.IsZero() {
+			continue // skip articles with no publication date
+		}
 		feed.Entries = append(feed.Entries, atomEntry{
 			Title:   a.FrontMatter.Title,
 			Link:    atomLink{Href: articleLink(itemBaseURL, a)},

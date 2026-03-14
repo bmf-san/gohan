@@ -37,7 +37,9 @@ type writeJob struct {
 }
 
 // Generate writes all HTML pages and copies static assets.
-// When changeSet is nil every page is written; otherwise only affected pages.
+// Generate writes all HTML pages for site into g.outDir.
+// changeSet is forwarded to the OGP image generator only; HTML pages are always
+// fully regenerated regardless of changeSet.
 func (g *HTMLGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) error {
 	parallelism := g.cfg.Build.Parallelism
 	if parallelism <= 0 {
@@ -90,7 +92,7 @@ func (g *HTMLGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) e
 	}
 
 	if g.cfg.OGP.Enabled {
-		ogpGen := NewOGPGenerator(g.outDir, g.cfg.OGP)
+		ogpGen := NewOGPGenerator(g.outDir, g.cfg.Build.ContentDir, g.cfg.OGP)
 		if err := ogpGen.Generate(site, changeSet); err != nil {
 			return fmt.Errorf("ogp generation: %w", err)
 		}
@@ -128,6 +130,22 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		jobs = append(jobs, paginatedJobs(site, allArticles, g.outDir, "index.html", "", "", perPage, "", nil)...)
 	}
 
+	// Pre-compute per-locale taxonomy bases so that article pages receive
+	// locale-filtered Tags, Categories, and ArchiveYears — matching the
+	// behaviour of listing pages (tag, category, archive, index).
+	articleLocaleBases := map[string]*model.Site{}
+	if len(g.cfg.I18n.Locales) > 0 {
+		for _, loc := range g.cfg.I18n.Locales {
+			locale := loc
+			locArticles := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
+				return a.Locale == locale
+			})
+			articleLocaleBases[locale] = localeTaxonomyBase(site, locArticles)
+		}
+	} else {
+		articleLocaleBases[""] = localeTaxonomyBase(site, site.Articles)
+	}
+
 	// Article pages: use pre-computed output path and respect FrontMatter.Template.
 	for _, a := range site.Articles {
 		a := a
@@ -136,7 +154,11 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		if a.FrontMatter.Template != "" {
 			tmplName = a.FrontMatter.Template
 		}
-		d := siteFor(site, []*model.ProcessedArticle{a})
+		base := articleLocaleBases[a.Locale]
+		if base == nil {
+			base = localeTaxonomyBase(site, site.Articles)
+		}
+		d := siteFor(base, []*model.ProcessedArticle{a})
 		d.CurrentLocale = a.Locale
 		d.RelatedArticles = relatedArticles(site.Articles, a, 5)
 		jobs = append(jobs, writeJob{
@@ -515,7 +537,10 @@ func CopyDir(srcDir, dstDir string) error {
 		if err != nil {
 			return err
 		}
-		rel, _ := filepath.Rel(srcDir, path)
+		rel, relErr := filepath.Rel(srcDir, path)
+		if relErr != nil {
+			return fmt.Errorf("copydir: rel path: %w", relErr)
+		}
 		dst := filepath.Join(dstDir, rel)
 		if d.IsDir() {
 			return os.MkdirAll(dst, 0o755)
@@ -617,12 +642,9 @@ func localeTaxonomyBase(base *model.Site, articles []*model.ProcessedArticle) *m
 	}
 	sort.Slice(tags, func(i, j int) bool { return tags[i].Name < tags[j].Name })
 	sort.Slice(cats, func(i, j int) bool { return cats[i].Name < cats[j].Name })
-	if len(tags) == 0 {
-		tags = base.Tags
-	}
-	if len(cats) == 0 {
-		cats = base.Categories
-	}
+	// No fallback to base.Tags / base.Categories: an empty slice is the correct
+	// value when the locale has no tagged/categorised articles.  Falling back to
+	// all-locale data would expose cross-locale taxonomy entries in the sidebar.
 	return &model.Site{
 		Config:       base.Config,
 		Articles:     base.Articles,
@@ -702,8 +724,9 @@ func articleOutputPath(a *model.ProcessedArticle, outDir string, cfg model.Confi
 		}
 	}
 	// Fallback: construct from slug and locale.
-	slug := a.FrontMatter.Slug
-	if slug == "" {
+	// BUG-7: sanitize slug to prevent path traversal outside the output directory.
+	slug := slugify(a.FrontMatter.Slug)
+	if slug == "untitled" {
 		slug = slugify(a.FrontMatter.Title)
 	}
 	if a.Locale != "" && a.Locale != cfg.I18n.DefaultLocale {

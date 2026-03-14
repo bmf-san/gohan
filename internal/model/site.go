@@ -2,17 +2,17 @@ package model
 
 // Site holds the full rendering context passed to templates.
 type Site struct {
-	Config             Config
-	Articles           []*ProcessedArticle
-	Tags               []Taxonomy
-	Categories         []Taxonomy
-	ArchiveYears       []int               // unique years that have articles, sorted newest-first
-	Pagination         *Pagination         // nil when pagination is disabled or not a listing page
-	CurrentLocale      string              // locale for the current page; empty when i18n is not configured
-	RelatedArticles    []*ProcessedArticle // articles sharing at least one category with the current article (article pages only)
-	CurrentTaxonomy      *Taxonomy           // set on tag and category listing pages; nil elsewhere
-	CurrentArchivePath   string              // set on archive pages; locale-aware path e.g. "/archives/2024/01/" or "/ja/archives/2024/01/"
-	CurrentArchiveIsMonth bool               // true for month archives (/archives/2024/01/), false for year archives (/archives/2024/)
+	Config                Config
+	Articles              []*ProcessedArticle
+	Tags                  []Taxonomy
+	Categories            []Taxonomy
+	ArchiveYears          []int               // unique years that have articles, sorted newest-first
+	Pagination            *Pagination         // nil when pagination is disabled or not a listing page
+	CurrentLocale         string              // locale for the current page; empty when i18n is not configured
+	RelatedArticles       []*ProcessedArticle // articles sharing at least one category with the current article (article pages only)
+	CurrentTaxonomy       *Taxonomy           // set on tag and category listing pages; nil elsewhere
+	CurrentArchivePath    string              // set on archive pages; locale-aware path e.g. "/archives/2024/01/" or "/ja/archives/2024/01/"
+	CurrentArchiveIsMonth bool                // true for month archives (/archives/2024/01/), false for year archives (/archives/2024/)
 }
 
 // Pagination holds computed paging metadata for listing pages.

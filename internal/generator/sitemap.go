@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"html"
 	"os"
 	"path/filepath"
 	"sort"
@@ -50,7 +51,7 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle,
 				indexURL = baseURL + "/" + loc + "/"
 			}
 			buf.WriteString("  <url>\n")
-			buf.WriteString("    <loc>" + indexURL + "</loc>\n")
+			buf.WriteString("    <loc>" + html.EscapeString(indexURL) + "</loc>\n")
 			buf.WriteString("  </url>\n")
 		}
 	}
@@ -68,7 +69,7 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle,
 		loc := baseURL + articleURL
 
 		buf.WriteString("  <url>\n")
-		buf.WriteString("    <loc>" + loc + "</loc>\n")
+		buf.WriteString("    <loc>" + html.EscapeString(loc) + "</loc>\n")
 		if !a.FrontMatter.Date.IsZero() {
 			buf.WriteString("    <lastmod>" + a.FrontMatter.Date.UTC().Format("2006-01-02") + "</lastmod>\n")
 		}

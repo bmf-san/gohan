@@ -52,7 +52,7 @@ func TestParseHexColor_Invalid(t *testing.T) {
 func TestOGPGenerator_Disabled(t *testing.T) {
 	outDir := t.TempDir()
 	cfg := model.OGPConfig{Enabled: false}
-	gen := NewOGPGenerator(outDir, cfg)
+	gen := NewOGPGenerator(outDir, "", cfg)
 	site := ogpSite()
 	if err := gen.Generate(site, nil); err != nil {
 		t.Fatalf("unexpected error when disabled: %v", err)
@@ -75,7 +75,7 @@ func TestOGPGenerator_NoFontFile_ProducesImage(t *testing.T) {
 		TextColor:       "#cdd6f4",
 		FontFile:        "", // no font
 	}
-	gen := NewOGPGenerator(outDir, cfg)
+	gen := NewOGPGenerator(outDir, "", cfg)
 	article := &model.ProcessedArticle{
 		Article: model.Article{
 			FrontMatter: model.FrontMatter{
@@ -117,7 +117,7 @@ func TestOGPGenerator_SkipsUnchanged(t *testing.T) {
 		Height:          63,
 		BackgroundColor: "#000000",
 	}
-	gen := NewOGPGenerator(outDir, cfg)
+	gen := NewOGPGenerator(outDir, "", cfg)
 
 	article := &model.ProcessedArticle{
 		Article: model.Article{
@@ -165,7 +165,7 @@ func TestOGPGenerator_NilChangeSet_GeneratesAll(t *testing.T) {
 		Height:          63,
 		BackgroundColor: "#0f0f0f",
 	}
-	gen := NewOGPGenerator(outDir, cfg)
+	gen := NewOGPGenerator(outDir, "", cfg)
 
 	articles := []*model.ProcessedArticle{
 		{Article: model.Article{FrontMatter: model.FrontMatter{Title: "First", Slug: "first"}}},
@@ -189,7 +189,7 @@ func TestOGPGenerator_DefaultDimensions(t *testing.T) {
 		Enabled:         true,
 		BackgroundColor: "#ffffff",
 	}
-	gen := NewOGPGenerator(outDir, cfg)
+	gen := NewOGPGenerator(outDir, "", cfg)
 	article := &model.ProcessedArticle{
 		Article: model.Article{FrontMatter: model.FrontMatter{Title: "Def", Slug: "def"}},
 	}

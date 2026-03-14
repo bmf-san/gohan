@@ -151,17 +151,21 @@ func TestCalculateImpact(t *testing.T) {
 }
 
 func TestCalculateDiff(t *testing.T) {
+	t0 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	t1 := time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC)
 	old := &model.DependencyGraph{
 		Nodes: map[string]*model.Node{
-			"a.md": {Path: "a.md"},
-			"b.md": {Path: "b.md"},
+			"a.md": {Path: "a.md", LastModified: t0}, // will be modified (t0 → t1)
+			"b.md": {Path: "b.md", LastModified: t0}, // will be deleted
+			"d.md": {Path: "d.md", LastModified: t0}, // unchanged (same time)
 		},
 		Edges: map[string][]string{},
 	}
 	newG := &model.DependencyGraph{
 		Nodes: map[string]*model.Node{
-			"a.md": {Path: "a.md"},
-			"c.md": {Path: "c.md"},
+			"a.md": {Path: "a.md", LastModified: t1}, // modified
+			"c.md": {Path: "c.md", LastModified: t1}, // added
+			"d.md": {Path: "d.md", LastModified: t0}, // unchanged — same timestamp
 		},
 		Edges: map[string][]string{},
 	}

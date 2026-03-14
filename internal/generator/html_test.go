@@ -18,7 +18,7 @@ type mockEngine struct {
 	calls []string
 }
 
-func (m *mockEngine) Load(_ string, _ htmltemplate.FuncMap) error { return nil }
+func (m *mockEngine) Load(_ string, _ htmltemplate.FuncMap, _ string) error { return nil }
 func (m *mockEngine) Render(w io.Writer, name string, _ *model.Site) error {
 	m.mu.Lock()
 	m.calls = append(m.calls, name)
@@ -38,7 +38,7 @@ type captureEngine struct {
 	renders []captureRender
 }
 
-func (c *captureEngine) Load(_ string, _ htmltemplate.FuncMap) error { return nil }
+func (c *captureEngine) Load(_ string, _ htmltemplate.FuncMap, _ string) error { return nil }
 func (c *captureEngine) Render(w io.Writer, name string, data *model.Site) error {
 	// Copy the site value so mutations after Render don't affect captured state.
 	dataCopy := *data
@@ -989,5 +989,50 @@ func TestArchive_PaginationJobs_I18n(t *testing.T) {
 	}
 	if jaMonthJobs != 2 {
 		t.Errorf("expected 2 JA month-archive pages, got %d", jaMonthJobs)
+	}
+}
+// TestLocaleTaxonomyBase_NoFallback verifies that localeTaxonomyBase does NOT
+// fall back to cross-locale tags/categories when a locale's articles have none.
+// Previously the function returned base.Tags for locales with untagged articles,
+// which caused JA tags to appear in the EN sidebar and vice-versa.
+func TestLocaleTaxonomyBase_NoFallback(t *testing.T) {
+	date := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	enArticle := &model.ProcessedArticle{
+		Article: model.Article{
+			FrontMatter: model.FrontMatter{
+				Title: "EN Post",
+				Slug:  "en-post",
+				Date:  date,
+				// No tags — should NOT fall back to JA tags
+			},
+		},
+		Locale: "en",
+	}
+	jaArticle := &model.ProcessedArticle{
+		Article: model.Article{
+			FrontMatter: model.FrontMatter{
+				Title: "JA Post",
+				Slug:  "ja-post",
+				Date:  date,
+				Tags:  []string{"golang", "書評"},
+			},
+		},
+		Locale: "ja",
+	}
+	base := &model.Site{
+		Articles: []*model.ProcessedArticle{enArticle, jaArticle},
+		Tags: []model.Taxonomy{{Name: "golang"}, {Name: "書評"}},
+	}
+
+	// EN locale has no tags — must return empty, not JA tags.
+	enBase := localeTaxonomyBase(base, []*model.ProcessedArticle{enArticle})
+	if len(enBase.Tags) != 0 {
+		t.Errorf("EN localeTaxonomyBase: expected 0 tags, got %d: %v", len(enBase.Tags), enBase.Tags)
+	}
+
+	// JA locale has tags — must return only JA tags.
+	jaBase := localeTaxonomyBase(base, []*model.ProcessedArticle{jaArticle})
+	if len(jaBase.Tags) != 2 {
+		t.Errorf("JA localeTaxonomyBase: expected 2 tags, got %d: %v", len(jaBase.Tags), jaBase.Tags)
 	}
 }

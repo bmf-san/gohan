@@ -109,7 +109,7 @@ func builtinFuncs(defaultLocale string) template.FuncMap {
 		// suitable for rendering a pagination control. For example, for
 		// current=5 total=10 it returns [1 -1 4 5 6 -1 10].
 		"paginationPages": func(current, total int) []int {
-			if total <= 1 {
+			if total <= 1 || current < 1 {
 				return nil
 			}
 			pages := []int{}
@@ -146,6 +146,7 @@ func builtinFuncs(defaultLocale string) template.FuncMap {
 // letters and replacing spaces with hyphens. Non-ASCII characters (e.g.
 // Japanese, accented Latin) are kept intact, matching the behaviour of
 // tagNorm in the generator so template links are consistent with page paths.
+// Returns "untitled" when the input produces an empty result.
 func toSlug(s string) string {
 	var b strings.Builder
 	for _, r := range s {
@@ -157,6 +158,9 @@ func toSlug(s string) string {
 		default:
 			b.WriteRune(r)
 		}
+	}
+	if b.Len() == 0 {
+		return "untitled"
 	}
 	return b.String()
 }

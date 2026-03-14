@@ -332,3 +332,23 @@ func TestEngine_Builtin_PageURL(t *testing.T) {
 		}
 	}
 }
+
+func TestToSlug_Empty(t *testing.T) {
+	// Empty input must return "untitled" not an empty string,
+	// so tagURL("", "") never produces "/tags//".
+	if got := toSlug(""); got != "untitled" {
+		t.Errorf("toSlug(%q) = %q, want %q", "", got, "untitled")
+	}
+}
+
+func TestPaginationPages_InvalidCurrent(t *testing.T) {
+	// current < 1 must return nil (invalid input guard, BUG-09).
+	fns := builtinFuncs("")
+	fn := fns["paginationPages"].(func(int, int) []int)
+	if got := fn(0, 10); got != nil {
+		t.Errorf("paginationPages(0,10): expected nil, got %v", got)
+	}
+	if got := fn(-1, 10); got != nil {
+		t.Errorf("paginationPages(-1,10): expected nil, got %v", got)
+	}
+}

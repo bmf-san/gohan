@@ -31,7 +31,9 @@ func ReadManifest(cacheDir string) (*model.BuildManifest, error) {
 	}
 	var m model.BuildManifest
 	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("unmarshal manifest: %w", err)
+		// Treat a corrupt or truncated manifest as absent so the next build
+		// performs a full rebuild rather than aborting with an error.
+		return nil, nil
 	}
 	return &m, nil
 }
@@ -47,7 +49,7 @@ func WriteManifest(cacheDir string, m *model.BuildManifest) error {
 		return fmt.Errorf("marshal manifest: %w", err)
 	}
 	path := filepath.Join(cacheDir, cacheManifestFile)
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := writeAtomicFile(path, data, 0644); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
 	return nil
@@ -74,8 +76,38 @@ func WriteCachedHTML(cacheDir, slug, html string) error {
 		return fmt.Errorf("mkdir html cache: %w", err)
 	}
 	path := filepath.Join(dir, slug+".html")
-	if err := os.WriteFile(path, []byte(html), 0644); err != nil {
+	if err := writeAtomicFile(path, []byte(html), 0644); err != nil {
 		return fmt.Errorf("write cached html: %w", err)
+	}
+	return nil
+}
+
+// writeAtomicFile writes data to path atomically using a temp-file-then-rename
+// pattern so that a crash or kill mid-write never leaves a truncated file.
+func writeAtomicFile(path string, data []byte, perm os.FileMode) error {
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, ".gohan-cache-tmp-")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	_, werr := tmp.Write(data)
+	cerr := tmp.Close()
+	if werr != nil {
+		_ = os.Remove(tmpName)
+		return werr
+	}
+	if cerr != nil {
+		_ = os.Remove(tmpName)
+		return cerr
+	}
+	if err := os.Chmod(tmpName, perm); err != nil {
+		_ = os.Remove(tmpName)
+		return err
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		_ = os.Remove(tmpName)
+		return err
 	}
 	return nil
 }
