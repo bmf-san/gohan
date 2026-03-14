@@ -243,3 +243,75 @@ func TestGenerateFeeds_NoURLFallsBackToSlug(t *testing.T) {
 		}
 	}
 }
+
+// TestGenerateSitemap_XDefault_DefaultLocale verifies that x-default points to
+// the self URL when the article's locale is the site's default locale.
+func TestGenerateSitemap_XDefault_DefaultLocale(t *testing.T) {
+	cfg := model.Config{}
+	cfg.I18n.DefaultLocale = "en"
+	articles := []*model.ProcessedArticle{
+		{
+			Article:      model.Article{FrontMatter: model.FrontMatter{Slug: "hello", Date: time.Now()}},
+			Locale:       "en",
+			URL:          "/posts/hello/",
+			Translations: []model.LocaleRef{{Locale: "ja", URL: "/ja/posts/hello/"}},
+		},
+	}
+	dir := t.TempDir()
+	if err := GenerateSitemap(dir, "https://example.com", articles, cfg); err != nil {
+		t.Fatalf("GenerateSitemap: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
+	s := string(data)
+	want := `hreflang="x-default" href="https://example.com/posts/hello/"`
+	if !strings.Contains(s, want) {
+		t.Errorf("expected x-default pointing to EN (self) URL\nwant substring: %s\ngot:\n%s", want, s)
+	}
+}
+
+// TestGenerateSitemap_XDefault_NonDefaultLocale verifies that x-default points
+// to the default-locale translation URL when the article itself is non-default.
+func TestGenerateSitemap_XDefault_NonDefaultLocale(t *testing.T) {
+	cfg := model.Config{}
+	cfg.I18n.DefaultLocale = "en"
+	articles := []*model.ProcessedArticle{
+		{
+			Article:      model.Article{FrontMatter: model.FrontMatter{Slug: "hello", Date: time.Now()}},
+			Locale:       "ja",
+			URL:          "/ja/posts/hello/",
+			Translations: []model.LocaleRef{{Locale: "en", URL: "/posts/hello/"}},
+		},
+	}
+	dir := t.TempDir()
+	if err := GenerateSitemap(dir, "https://example.com", articles, cfg); err != nil {
+		t.Fatalf("GenerateSitemap: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
+	s := string(data)
+	want := `hreflang="x-default" href="https://example.com/posts/hello/"`
+	if !strings.Contains(s, want) {
+		t.Errorf("expected x-default pointing to EN translation URL\nwant substring: %s\ngot:\n%s", want, s)
+	}
+}
+
+// TestGenerateSitemap_XDefault_NotEmittedWithoutConfig verifies that no
+// x-default link is emitted when DefaultLocale is not configured.
+func TestGenerateSitemap_XDefault_NotEmittedWithoutConfig(t *testing.T) {
+	articles := []*model.ProcessedArticle{
+		{
+			Article:      model.Article{FrontMatter: model.FrontMatter{Slug: "hello", Date: time.Now()}},
+			Locale:       "en",
+			URL:          "/posts/hello/",
+			Translations: []model.LocaleRef{{Locale: "ja", URL: "/ja/posts/hello/"}},
+		},
+	}
+	dir := t.TempDir()
+	// model.Config{} has an empty DefaultLocale
+	if err := GenerateSitemap(dir, "https://example.com", articles, model.Config{}); err != nil {
+		t.Fatalf("GenerateSitemap: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
+	if strings.Contains(string(data), "x-default") {
+		t.Errorf("x-default should NOT be emitted when DefaultLocale is not configured:\n%s", data)
+	}
+}

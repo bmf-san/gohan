@@ -82,6 +82,20 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle,
 			for _, tr := range a.Translations {
 				fmt.Fprintf(&buf, "    <xhtml:link rel=\"alternate\" hreflang=\"%s\" href=\"%s\"/>\n", tr.Locale, baseURL+tr.URL)
 			}
+			// x-default points to the default-locale variant so search engines
+			// have a clear fallback when no locale matches the visitor's language.
+			if cfg.I18n.DefaultLocale != "" {
+				xdefault := loc // self is default unless we find a translation that is
+				if a.Locale != cfg.I18n.DefaultLocale {
+					for _, tr := range a.Translations {
+						if tr.Locale == cfg.I18n.DefaultLocale {
+							xdefault = baseURL + tr.URL
+							break
+						}
+					}
+				}
+				fmt.Fprintf(&buf, "    <xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"%s\"/>\n", xdefault)
+			}
 		}
 		buf.WriteString("  </url>\n")
 	}
