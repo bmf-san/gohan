@@ -153,16 +153,36 @@ Template functions:
 
 ## Archive pages
 
-Year-based archive pages are generated automatically from the article `date` field:
+Year-based and month-based archive pages are generated automatically from the article `date` field.
+
+When i18n is **not** configured, archives are generated at the root:
 
 ```
 public/
-└── archive/
-    ├── 2024/index.html
-    └── 2023/index.html
+└── archives/
+    ├── 2024/
+    │   ├── index.html
+    │   └── 03/index.html
+    └── 2023/
+        └── index.html
 ```
 
-In `archive.html`, `.Articles` contains the articles published in that year:
+When i18n is configured, archives are generated **per locale**. The default locale uses the root path; other locales are prefixed with their locale code:
+
+```
+public/
+├── archives/          # default locale (e.g. en)
+│   └── 2024/
+│       ├── index.html
+│       └── 03/index.html
+└── ja/
+    └── archives/      # non-default locale
+        └── 2024/
+            ├── index.html
+            └── 03/index.html
+```
+
+In `archive.html`, `.Articles` contains only the articles for that locale and period, and `.CurrentLocale` is set to the locale string.
 
 ```html
 <!-- themes/default/templates/archive.html -->
