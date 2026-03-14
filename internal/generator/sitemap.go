@@ -75,13 +75,14 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle,
 		}
 		if len(a.Translations) > 0 {
 			// Self-referencing hreflang (recommended by Google).
+			// BUG-E: href values must be XML-escaped (consistent with <loc>).
 			locale := a.Locale
 			if locale == "" {
 				locale = "x-default"
 			}
-			fmt.Fprintf(&buf, "    <xhtml:link rel=\"alternate\" hreflang=\"%s\" href=\"%s\"/>\n", locale, loc)
+			fmt.Fprintf(&buf, "    <xhtml:link rel=\"alternate\" hreflang=\"%s\" href=\"%s\"/>\n", locale, html.EscapeString(loc))
 			for _, tr := range a.Translations {
-				fmt.Fprintf(&buf, "    <xhtml:link rel=\"alternate\" hreflang=\"%s\" href=\"%s\"/>\n", tr.Locale, baseURL+tr.URL)
+				fmt.Fprintf(&buf, "    <xhtml:link rel=\"alternate\" hreflang=\"%s\" href=\"%s\"/>\n", tr.Locale, html.EscapeString(baseURL+tr.URL))
 			}
 			// x-default points to the default-locale variant so search engines
 			// have a clear fallback when no locale matches the visitor's language.
@@ -95,7 +96,7 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle,
 						}
 					}
 				}
-				fmt.Fprintf(&buf, "    <xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"%s\"/>\n", xdefault)
+				fmt.Fprintf(&buf, "    <xhtml:link rel=\"alternate\" hreflang=\"x-default\" href=\"%s\"/>\n", html.EscapeString(xdefault))
 			}
 		}
 		buf.WriteString("  </url>\n")
