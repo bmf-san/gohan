@@ -3,6 +3,7 @@ package processor
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -280,6 +281,9 @@ func TestLoadTaxonomyRegistry_InvalidCategoriesYAML(t *testing.T) {
 }
 
 func TestLoadTaxonomyFile_ReadError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping permission test on Windows")
+	}
 	if os.Getuid() == 0 {
 		t.Skip("skipping permission test when running as root")
 	}
