@@ -560,6 +560,129 @@ func TestGenerate_FrontMatterTemplateOverride(t *testing.T) {
 	t.Errorf("expected custom.html template call, got: %v", calls)
 }
 
+func makeSiteI18n() *model.Site {
+	now := time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)
+	return &model.Site{
+		Config: model.Config{
+			Site:  model.SiteConfig{Title: "Test Site", BaseURL: "https://example.com"},
+			Build: model.BuildConfig{Parallelism: 2},
+			I18n:  model.I18nConfig{Locales: []string{"en", "ja"}, DefaultLocale: "en"},
+		},
+		Articles: []*model.ProcessedArticle{
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Title: "Hello EN", Slug: "hello-en",
+					Tags: []string{"go"}, Categories: []string{"tech"}, Date: now,
+				}},
+				Locale: "en",
+			},
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Title: "Hello JA", Slug: "hello-ja",
+					Tags: []string{"go"}, Categories: []string{"tech"}, Date: now,
+				}},
+				Locale: "ja",
+			},
+		},
+		Tags:       []model.Taxonomy{{Name: "go"}},
+		Categories: []model.Taxonomy{{Name: "tech"}},
+	}
+}
+
+func TestGenerate_LocaleAwareArchives(t *testing.T) {
+	outDir := t.TempDir()
+	site := makeSiteI18n()
+	g := NewHTMLGenerator(outDir, &mockEngine{}, site.Config)
+	if err := g.Generate(site, nil); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	// Default locale (en) archives should be at the root.
+	for _, rel := range []string{
+		"archives/2024/03/index.html",
+		"archives/2024/index.html",
+	} {
+		if _, err := os.Stat(filepath.Join(outDir, rel)); err != nil {
+			t.Errorf("missing default-locale archive %s: %v", rel, err)
+		}
+	}
+
+	// Non-default locale (ja) archives should be under ja/.
+	for _, rel := range []string{
+		"ja/archives/2024/03/index.html",
+		"ja/archives/2024/index.html",
+	} {
+		if _, err := os.Stat(filepath.Join(outDir, rel)); err != nil {
+			t.Errorf("missing ja locale archive %s: %v", rel, err)
+		}
+	}
+}
+
+func TestGenerate_LocaleAwareArchives_ArticleIsolation(t *testing.T) {
+	outDir := t.TempDir()
+	site := makeSiteI18n()
+	g := NewHTMLGenerator(outDir, &mockEngine{}, site.Config)
+	if err := g.Generate(site, nil); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	// en archive should not contain ja articles (locale set correctly)
+	enJobs := filterBuildJobsByLocale(g, site, "en")
+	for _, j := range enJobs {
+		for _, a := range j.data.Articles {
+			if a.Locale == "ja" {
+				t.Errorf("en archive contains ja article: %s", a.FrontMatter.Title)
+			}
+		}
+	}
+}
+
+// filterBuildJobsByLocale returns archive write jobs for the given locale.
+func filterBuildJobsByLocale(g *HTMLGenerator, site *model.Site, locale string) []writeJob {
+	jobs := g.buildJobs(site)
+	var out []writeJob
+	for _, j := range jobs {
+		if j.tmpl == "archive.html" && j.data.CurrentLocale == locale {
+			out = append(out, j)
+		}
+	}
+	return out
+}
+
+func TestGenerate_SkipsDateZeroArchiveI18n(t *testing.T) {
+	outDir := t.TempDir()
+	site := &model.Site{
+		Config: model.Config{
+			Build: model.BuildConfig{Parallelism: 1},
+			I18n:  model.I18nConfig{Locales: []string{"en", "ja"}, DefaultLocale: "en"},
+		},
+		Articles: []*model.ProcessedArticle{
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{Title: "No Date EN", Slug: "no-date-en"}},
+				Locale:  "en",
+			},
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{Title: "No Date JA", Slug: "no-date-ja"}},
+				Locale:  "ja",
+			},
+		},
+	}
+	g := NewHTMLGenerator(outDir, &mockEngine{}, site.Config)
+	if err := g.Generate(site, nil); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	for _, bad := range []string{
+		filepath.Join(outDir, "archives", "0001", "01"),
+		filepath.Join(outDir, "archives", "0001"),
+		filepath.Join(outDir, "ja", "archives", "0001", "01"),
+		filepath.Join(outDir, "ja", "archives", "0001"),
+	} {
+		if _, err := os.Stat(bad); err == nil {
+			t.Errorf("should NOT be created for date-zero articles: %s", bad)
+		}
+	}
+}
+
 func TestArticleOutputPath_UsesOutputPath(t *testing.T) {
 	outDir := "/abs/public"
 	cfg := model.Config{Build: model.BuildConfig{OutputDir: "public"}}

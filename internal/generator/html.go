@@ -252,55 +252,111 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		}
 	}
 
-	// Archive pages: public/archives/<year>/<month>/index.html
+	// Archive pages — locale-aware when i18n is active.
 	// Articles with a zero date are skipped to avoid generating archives/0001/01/.
 	type ym struct {
 		year  int
 		month time.Month
 	}
-	archives := map[ym][]*model.ProcessedArticle{}
-	for _, a := range site.Articles {
-		if a.FrontMatter.Date.IsZero() {
-			continue
-		}
-		key := ym{a.FrontMatter.Date.Year(), a.FrontMatter.Date.Month()}
-		archives[key] = append(archives[key], a)
-	}
-	for key, articles := range archives {
-		as := make([]*model.ProcessedArticle, len(articles))
-		copy(as, articles)
-		sortByDateDesc(as)
-		k := key
-		jobs = append(jobs, writeJob{
-			path: filepath.Join(g.outDir, "archives",
-				fmt.Sprintf("%04d", k.year),
-				fmt.Sprintf("%02d", int(k.month)),
-				"index.html"),
-			tmpl: "archive.html",
-			data: siteFor(site, as),
-		})
-	}
 
-	// Year-level archive pages: public/archives/<year>/index.html
-	yearArchives := map[int][]*model.ProcessedArticle{}
-	for _, a := range site.Articles {
-		if a.FrontMatter.Date.IsZero() {
-			continue
+	if len(g.cfg.I18n.Locales) > 0 {
+		for _, loc := range g.cfg.I18n.Locales {
+			locale := loc
+			locArticles := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
+				return a.Locale == locale && !a.FrontMatter.Date.IsZero()
+			})
+
+			archives := map[ym][]*model.ProcessedArticle{}
+			yearArchives := map[int][]*model.ProcessedArticle{}
+			for _, a := range locArticles {
+				key := ym{a.FrontMatter.Date.Year(), a.FrontMatter.Date.Month()}
+				archives[key] = append(archives[key], a)
+				yearArchives[a.FrontMatter.Date.Year()] = append(yearArchives[a.FrontMatter.Date.Year()], a)
+			}
+
+			var archivePrefix string
+			if locale != g.cfg.I18n.DefaultLocale {
+				archivePrefix = locale
+			}
+
+			for key, articles := range archives {
+				as := make([]*model.ProcessedArticle, len(articles))
+				copy(as, articles)
+				sortByDateDesc(as)
+				k := key
+				d := siteFor(site, as)
+				d.CurrentLocale = locale
+				jobs = append(jobs, writeJob{
+					path: filepath.Join(g.outDir, archivePrefix, "archives",
+						fmt.Sprintf("%04d", k.year),
+						fmt.Sprintf("%02d", int(k.month)),
+						"index.html"),
+					tmpl: "archive.html",
+					data: d,
+				})
+			}
+
+			for year, articles := range yearArchives {
+				as := make([]*model.ProcessedArticle, len(articles))
+				copy(as, articles)
+				sortByDateDesc(as)
+				y := year
+				d := siteFor(site, as)
+				d.CurrentLocale = locale
+				jobs = append(jobs, writeJob{
+					path: filepath.Join(g.outDir, archivePrefix, "archives",
+						fmt.Sprintf("%04d", y),
+						"index.html"),
+					tmpl: "archive.html",
+					data: d,
+				})
+			}
 		}
-		yearArchives[a.FrontMatter.Date.Year()] = append(yearArchives[a.FrontMatter.Date.Year()], a)
-	}
-	for year, articles := range yearArchives {
-		as := make([]*model.ProcessedArticle, len(articles))
-		copy(as, articles)
-		sortByDateDesc(as)
-		y := year
-		jobs = append(jobs, writeJob{
-			path: filepath.Join(g.outDir, "archives",
-				fmt.Sprintf("%04d", y),
-				"index.html"),
-			tmpl: "archive.html",
-			data: siteFor(site, as),
-		})
+	} else {
+		// Non-i18n: global archive pages (original behavior).
+		archives := map[ym][]*model.ProcessedArticle{}
+		for _, a := range site.Articles {
+			if a.FrontMatter.Date.IsZero() {
+				continue
+			}
+			key := ym{a.FrontMatter.Date.Year(), a.FrontMatter.Date.Month()}
+			archives[key] = append(archives[key], a)
+		}
+		for key, articles := range archives {
+			as := make([]*model.ProcessedArticle, len(articles))
+			copy(as, articles)
+			sortByDateDesc(as)
+			k := key
+			jobs = append(jobs, writeJob{
+				path: filepath.Join(g.outDir, "archives",
+					fmt.Sprintf("%04d", k.year),
+					fmt.Sprintf("%02d", int(k.month)),
+					"index.html"),
+				tmpl: "archive.html",
+				data: siteFor(site, as),
+			})
+		}
+
+		yearArchives := map[int][]*model.ProcessedArticle{}
+		for _, a := range site.Articles {
+			if a.FrontMatter.Date.IsZero() {
+				continue
+			}
+			yearArchives[a.FrontMatter.Date.Year()] = append(yearArchives[a.FrontMatter.Date.Year()], a)
+		}
+		for year, articles := range yearArchives {
+			as := make([]*model.ProcessedArticle, len(articles))
+			copy(as, articles)
+			sortByDateDesc(as)
+			y := year
+			jobs = append(jobs, writeJob{
+				path: filepath.Join(g.outDir, "archives",
+					fmt.Sprintf("%04d", y),
+					"index.html"),
+				tmpl: "archive.html",
+				data: siteFor(site, as),
+			})
+		}
 	}
 
 	return jobs
