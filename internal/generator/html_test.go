@@ -187,7 +187,7 @@ func makePaginatedArticles(n int) []*model.ProcessedArticle {
 func TestPaginatedJobs_Disabled(t *testing.T) {
 	site := makeSite()
 	articles := makePaginatedArticles(5)
-	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 0, "")
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 0, "", nil)
 	if len(jobs) != 1 {
 		t.Fatalf("expected 1 job when pagination disabled, got %d", len(jobs))
 	}
@@ -202,7 +202,7 @@ func TestPaginatedJobs_Disabled(t *testing.T) {
 func TestPaginatedJobs_SinglePage(t *testing.T) {
 	site := makeSite()
 	articles := makePaginatedArticles(3)
-	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 10, "")
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 10, "", nil)
 	if len(jobs) != 1 {
 		t.Fatalf("expected 1 job for 3 articles with perPage=10, got %d", len(jobs))
 	}
@@ -222,7 +222,7 @@ func TestPaginatedJobs_SinglePage(t *testing.T) {
 func TestPaginatedJobs_MultiPage_Paths(t *testing.T) {
 	site := makeSite()
 	articles := makePaginatedArticles(5)
-	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "", 2, "")
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "", 2, "", nil)
 	// 5 articles / perPage 2 → pages 1,2,3
 	if len(jobs) != 3 {
 		t.Fatalf("expected 3 jobs, got %d", len(jobs))
@@ -244,7 +244,7 @@ func TestPaginatedJobs_MultiPage_Paths(t *testing.T) {
 func TestPaginatedJobs_MultiPage_PrevNext(t *testing.T) {
 	site := makeSite()
 	articles := makePaginatedArticles(5)
-	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/blog", 2, "")
+	jobs := paginatedJobs(site, articles, "/out", "index.html", "", "/blog", 2, "", nil)
 
 	pg1 := jobs[0].data.Pagination
 	if pg1.PrevURL != "" {
@@ -274,7 +274,7 @@ func TestPaginatedJobs_MultiPage_PrevNext(t *testing.T) {
 func TestPaginatedJobs_WithBasePath(t *testing.T) {
 	site := makeSite()
 	articles := makePaginatedArticles(3)
-	jobs := paginatedJobs(site, articles, "/out", "tag.html", "tags/go", "/tags/go", 2, "")
+	jobs := paginatedJobs(site, articles, "/out", "tag.html", "tags/go", "/tags/go", 2, "", nil)
 	// 3 articles / perPage 2 → 2 pages
 	if len(jobs) != 2 {
 		t.Fatalf("expected 2 jobs, got %d", len(jobs))
@@ -284,6 +284,39 @@ func TestPaginatedJobs_WithBasePath(t *testing.T) {
 	}
 	if jobs[1].path != filepath.Join("/out", "tags/go", "page", "2", "index.html") {
 		t.Errorf("page2 path = %q", jobs[1].path)
+	}
+}
+
+func TestPaginatedJobs_CurrentTaxonomy(t *testing.T) {
+	site := makeSite()
+	articles := makePaginatedArticles(2)
+	tax := &model.Taxonomy{Name: "go", Description: "Go language articles"}
+
+	// taxonomy is propagated to all page jobs (single page)
+	jobs := paginatedJobs(site, articles, "/out", "tag.html", "tags/go", "/tags/go", 0, "", tax)
+	if len(jobs) != 1 {
+		t.Fatalf("expected 1 job, got %d", len(jobs))
+	}
+	if jobs[0].data.CurrentTaxonomy == nil {
+		t.Fatal("CurrentTaxonomy should not be nil for tag page")
+	}
+	if jobs[0].data.CurrentTaxonomy.Name != "go" {
+		t.Errorf("CurrentTaxonomy.Name = %q, want %q", jobs[0].data.CurrentTaxonomy.Name, "go")
+	}
+
+	// taxonomy is propagated across multiple pages
+	articles5 := makePaginatedArticles(5)
+	jobs2 := paginatedJobs(site, articles5, "/out", "tag.html", "tags/go", "/tags/go", 2, "", tax)
+	for i, j := range jobs2 {
+		if j.data.CurrentTaxonomy == nil || j.data.CurrentTaxonomy.Name != "go" {
+			t.Errorf("page %d: CurrentTaxonomy not set correctly", i+1)
+		}
+	}
+
+	// nil taxonomy on index page
+	indexJobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 0, "", nil)
+	if indexJobs[0].data.CurrentTaxonomy != nil {
+		t.Error("CurrentTaxonomy should be nil for index page")
 	}
 }
 
