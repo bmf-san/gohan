@@ -286,6 +286,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				k := key
 				d := siteFor(site, as)
 				d.CurrentLocale = locale
+				d.CurrentArchivePath = fmt.Sprintf("/archives/%04d/%02d/", k.year, int(k.month))
 				jobs = append(jobs, writeJob{
 					path: filepath.Join(g.outDir, archivePrefix, "archives",
 						fmt.Sprintf("%04d", k.year),
@@ -303,6 +304,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				y := year
 				d := siteFor(site, as)
 				d.CurrentLocale = locale
+				d.CurrentArchivePath = fmt.Sprintf("/archives/%04d/", y)
 				jobs = append(jobs, writeJob{
 					path: filepath.Join(g.outDir, archivePrefix, "archives",
 						fmt.Sprintf("%04d", y),
@@ -378,6 +380,12 @@ func paginatedJobs(
 	// Build a locale-specific base so that listing pages see only the
 	// tags/categories present in the locale's articles (all of them,
 	// not just the current page slice).
+	// Attach locale-aware URL to taxonomy so templates can build language-switcher links.
+	if taxonomy != nil && baseURLPath != "" {
+		taxCopy := *taxonomy
+		taxCopy.URL = baseURLPath + "/"
+		taxonomy = &taxCopy
+	}
 	base := localeTaxonomyBase(site, articles)
 	if perPage <= 0 {
 		var path string

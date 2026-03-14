@@ -27,6 +27,28 @@ func (m *mockEngine) Render(w io.Writer, name string, _ *model.Site) error {
 	return err
 }
 
+// captureEngine records each Render call with its template name and a copy of the Site data.
+type captureRender struct {
+	tmpl string
+	data *model.Site
+}
+
+type captureEngine struct {
+	mu      sync.Mutex
+	renders []captureRender
+}
+
+func (c *captureEngine) Load(_ string, _ htmltemplate.FuncMap) error { return nil }
+func (c *captureEngine) Render(w io.Writer, name string, data *model.Site) error {
+	// Copy the site value so mutations after Render don't affect captured state.
+	dataCopy := *data
+	c.mu.Lock()
+	c.renders = append(c.renders, captureRender{tmpl: name, data: &dataCopy})
+	c.mu.Unlock()
+	_, err := io.WriteString(w, "<html>"+name+"</html>")
+	return err
+}
+
 func makeSite() *model.Site {
 	now := time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)
 	return &model.Site{
@@ -317,6 +339,97 @@ func TestPaginatedJobs_CurrentTaxonomy(t *testing.T) {
 	indexJobs := paginatedJobs(site, articles, "/out", "index.html", "", "/", 0, "", nil)
 	if indexJobs[0].data.CurrentTaxonomy != nil {
 		t.Error("CurrentTaxonomy should be nil for index page")
+	}
+}
+
+func TestPaginatedJobs_TaxonomyURL(t *testing.T) {
+	site := makeSite()
+	articles := makePaginatedArticles(2)
+	tax := &model.Taxonomy{Name: "go"}
+
+	// EN tag: baseURLPath="/tags/go" → URL set to "/tags/go/"
+	jobs := paginatedJobs(site, articles, "/out", "tag.html", "tags/go", "/tags/go", 0, "en", tax)
+	if jobs[0].data.CurrentTaxonomy == nil {
+		t.Fatal("CurrentTaxonomy should not be nil")
+	}
+	if got, want := jobs[0].data.CurrentTaxonomy.URL, "/tags/go/"; got != want {
+		t.Errorf("Taxonomy.URL = %q, want %q", got, want)
+	}
+
+	// JA tag: baseURLPath="/ja/tags/go" → URL set to "/ja/tags/go/"
+	jobs2 := paginatedJobs(site, articles, "/out", "tag.html", "ja/tags/go", "/ja/tags/go", 0, "ja", tax)
+	if got, want := jobs2[0].data.CurrentTaxonomy.URL, "/ja/tags/go/"; got != want {
+		t.Errorf("JA Taxonomy.URL = %q, want %q", got, want)
+	}
+
+	// Empty baseURLPath: URL should not be set (remains "")
+	jobs3 := paginatedJobs(site, articles, "/out", "index.html", "", "", 0, "", tax)
+	if jobs3[0].data.CurrentTaxonomy != nil && jobs3[0].data.CurrentTaxonomy.URL != "" {
+		t.Errorf("Taxonomy.URL should be empty when baseURLPath is empty, got %q", jobs3[0].data.CurrentTaxonomy.URL)
+	}
+}
+
+func TestGenerate_ArchiveCurrentArchivePath(t *testing.T) {
+	outDir := t.TempDir()
+	cfg := model.Config{
+		Build: model.BuildConfig{Parallelism: 1},
+		I18n:  model.I18nConfig{Locales: []string{"en", "ja"}, DefaultLocale: "en"},
+	}
+	now := time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)
+	site := &model.Site{
+		Config: cfg,
+		Articles: []*model.ProcessedArticle{
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Slug: "post-en", Date: now,
+				}},
+				Locale: "en",
+			},
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Slug: "post-ja", Date: now,
+				}},
+				Locale: "ja",
+			},
+		},
+	}
+	eng := &captureEngine{}
+	g := NewHTMLGenerator(outDir, eng, cfg)
+	if err := g.Generate(site, nil); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	// Find archive jobs and check CurrentArchivePath
+	eng.mu.Lock()
+	defer eng.mu.Unlock()
+	var enMonthPath, jaMonthPath, enYearPath, jaYearPath string
+	for _, r := range eng.renders {
+		if r.tmpl != "archive.html" {
+			continue
+		}
+		path := r.data.CurrentArchivePath
+		locale := r.data.CurrentLocale
+		switch {
+		case locale == "en" && path == "/archives/2024/03/":
+			enMonthPath = path
+		case locale == "en" && path == "/archives/2024/":
+			enYearPath = path
+		case locale == "ja" && path == "/archives/2024/03/":
+			jaMonthPath = path
+		case locale == "ja" && path == "/archives/2024/":
+			jaYearPath = path
+		}	}
+	if enMonthPath == "" {
+		t.Error("EN month archive: CurrentArchivePath not set to /archives/2024/03/")
+	}
+	if enYearPath == "" {
+		t.Error("EN year archive: CurrentArchivePath not set to /archives/2024/")
+	}
+	if jaMonthPath == "" {
+		t.Error("JA month archive: CurrentArchivePath not set to /archives/2024/03/")
+	}
+	if jaYearPath == "" {
+		t.Error("JA year archive: CurrentArchivePath not set to /archives/2024/")
 	}
 }
 
