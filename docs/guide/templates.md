@@ -41,7 +41,8 @@ type Site struct {
     CurrentLocale   string              // Locale for the current page (e.g. "en", "ja"); empty when i18n is not configured
     RelatedArticles    []*ProcessedArticle // Articles sharing at least one category with the current article (article pages only; nil on all other pages)
     CurrentTaxonomy    *Taxonomy           // The tag or category being listed; nil on all other pages
-    CurrentArchivePath string              // Set on archive pages; locale-neutral path, e.g. "/archives/2024/01/"; empty on all other pages
+    CurrentArchivePath   string              // Set on archive pages; locale-aware path, e.g. "/archives/2024/01/" (EN) or "/ja/archives/2024/01/" (JA); empty on all other pages
+    CurrentArchiveIsMonth bool                // true on month archive pages (e.g. /archives/2024/01/); false on year archive pages (e.g. /archives/2024/)
 }
 ```
 

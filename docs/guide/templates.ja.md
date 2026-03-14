@@ -41,7 +41,8 @@ type Site struct {
     CurrentLocale   string              // 現在ページのロケールコード（例: "en", "ja"）。i18n 未設定時は空
     RelatedArticles    []*ProcessedArticle // 現在記事と同一カテゴリーを持つ関連記事（記事ページのみ。他ページは nil）
     CurrentTaxonomy    *Taxonomy           // 一覧表示中のタグまたはカテゴリー。他ページは nil
-    CurrentArchivePath string              // アーカイブページでのロケール非依存パス（例: "/archives/2024/01/"）。他ページは空文字
+    CurrentArchivePath   string              // アーカイブページでのロケール対応パス（例: EN "/archives/2024/01/"、JA "/ja/archives/2024/01/"）。他ページは空文字
+    CurrentArchiveIsMonth bool                // 月別アーカイブページで true（例: /archives/2024/01/）、年別アーカイブページで false（例: /archives/2024/）
 }
 ```
 
