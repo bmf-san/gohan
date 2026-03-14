@@ -148,6 +148,21 @@ func TestParseNameStatus(t *testing.T) {
 	}
 }
 
+func TestParseNameStatus_Rename(t *testing.T) {
+	// git diff --name-status emits "R<score>\told\tnew" for renames.
+	output := "R100\tinternal/old.go\tinternal/new.go\n"
+	cs := parseNameStatus(output)
+	if len(cs.DeletedFiles) != 1 || cs.DeletedFiles[0] != "internal/old.go" {
+		t.Errorf("expected old path in DeletedFiles, got %v", cs.DeletedFiles)
+	}
+	if len(cs.AddedFiles) != 1 || cs.AddedFiles[0] != "internal/new.go" {
+		t.Errorf("expected new path in AddedFiles, got %v", cs.AddedFiles)
+	}
+	if len(cs.ModifiedFiles) != 0 {
+		t.Errorf("expected no ModifiedFiles, got %v", cs.ModifiedFiles)
+	}
+}
+
 func TestGitDiffEngine_Hash(t *testing.T) {
 	content := "gohan hash test"
 	path := writeTemp(t, content)

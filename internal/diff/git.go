@@ -109,6 +109,13 @@ func parseNameStatus(output string) *model.ChangeSet {
 			cs.ModifiedFiles = append(cs.ModifiedFiles, path)
 		case strings.HasPrefix(status, "D"):
 			cs.DeletedFiles = append(cs.DeletedFiles, path)
+		case strings.HasPrefix(status, "R"):
+			// Rename: treat old path as deleted, new path as added.
+			// Format: R<score>\told_path\tnew_path
+			cs.DeletedFiles = append(cs.DeletedFiles, path)
+			if len(parts) >= 3 {
+				cs.AddedFiles = append(cs.AddedFiles, parts[2])
+			}
 		}
 	}
 	return cs
