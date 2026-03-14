@@ -39,8 +39,9 @@ type Site struct {
     ArchiveYears    []int               // 記事が存在する年の一覧（新しい順）
     Pagination      *Pagination         // ページング情報。ページネーション無効または一覧ページ以外は nil
     CurrentLocale   string              // 現在ページのロケールコード（例: "en", "ja"）。i18n 未設定時は空
-    RelatedArticles []*ProcessedArticle // 現在記事と同一カテゴリーを持つ関連記事（記事ページのみ。他ページは nil）
-    CurrentTaxonomy *Taxonomy           // 一覧表示中のタグまたはカテゴリー。他ページは nil
+    RelatedArticles    []*ProcessedArticle // 現在記事と同一カテゴリーを持つ関連記事（記事ページのみ。他ページは nil）
+    CurrentTaxonomy    *Taxonomy           // 一覧表示中のタグまたはカテゴリー。他ページは nil
+    CurrentArchivePath string              // アーカイブページでのロケール非依存パス（例: "/archives/2024/01/"）。他ページは空文字
 }
 ```
 
@@ -104,6 +105,7 @@ type FrontMatter struct {
 type Taxonomy struct {
     Name        string // タグ/カテゴリー名
     Description string // 説明（任意）
+    URL         string // レンダリング時に設定されるロケール対応の正規 URL パス（例: "/ja/tags/go/"）。paginatedJobs 外では空文字
 }
 ```
 
@@ -115,9 +117,9 @@ type Taxonomy struct {
 |---|---|---|
 | `index.html` | サイト全体の全記事 | `.Pagination`、`.ArchiveYears`、`.Tags`、`.Categories` |
 | `article.html` | その記事 1 件のみ | `.RelatedArticles`、`.CurrentLocale` |
-| `tag.html` | そのタグを持つ記事 | `.Pagination`、`.CurrentTaxonomy` |
-| `category.html` | そのカテゴリーを持つ記事 | `.Pagination`、`.CurrentTaxonomy` |
-| `archive.html` | その年の記事 | `.CurrentLocale` |
+| `tag.html` | そのタグを持つ記事 | `.Pagination`、`.CurrentTaxonomy`（`.CurrentTaxonomy.URL` 設定済み） |
+| `category.html` | そのカテゴリーを持つ記事 | `.Pagination`、`.CurrentTaxonomy`（`.CurrentTaxonomy.URL` 設定済み） |
+| `archive.html` | その年/月の記事 | `.CurrentLocale`、`.CurrentArchivePath` |
 
 > **`article.html` の注意:** `{{range .Articles}}` ループの内側では `$` でルートフィールドにアクセスします。例: `$.RelatedArticles`、`$.CurrentLocale`、`$.Config`。
 

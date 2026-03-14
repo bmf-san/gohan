@@ -39,8 +39,9 @@ type Site struct {
     ArchiveYears    []int               // Unique years that have articles, sorted newest-first
     Pagination      *Pagination         // Paging metadata; nil when pagination is disabled or for non-listing pages
     CurrentLocale   string              // Locale for the current page (e.g. "en", "ja"); empty when i18n is not configured
-    RelatedArticles []*ProcessedArticle // Articles sharing at least one category with the current article (article pages only; nil on all other pages)
-    CurrentTaxonomy *Taxonomy           // The tag or category being listed; nil on all other pages
+    RelatedArticles    []*ProcessedArticle // Articles sharing at least one category with the current article (article pages only; nil on all other pages)
+    CurrentTaxonomy    *Taxonomy           // The tag or category being listed; nil on all other pages
+    CurrentArchivePath string              // Set on archive pages; locale-neutral path, e.g. "/archives/2024/01/"; empty on all other pages
 }
 ```
 
@@ -127,6 +128,7 @@ type FrontMatter struct {
 type Taxonomy struct {
     Name        string // Tag or category name
     Description string // Optional description
+    URL         string // Locale-aware canonical URL path set at render time, e.g. "/ja/tags/go/"; empty outside paginatedJobs
 }
 ```
 
@@ -138,9 +140,9 @@ type Taxonomy struct {
 |---|---|---|
 | `index.html` | All articles on the site | `.Pagination`, `.ArchiveYears`, `.Tags`, `.Categories` |
 | `article.html` | The single article being rendered | `.RelatedArticles`, `.CurrentLocale` |
-| `tag.html` | Articles that have this tag | `.Pagination`, `.CurrentTaxonomy` |
-| `category.html` | Articles that belong to this category | `.Pagination`, `.CurrentTaxonomy` |
-| `archive.html` | Articles published in this year | `.CurrentLocale` |
+| `tag.html` | Articles that have this tag | `.Pagination`, `.CurrentTaxonomy` (`.CurrentTaxonomy.URL` set) |
+| `category.html` | Articles that belong to this category | `.Pagination`, `.CurrentTaxonomy` (`.CurrentTaxonomy.URL` set) |
+| `archive.html` | Articles published in this year/month | `.CurrentLocale`, `.CurrentArchivePath` |
 
 > **Note on `article.html`:** inside a `{{range .Articles}}` loop, use `$` to access root-level fields — e.g. `$.RelatedArticles`, `$.CurrentLocale`, `$.Config`.
 
