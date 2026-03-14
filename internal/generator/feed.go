@@ -130,7 +130,8 @@ func GenerateFeeds(outDir, baseURL, siteTitle string, articles []*model.Processe
 }
 
 func writeRSS(outDir, baseURL, title string, articles []*model.ProcessedArticle) error {
-	return writeRSSWithChannelURL(outDir, baseURL, baseURL, title, articles)
+	// BUG-C: channel URL must have a trailing slash (consistent with writeAtom).
+	return writeRSSWithChannelURL(outDir, baseURL, baseURL+"/", title, articles)
 }
 
 func writeRSSWithChannelURL(outDir, itemBaseURL, channelURL, title string, articles []*model.ProcessedArticle) error {

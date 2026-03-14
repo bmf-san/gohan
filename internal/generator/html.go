@@ -642,9 +642,25 @@ func localeTaxonomyBase(base *model.Site, articles []*model.ProcessedArticle) *m
 	}
 	sort.Slice(tags, func(i, j int) bool { return tags[i].Name < tags[j].Name })
 	sort.Slice(cats, func(i, j int) bool { return cats[i].Name < cats[j].Name })
-	// No fallback to base.Tags / base.Categories: an empty slice is the correct
-	// value when the locale has no tagged/categorised articles.  Falling back to
-	// all-locale data would expose cross-locale taxonomy entries in the sidebar.
+	// BUG-B: preserve Taxonomy.Description from base.Tags / base.Categories.
+	// Without this, locale-filtered listing pages always show empty descriptions.
+	tagDesc := make(map[string]string, len(base.Tags))
+	for _, t := range base.Tags {
+		tagDesc[t.Name] = t.Description
+	}
+	catDesc := make(map[string]string, len(base.Categories))
+	for _, c := range base.Categories {
+		catDesc[c.Name] = c.Description
+	}
+	for i := range tags {
+		tags[i].Description = tagDesc[tags[i].Name]
+	}
+	for i := range cats {
+		cats[i].Description = catDesc[cats[i].Name]
+	}
+	// No fallback to base.Tags / base.Categories tags themselves: an empty slice
+	// is the correct value when the locale has no tagged/categorised articles.
+	// Falling back to all-locale data would expose cross-locale entries in the sidebar.
 	return &model.Site{
 		Config:       base.Config,
 		Articles:     base.Articles,

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,11 +49,6 @@ func runNew(args []string) error {
 
 	filePath := filepath.Join(dir, slug+".md")
 
-	// Error if file already exists
-	if _, err := os.Stat(filePath); err == nil {
-		return fmt.Errorf("file already exists: %s", filePath)
-	}
-
 	// Create directory if needed
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
@@ -70,7 +66,18 @@ categories: []
 
 `, articleTitle, today)
 
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	// BUG-D: use O_CREATE|O_EXCL for an atomic create-or-fail, eliminating the
+	// TOCTOU race between the old os.Stat check and os.WriteFile.
+	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	if err != nil {
+		if os.IsExist(err) {
+			return fmt.Errorf("file already exists: %s", filePath)
+		}
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+	if _, err := io.WriteString(f, content); err != nil {
+		_ = os.Remove(filePath)
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 

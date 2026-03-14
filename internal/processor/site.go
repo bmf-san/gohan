@@ -206,7 +206,14 @@ func computeOutputPath(a *model.Article, cfg model.Config) string {
 	dir := filepath.Dir(rel)
 	base := strings.TrimSuffix(filepath.Base(rel), filepath.Ext(rel))
 	if a.FrontMatter.Slug != "" {
-		base = a.FrontMatter.Slug
+		// BUG-A: sanitise slug against path traversal — take only the last path
+		// component so that "../../etc/passwd" reduces to "passwd".
+		s := filepath.Base(filepath.FromSlash(a.FrontMatter.Slug))
+		if s == "." || s == ".." {
+			// degenerate input — keep the filename-derived base
+		} else {
+			base = s
+		}
 	}
 	// i18n: strip the locale segment from dir, re-add only for non-default locales.
 	if locale := detectLocale(a, cfg); locale != "" {
