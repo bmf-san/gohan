@@ -119,13 +119,13 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				basePath = locale
 				baseURLPath = "/" + locale
 			}
-			jobs = append(jobs, paginatedJobs(site, locArticles, g.outDir, "index.html", basePath, baseURLPath, perPage, locale)...)
+			jobs = append(jobs, paginatedJobs(site, locArticles, g.outDir, "index.html", basePath, baseURLPath, perPage, locale, nil)...)
 		}
 	} else {
 		allArticles := make([]*model.ProcessedArticle, len(site.Articles))
 		copy(allArticles, site.Articles)
 		sortByDateDesc(allArticles)
-		jobs = append(jobs, paginatedJobs(site, allArticles, g.outDir, "index.html", "", "", perPage, "")...)
+		jobs = append(jobs, paginatedJobs(site, allArticles, g.outDir, "index.html", "", "", perPage, "", nil)...)
 	}
 
 	// Article pages: use pre-computed output path and respect FrontMatter.Template.
@@ -175,7 +175,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 					basePath = filepath.Join(locale, "tags", tagNorm(t.Name))
 					baseURLPath = "/" + locale + "/tags/" + tagNorm(t.Name)
 				}
-				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, locale)...)
+				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, locale, &t)...)
 			}
 		}
 	} else {
@@ -195,7 +195,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			sortByDateDesc(filtered)
 			basePath := filepath.Join("tags", tagNorm(t.Name))
 			baseURLPath := "/tags/" + tagNorm(t.Name)
-			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, "")...)
+			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, "", &t)...)
 		}
 	}
 
@@ -228,7 +228,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 					basePath = filepath.Join(locale, "categories", tagNorm(c.Name))
 					baseURLPath = "/" + locale + "/categories/" + tagNorm(c.Name)
 				}
-				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, locale)...)
+				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, locale, &c)...)
 			}
 		}
 	} else {
@@ -248,7 +248,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			sortByDateDesc(filtered)
 			basePath := filepath.Join("categories", tagNorm(c.Name))
 			baseURLPath := "/categories/" + tagNorm(c.Name)
-			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, "")...)
+			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, "", &c)...)
 		}
 	}
 
@@ -309,6 +309,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 // paginatedJobs returns writeJobs for a paginated listing page.
 // basePath is the filesystem path prefix relative to outDir (e.g. "tags/go").
 // baseURLPath is the URL prefix for computing PrevURL/NextURL.
+// taxonomy is the tag or category being listed; nil for plain index pages.
 // When perPage <= 0, a single job with all articles and no Pagination is returned.
 func paginatedJobs(
 	site *model.Site,
@@ -316,6 +317,7 @@ func paginatedJobs(
 	outDir, tmpl, basePath, baseURLPath string,
 	perPage int,
 	currentLocale string,
+	taxonomy *model.Taxonomy,
 ) []writeJob {
 	// Build a locale-specific base so that listing pages see only the
 	// tags/categories present in the locale's articles (all of them,
@@ -330,6 +332,7 @@ func paginatedJobs(
 		}
 		d := siteFor(base, articles)
 		d.CurrentLocale = currentLocale
+		d.CurrentTaxonomy = taxonomy
 		return []writeJob{{path: path, tmpl: tmpl, data: d}}
 	}
 
@@ -390,6 +393,7 @@ func paginatedJobs(
 
 		d := siteWithPagination(base, slice, pg)
 		d.CurrentLocale = currentLocale
+		d.CurrentTaxonomy = taxonomy
 		jobs = append(jobs, writeJob{
 			path: path,
 			tmpl: tmpl,
