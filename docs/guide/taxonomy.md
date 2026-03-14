@@ -190,6 +190,32 @@ In `archive.html`, `.Articles` contains the articles published in that year:
 
 ---
 
+## Locale-aware taxonomy (i18n)
+
+When i18n is enabled, you can maintain separate tag and category lists per locale.
+Place locale-specific files under the locale directory; if absent, gohan falls back to the global file:
+
+```
+content/
+  tags.yaml              # global / fallback for all locales
+  categories.yaml
+  en/
+    tags.yaml            # EN-specific (optional)
+    categories.yaml      # EN-specific (optional)
+    posts/
+  ja/
+    tags.yaml            # JA-specific (optional)
+    categories.yaml      # JA-specific (optional)
+    posts/
+```
+
+During `gohan build`, each article is validated against its own locale's registry.
+Articles whose locale has no dedicated file are validated against the global file.
+
+See [i18n feature docs](../features/i18n.md) for the full configuration reference.
+
+---
+
 ## Taxonomy design guidelines
 
 - **Tags** — Specific keywords for the article (`go`, `docker`, `postgresql`, etc.). Having many tags is fine.
