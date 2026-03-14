@@ -63,7 +63,12 @@ func CalculateDiff(oldGraph, newGraph *model.DependencyGraph) (*model.ChangeSet,
 		if _, exists := oldGraph.Nodes[path]; !exists {
 			cs.AddedFiles = append(cs.AddedFiles, path)
 		} else {
-			cs.ModifiedFiles = append(cs.ModifiedFiles, path)
+			// Only report as modified when the modification time actually changed.
+			oldNode := oldGraph.Nodes[path]
+			newNode := newGraph.Nodes[path]
+			if oldNode == nil || newNode == nil || !oldNode.LastModified.Equal(newNode.LastModified) {
+				cs.ModifiedFiles = append(cs.ModifiedFiles, path)
+			}
 		}
 	}
 	for path := range oldGraph.Nodes {

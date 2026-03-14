@@ -41,7 +41,8 @@ type Site struct {
     CurrentLocale   string              // Locale for the current page (e.g. "en", "ja"); empty when i18n is not configured
     RelatedArticles    []*ProcessedArticle // Articles sharing at least one category with the current article (article pages only; nil on all other pages)
     CurrentTaxonomy    *Taxonomy           // The tag or category being listed; nil on all other pages
-    CurrentArchivePath string              // Set on archive pages; locale-neutral path, e.g. "/archives/2024/01/"; empty on all other pages
+    CurrentArchivePath   string              // Set on archive pages; locale-aware path, e.g. "/archives/2024/01/" (EN) or "/ja/archives/2024/01/" (JA); empty on all other pages
+    CurrentArchiveIsMonth bool                // true on month archive pages (e.g. /archives/2024/01/); false on year archive pages (e.g. /archives/2024/)
 }
 ```
 
@@ -153,8 +154,8 @@ type Taxonomy struct {
 | Function | Example | Description |
 |---|---|---|
 | `formatDate` | `{{formatDate "2006-01-02" .FrontMatter.Date}}` | Format a `time.Time` value |
-| `tagURL` | `{{tagURL "go"}}` → `/tags/go/` | Generate a tag page URL |
-| `categoryURL` | `{{categoryURL "tech"}}` → `/categories/tech/` | Generate a category page URL |
+| `tagURL` | `{{tagURL .CurrentLocale "go"}}` → `/tags/go/` (EN) or `/ja/tags/go/` (JA) | Generate a locale-aware tag page URL |
+| `categoryURL` | `{{categoryURL .CurrentLocale "tech"}}` → `/categories/tech/` (EN) | Generate a locale-aware category page URL |
 | `markdownify` | `{{markdownify "**bold**"}}` | Convert a Markdown string to HTML |
 
 `formatDate` uses Go's [reference time](https://pkg.go.dev/time#Layout) layout:
@@ -191,7 +192,7 @@ type Taxonomy struct {
         <a href="/posts/{{.FrontMatter.Slug}}/">{{.FrontMatter.Title}}</a>
         {{if .FrontMatter.Tags}}
         <span>
-          {{range .FrontMatter.Tags}}<a href="{{tagURL .}}">#{{.}}</a> {{end}}
+          {{range .FrontMatter.Tags}}<a href="{{tagURL $.CurrentLocale .}}">#{{.}}</a> {{end}}
         </span>
         {{end}}
       </li>
@@ -231,7 +232,7 @@ type Taxonomy struct {
       {{if .FrontMatter.Author}}<span> · {{.FrontMatter.Author}}</span>{{end}}
       {{if .FrontMatter.Tags}}
       <ul class="tags">
-        {{range .FrontMatter.Tags}}<li><a href="{{tagURL .}}">{{.}}</a></li>{{end}}
+        {{range .FrontMatter.Tags}}<li><a href="{{tagURL $.CurrentLocale .}}">{{.}}</a></li>{{end}}
       </ul>
       {{end}}
       <div class="content">{{.HTMLContent}}</div>

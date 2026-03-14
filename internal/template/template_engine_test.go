@@ -41,7 +41,7 @@ func TestEngine_Load_Valid(t *testing.T) {
 	dir := t.TempDir()
 	writeTmpl(t, dir, "index.html", `{{define "index.html"}}hello{{end}}`)
 	e := NewEngine()
-	if err := e.Load(dir, nil); err != nil {
+	if err := e.Load(dir, nil, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -50,14 +50,14 @@ func TestEngine_Load_NoHTML(t *testing.T) {
 	dir := t.TempDir()
 	writeTmpl(t, dir, "readme.txt", "nothing here")
 	e := NewEngine()
-	if err := e.Load(dir, nil); err == nil {
+	if err := e.Load(dir, nil, ""); err == nil {
 		t.Error("expected error when no .html files, got nil")
 	}
 }
 
 func TestEngine_Load_DirNotFound(t *testing.T) {
 	e := NewEngine()
-	if err := e.Load("/nonexistent/themes/default", nil); err == nil {
+	if err := e.Load("/nonexistent/themes/default", nil, ""); err == nil {
 		t.Error("expected error for missing directory, got nil")
 	}
 }
@@ -74,7 +74,7 @@ func TestEngine_Render_MissingTemplate(t *testing.T) {
 	dir := t.TempDir()
 	writeTmpl(t, dir, "index.html", `{{define "index.html"}}hi{{end}}`)
 	e := NewEngine()
-	if err := e.Load(dir, nil); err != nil {
+	if err := e.Load(dir, nil, ""); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	var buf bytes.Buffer
@@ -87,7 +87,7 @@ func TestEngine_Render_VariableExpansion(t *testing.T) {
 	dir := t.TempDir()
 	writeTmpl(t, dir, "index.html", `{{define "index.html"}}{{.Config.Site.Title}}{{end}}`)
 	e := NewEngine()
-	if err := e.Load(dir, nil); err != nil {
+	if err := e.Load(dir, nil, ""); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	got := renderStr(t, e, "index.html", minSite("My Blog"))
@@ -101,7 +101,7 @@ func TestEngine_Render_MultipleTemplates(t *testing.T) {
 	writeTmpl(t, dir, "index.html", `{{define "index.html"}}index{{end}}`)
 	writeTmpl(t, dir, "article.html", `{{define "article.html"}}article{{end}}`)
 	e := NewEngine()
-	if err := e.Load(dir, nil); err != nil {
+	if err := e.Load(dir, nil, ""); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	if got := renderStr(t, e, "index.html", minSite("")); got != "index" {
@@ -113,7 +113,7 @@ func TestEngine_Render_MultipleTemplates(t *testing.T) {
 }
 
 func TestEngine_Builtin_FormatDate(t *testing.T) {
-	fns := builtinFuncs()
+	fns := builtinFuncs("")
 	fn, ok := fns["formatDate"].(func(string, time.Time) string)
 	if !ok {
 		t.Fatal("formatDate not found in builtinFuncs")
@@ -126,31 +126,55 @@ func TestEngine_Builtin_FormatDate(t *testing.T) {
 }
 
 func TestEngine_Builtin_TagURL(t *testing.T) {
-	fns := builtinFuncs()
-	fn, ok := fns["tagURL"].(func(string) string)
+	// no-locale (non-i18n): root path
+	fns := builtinFuncs("")
+	fn, ok := fns["tagURL"].(func(string, string) string)
 	if !ok {
-		t.Fatal("tagURL not found")
+		t.Fatal("tagURL not found or wrong type")
 	}
-	got := fn("Go Programming")
-	if got != "/tags/go-programming/" {
-		t.Errorf("tagURL: got %q, want %q", got, "/tags/go-programming/")
+	if got := fn("", "Go Programming"); got != "/tags/go-programming/" {
+		t.Errorf("tagURL no-locale: got %q, want %q", got, "/tags/go-programming/")
+	}
+
+	// default locale ("en"): same root path — no prefix
+	fnsEN := builtinFuncs("en")
+	fnEN := fnsEN["tagURL"].(func(string, string) string)
+	if got := fnEN("en", "Go Programming"); got != "/tags/go-programming/" {
+		t.Errorf("tagURL en (default): got %q, want %q", got, "/tags/go-programming/")
+	}
+
+	// non-default locale ("ja"): locale-prefixed path
+	if got := fnEN("ja", "Go Programming"); got != "/ja/tags/go-programming/" {
+		t.Errorf("tagURL ja: got %q, want %q", got, "/ja/tags/go-programming/")
 	}
 }
 
 func TestEngine_Builtin_CategoryURL(t *testing.T) {
-	fns := builtinFuncs()
-	fn, ok := fns["categoryURL"].(func(string) string)
+	// no-locale (non-i18n): root path
+	fns := builtinFuncs("")
+	fn, ok := fns["categoryURL"].(func(string, string) string)
 	if !ok {
-		t.Fatal("categoryURL not found")
+		t.Fatal("categoryURL not found or wrong type")
 	}
-	got := fn("Web Development")
-	if got != "/categories/web-development/" {
-		t.Errorf("categoryURL: got %q, want %q", got, "/categories/web-development/")
+	if got := fn("", "Web Development"); got != "/categories/web-development/" {
+		t.Errorf("categoryURL no-locale: got %q, want %q", got, "/categories/web-development/")
+	}
+
+	// default locale ("en"): root path — no prefix
+	fnsEN := builtinFuncs("en")
+	fnEN := fnsEN["categoryURL"].(func(string, string) string)
+	if got := fnEN("en", "Web Development"); got != "/categories/web-development/" {
+		t.Errorf("categoryURL en (default): got %q, want %q", got, "/categories/web-development/")
+	}
+
+	// non-default locale ("ja"): locale-prefixed path
+	if got := fnEN("ja", "Web Development"); got != "/ja/categories/web-development/" {
+		t.Errorf("categoryURL ja: got %q, want %q", got, "/ja/categories/web-development/")
 	}
 }
 
 func TestEngine_Builtin_Markdownify(t *testing.T) {
-	fns := builtinFuncs()
+	fns := builtinFuncs("")
 	fn, ok := fns["markdownify"].(func(string) (template.HTML, error))
 	if !ok {
 		t.Fatal("markdownify not found")
@@ -171,7 +195,7 @@ func TestEngine_CustomFunc(t *testing.T) {
 	customFuncs := template.FuncMap{
 		"shout": func(s string) string { return strings.ToUpper(s) + "!" },
 	}
-	if err := e.Load(dir, customFuncs); err != nil {
+	if err := e.Load(dir, customFuncs, ""); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	got := renderStr(t, e, "custom.html", minSite("hello"))
@@ -189,7 +213,7 @@ func TestEngine_Load_SubDir(t *testing.T) {
 	writeTmpl(t, dir, "index.html", `{{define "index.html"}}main{{end}}`)
 	writeTmpl(t, sub, "partial.html", `{{define "partial.html"}}part{{end}}`)
 	e := NewEngine()
-	if err := e.Load(dir, nil); err != nil {
+	if err := e.Load(dir, nil, ""); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	if got := renderStr(t, e, "index.html", minSite("")); got != "main" {
@@ -216,7 +240,7 @@ func TestToSlug(t *testing.T) {
 }
 
 func TestEngine_Builtin_PaginationPages(t *testing.T) {
-	fns := builtinFuncs()
+	fns := builtinFuncs("")
 	fn, ok := fns["paginationPages"].(func(int, int) []int)
 	if !ok {
 		t.Fatal("paginationPages not found in builtinFuncs")
@@ -283,7 +307,7 @@ func TestEngine_Builtin_PaginationPages(t *testing.T) {
 }
 
 func TestEngine_Builtin_PageURL(t *testing.T) {
-	fns := builtinFuncs()
+	fns := builtinFuncs("")
 	fn, ok := fns["pageURL"].(func(string, int) string)
 	if !ok {
 		t.Fatal("pageURL not found in builtinFuncs")
@@ -306,5 +330,25 @@ func TestEngine_Builtin_PageURL(t *testing.T) {
 		if got != c.want {
 			t.Errorf("pageURL(%q, %d): got %q, want %q", c.baseURL, c.p, got, c.want)
 		}
+	}
+}
+
+func TestToSlug_Empty(t *testing.T) {
+	// Empty input must return "untitled" not an empty string,
+	// so tagURL("", "") never produces "/tags//".
+	if got := toSlug(""); got != "untitled" {
+		t.Errorf("toSlug(%q) = %q, want %q", "", got, "untitled")
+	}
+}
+
+func TestPaginationPages_InvalidCurrent(t *testing.T) {
+	// current < 1 must return nil (invalid input guard, BUG-09).
+	fns := builtinFuncs("")
+	fn := fns["paginationPages"].(func(int, int) []int)
+	if got := fn(0, 10); got != nil {
+		t.Errorf("paginationPages(0,10): expected nil, got %v", got)
+	}
+	if got := fn(-1, 10); got != nil {
+		t.Errorf("paginationPages(-1,10): expected nil, got %v", got)
 	}
 }

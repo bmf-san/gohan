@@ -37,7 +37,9 @@ type writeJob struct {
 }
 
 // Generate writes all HTML pages and copies static assets.
-// When changeSet is nil every page is written; otherwise only affected pages.
+// Generate writes all HTML pages for site into g.outDir.
+// changeSet is forwarded to the OGP image generator only; HTML pages are always
+// fully regenerated regardless of changeSet.
 func (g *HTMLGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) error {
 	parallelism := g.cfg.Build.Parallelism
 	if parallelism <= 0 {
@@ -90,7 +92,7 @@ func (g *HTMLGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) e
 	}
 
 	if g.cfg.OGP.Enabled {
-		ogpGen := NewOGPGenerator(g.outDir, g.cfg.OGP)
+		ogpGen := NewOGPGenerator(g.outDir, g.cfg.Build.ContentDir, g.cfg.OGP)
 		if err := ogpGen.Generate(site, changeSet); err != nil {
 			return fmt.Errorf("ogp generation: %w", err)
 		}
@@ -128,6 +130,22 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		jobs = append(jobs, paginatedJobs(site, allArticles, g.outDir, "index.html", "", "", perPage, "", nil)...)
 	}
 
+	// Pre-compute per-locale taxonomy bases so that article pages receive
+	// locale-filtered Tags, Categories, and ArchiveYears — matching the
+	// behaviour of listing pages (tag, category, archive, index).
+	articleLocaleBases := map[string]*model.Site{}
+	if len(g.cfg.I18n.Locales) > 0 {
+		for _, loc := range g.cfg.I18n.Locales {
+			locale := loc
+			locArticles := filterArticles(site.Articles, func(a *model.ProcessedArticle) bool {
+				return a.Locale == locale
+			})
+			articleLocaleBases[locale] = localeTaxonomyBase(site, locArticles)
+		}
+	} else {
+		articleLocaleBases[""] = localeTaxonomyBase(site, site.Articles)
+	}
+
 	// Article pages: use pre-computed output path and respect FrontMatter.Template.
 	for _, a := range site.Articles {
 		a := a
@@ -136,7 +154,11 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		if a.FrontMatter.Template != "" {
 			tmplName = a.FrontMatter.Template
 		}
-		d := siteFor(site, []*model.ProcessedArticle{a})
+		base := articleLocaleBases[a.Locale]
+		if base == nil {
+			base = localeTaxonomyBase(site, site.Articles)
+		}
+		d := siteFor(base, []*model.ProcessedArticle{a})
 		d.CurrentLocale = a.Locale
 		d.RelatedArticles = relatedArticles(site.Articles, a, 5)
 		jobs = append(jobs, writeJob{
@@ -284,17 +306,16 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				copy(as, articles)
 				sortByDateDesc(as)
 				k := key
-				d := siteFor(site, as)
-				d.CurrentLocale = locale
-				d.CurrentArchivePath = fmt.Sprintf("/archives/%04d/%02d/", k.year, int(k.month))
-				jobs = append(jobs, writeJob{
-					path: filepath.Join(g.outDir, archivePrefix, "archives",
-						fmt.Sprintf("%04d", k.year),
-						fmt.Sprintf("%02d", int(k.month)),
-						"index.html"),
-					tmpl: "archive.html",
-					data: d,
-				})
+				basePath := filepath.Join(archivePrefix, "archives", fmt.Sprintf("%04d", k.year), fmt.Sprintf("%02d", int(k.month)))
+				var baseURLPath, archivePath string
+				if archivePrefix == "" {
+					baseURLPath = fmt.Sprintf("/archives/%04d/%02d", k.year, int(k.month))
+					archivePath = fmt.Sprintf("/archives/%04d/%02d/", k.year, int(k.month))
+				} else {
+					baseURLPath = fmt.Sprintf("/%s/archives/%04d/%02d", archivePrefix, k.year, int(k.month))
+					archivePath = fmt.Sprintf("/%s/archives/%04d/%02d/", archivePrefix, k.year, int(k.month))
+				}
+				jobs = append(jobs, paginatedArchiveJobs(site, as, g.outDir, basePath, baseURLPath, perPage, locale, archivePath, true)...)
 			}
 
 			for year, articles := range yearArchives {
@@ -302,16 +323,16 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				copy(as, articles)
 				sortByDateDesc(as)
 				y := year
-				d := siteFor(site, as)
-				d.CurrentLocale = locale
-				d.CurrentArchivePath = fmt.Sprintf("/archives/%04d/", y)
-				jobs = append(jobs, writeJob{
-					path: filepath.Join(g.outDir, archivePrefix, "archives",
-						fmt.Sprintf("%04d", y),
-						"index.html"),
-					tmpl: "archive.html",
-					data: d,
-				})
+				basePath := filepath.Join(archivePrefix, "archives", fmt.Sprintf("%04d", y))
+				var baseURLPath, archivePath string
+				if archivePrefix == "" {
+					baseURLPath = fmt.Sprintf("/archives/%04d", y)
+					archivePath = fmt.Sprintf("/archives/%04d/", y)
+				} else {
+					baseURLPath = fmt.Sprintf("/%s/archives/%04d", archivePrefix, y)
+					archivePath = fmt.Sprintf("/%s/archives/%04d/", archivePrefix, y)
+				}
+				jobs = append(jobs, paginatedArchiveJobs(site, as, g.outDir, basePath, baseURLPath, perPage, locale, archivePath, false)...)
 			}
 		}
 	} else {
@@ -329,14 +350,10 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			copy(as, articles)
 			sortByDateDesc(as)
 			k := key
-			jobs = append(jobs, writeJob{
-				path: filepath.Join(g.outDir, "archives",
-					fmt.Sprintf("%04d", k.year),
-					fmt.Sprintf("%02d", int(k.month)),
-					"index.html"),
-				tmpl: "archive.html",
-				data: siteFor(site, as),
-			})
+			basePath := filepath.Join("archives", fmt.Sprintf("%04d", k.year), fmt.Sprintf("%02d", int(k.month)))
+			baseURLPath := fmt.Sprintf("/archives/%04d/%02d", k.year, int(k.month))
+			archivePath := fmt.Sprintf("/archives/%04d/%02d/", k.year, int(k.month))
+			jobs = append(jobs, paginatedArchiveJobs(site, as, g.outDir, basePath, baseURLPath, perPage, "", archivePath, true)...)
 		}
 
 		yearArchives := map[int][]*model.ProcessedArticle{}
@@ -351,13 +368,10 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			copy(as, articles)
 			sortByDateDesc(as)
 			y := year
-			jobs = append(jobs, writeJob{
-				path: filepath.Join(g.outDir, "archives",
-					fmt.Sprintf("%04d", y),
-					"index.html"),
-				tmpl: "archive.html",
-				data: siteFor(site, as),
-			})
+			basePath := filepath.Join("archives", fmt.Sprintf("%04d", y))
+			baseURLPath := fmt.Sprintf("/archives/%04d", y)
+			archivePath := fmt.Sprintf("/archives/%04d/", y)
+			jobs = append(jobs, paginatedArchiveJobs(site, as, g.outDir, basePath, baseURLPath, perPage, "", archivePath, false)...)
 		}
 	}
 
@@ -467,6 +481,27 @@ func paginatedJobs(
 	return jobs
 }
 
+// paginatedArchiveJobs is like paginatedJobs but also sets CurrentArchivePath
+// and CurrentArchiveIsMonth on every job so archive templates can render
+// locale-aware language-switcher links and display the correct date granularity.
+// archivePath is the locale-aware path, e.g. "/archives/2024/03/" or "/ja/archives/2024/03/".
+// isMonth is true for month-granularity archives, false for year-granularity.
+func paginatedArchiveJobs(
+	site *model.Site,
+	articles []*model.ProcessedArticle,
+	outDir, basePath, baseURLPath string,
+	perPage int,
+	currentLocale, archivePath string,
+	isMonth bool,
+) []writeJob {
+	jobs := paginatedJobs(site, articles, outDir, "archive.html", basePath, baseURLPath, perPage, currentLocale, nil)
+	for i := range jobs {
+		jobs[i].data.CurrentArchivePath = archivePath
+		jobs[i].data.CurrentArchiveIsMonth = isMonth
+	}
+	return jobs
+}
+
 // filterArticles returns articles matching pred.
 func filterArticles(articles []*model.ProcessedArticle, pred func(*model.ProcessedArticle) bool) []*model.ProcessedArticle {
 	var out []*model.ProcessedArticle
@@ -502,7 +537,10 @@ func CopyDir(srcDir, dstDir string) error {
 		if err != nil {
 			return err
 		}
-		rel, _ := filepath.Rel(srcDir, path)
+		rel, relErr := filepath.Rel(srcDir, path)
+		if relErr != nil {
+			return fmt.Errorf("copydir: rel path: %w", relErr)
+		}
 		dst := filepath.Join(dstDir, rel)
 		if d.IsDir() {
 			return os.MkdirAll(dst, 0o755)
@@ -604,15 +642,28 @@ func localeTaxonomyBase(base *model.Site, articles []*model.ProcessedArticle) *m
 	}
 	sort.Slice(tags, func(i, j int) bool { return tags[i].Name < tags[j].Name })
 	sort.Slice(cats, func(i, j int) bool { return cats[i].Name < cats[j].Name })
-	if len(tags) == 0 {
-		tags = base.Tags
+	// BUG-B: preserve Taxonomy.Description from base.Tags / base.Categories.
+	// Without this, locale-filtered listing pages always show empty descriptions.
+	tagDesc := make(map[string]string, len(base.Tags))
+	for _, t := range base.Tags {
+		tagDesc[t.Name] = t.Description
 	}
-	if len(cats) == 0 {
-		cats = base.Categories
+	catDesc := make(map[string]string, len(base.Categories))
+	for _, c := range base.Categories {
+		catDesc[c.Name] = c.Description
 	}
+	for i := range tags {
+		tags[i].Description = tagDesc[tags[i].Name]
+	}
+	for i := range cats {
+		cats[i].Description = catDesc[cats[i].Name]
+	}
+	// No fallback to base.Tags / base.Categories tags themselves: an empty slice
+	// is the correct value when the locale has no tagged/categorised articles.
+	// Falling back to all-locale data would expose cross-locale entries in the sidebar.
 	return &model.Site{
 		Config:       base.Config,
-		Articles:     base.Articles,
+		Articles:     articles,
 		Tags:         tags,
 		Categories:   cats,
 		ArchiveYears: archiveYears(articles),
@@ -643,9 +694,15 @@ func siteWithPagination(base *model.Site, articles []*model.ProcessedArticle, pg
 }
 
 // sortByDateDesc sorts a slice of processed articles newest-first in place.
+// When two articles share the same date, FilePath is used as a tiebreaker so
+// that builds with same-dated articles are deterministic across runs.
 func sortByDateDesc(articles []*model.ProcessedArticle) {
 	sort.Slice(articles, func(i, j int) bool {
-		return articles[i].FrontMatter.Date.After(articles[j].FrontMatter.Date)
+		di, dj := articles[i].FrontMatter.Date, articles[j].FrontMatter.Date
+		if !di.Equal(dj) {
+			return di.After(dj)
+		}
+		return articles[i].FilePath < articles[j].FilePath
 	})
 }
 
@@ -689,23 +746,13 @@ func articleOutputPath(a *model.ProcessedArticle, outDir string, cfg model.Confi
 		}
 	}
 	// Fallback: construct from slug and locale.
-	slug := a.FrontMatter.Slug
-	if slug == "" {
+	// BUG-7: sanitize slug to prevent path traversal outside the output directory.
+	slug := slugify(a.FrontMatter.Slug)
+	if slug == "untitled" {
 		slug = slugify(a.FrontMatter.Title)
 	}
 	if a.Locale != "" && a.Locale != cfg.I18n.DefaultLocale {
 		return filepath.Join(outDir, a.Locale, "posts", slug, "index.html")
 	}
 	return filepath.Join(outDir, "posts", slug, "index.html")
-}
-
-// filteredSite creates a site copy with articles matching pred.
-func filteredSite(base *model.Site, pred func(*model.ProcessedArticle) bool) *model.Site {
-	var filtered []*model.ProcessedArticle
-	for _, a := range base.Articles {
-		if pred(a) {
-			filtered = append(filtered, a)
-		}
-	}
-	return siteFor(base, filtered)
 }

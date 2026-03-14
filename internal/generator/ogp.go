@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"bytes"
 	"fmt"
 	"hash/fnv"
 	"image"
@@ -11,7 +12,6 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
-	"strings"
 
 	xdraw "golang.org/x/image/draw"
 
@@ -25,13 +25,17 @@ const (
 
 // OGPGenerator generates OGP thumbnail images for articles at build time.
 type OGPGenerator struct {
-	outDir string
-	cfg    model.OGPConfig
+	outDir     string
+	contentDir string // used to convert absolute FilePath to relative for changeSet lookup
+	cfg        model.OGPConfig
 }
 
 // NewOGPGenerator returns an OGPGenerator configured from cfg.
-func NewOGPGenerator(outDir string, cfg model.OGPConfig) *OGPGenerator {
-	return &OGPGenerator{outDir: outDir, cfg: cfg}
+// contentDir should be the absolute path to the content directory so that
+// article FilePaths (absolute) can be matched against changeSet entries
+// (relative to contentDir). Pass "" to disable that conversion.
+func NewOGPGenerator(outDir, contentDir string, cfg model.OGPConfig) *OGPGenerator {
+	return &OGPGenerator{outDir: outDir, contentDir: contentDir, cfg: cfg}
 }
 
 // Generate creates one PNG per article in public/ogp/{slug}.png.
@@ -68,15 +72,24 @@ func (g *OGPGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) er
 	changed := changedSet(changeSet)
 
 	for _, a := range site.Articles {
-		slug := a.FrontMatter.Slug
-		if slug == "" {
+		// BUG-7: sanitize slug to prevent path traversal (slugify strips dots, slashes, etc.).
+		slug := slugify(a.FrontMatter.Slug)
+		if slug == "untitled" {
 			slug = slugify(a.FrontMatter.Title)
 		}
 		outPath := filepath.Join(ogpDir, slug+".png")
 
-		// Skip if already exists and article not in change set
+		// Skip if already exists and article not in change set.
+		// BUG-1: changeSet entries are relative to contentDir, but a.FilePath is
+		// absolute — compute the relative path for the lookup.
 		if _, statErr := os.Stat(outPath); statErr == nil && changeSet != nil {
-			if !changed[a.FilePath] {
+			lookupPath := a.FilePath
+			if g.contentDir != "" {
+				if rel, relErr := filepath.Rel(g.contentDir, a.FilePath); relErr == nil {
+					lookupPath = rel
+				}
+			}
+			if !changed[lookupPath] {
 				continue
 			}
 		}
@@ -107,12 +120,11 @@ func (g *OGPGenerator) renderImage(outPath, slug string, w, h int, logo image.Im
 		xdraw.BiLinear.Scale(img, dstRect, logo, bounds, draw.Over, nil)
 	}
 
-	f, err := os.Create(outPath)
-	if err != nil {
-		return err
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return fmt.Errorf("ogp: encode %q: %w", slug, err)
 	}
-	defer func() { _ = f.Close() }()
-	return png.Encode(f, img)
+	return writeFileAtomic(outPath, buf.Bytes(), 0o644)
 }
 
 // drawGradientBackground fills img with a diagonal two-colour gradient whose
@@ -263,19 +275,6 @@ func loadImage(path string) (image.Image, error) {
 	defer func() { _ = f.Close() }()
 	img, _, err := image.Decode(f)
 	return img, err
-}
-
-// parseHexColor parses a "#rrggbb" string into color.RGBA.
-func parseHexColor(s string) (color.RGBA, error) {
-	s = strings.TrimPrefix(s, "#")
-	if len(s) != 6 {
-		return color.RGBA{}, fmt.Errorf("invalid hex color: %q", s)
-	}
-	var r, g, b uint8
-	if _, err := fmt.Sscanf(s, "%02x%02x%02x", &r, &g, &b); err != nil {
-		return color.RGBA{}, err
-	}
-	return color.RGBA{R: r, G: g, B: b, A: 255}, nil
 }
 
 // changedSet converts a ChangeSet slice into a map for O(1) lookup.

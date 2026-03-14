@@ -28,8 +28,10 @@ func NewEngine() *Engine {
 // Load parses all .html files found (recursively) under templateDir.
 // Built-in helper functions (formatDate, tagURL, categoryURL, markdownify) are
 // registered automatically; callers may supply additional functions via funcs.
-func (e *Engine) Load(templateDir string, funcs template.FuncMap) error {
-	allFuncs := builtinFuncs()
+// defaultLocale is the site's primary locale (e.g. "en"); pass "" for non-i18n
+// sites. tagURL and categoryURL use it to decide when to omit the locale prefix.
+func (e *Engine) Load(templateDir string, funcs template.FuncMap, defaultLocale string) error {
+	allFuncs := builtinFuncs(defaultLocale)
 	for k, v := range funcs {
 		allFuncs[k] = v
 	}
@@ -73,20 +75,31 @@ func (e *Engine) Render(w io.Writer, templateName string, data *model.Site) erro
 }
 
 // builtinFuncs returns the default template function map.
-func builtinFuncs() template.FuncMap {
+// defaultLocale is the site's primary locale; tagURL and categoryURL use it to
+// omit the locale prefix for the default locale (and for non-i18n sites when
+// "" is passed).
+func builtinFuncs(defaultLocale string) template.FuncMap {
 	conv := parser.NewConverter(parser.WithGFM())
 	return template.FuncMap{
 		// formatDate formats t using layout (e.g. "2006-01-02").
 		"formatDate": func(layout string, t time.Time) string {
 			return t.Format(layout)
 		},
-		// tagURL returns the canonical URL for a tag.
-		"tagURL": func(tag string) string {
-			return "/tags/" + toSlug(tag) + "/"
+		// tagURL returns the locale-aware canonical URL for a tag.
+		// locale="" or locale==defaultLocale → /tags/{slug}/
+		// otherwise → /{locale}/tags/{slug}/
+		"tagURL": func(locale, tag string) string {
+			if locale == "" || locale == defaultLocale {
+				return "/tags/" + toSlug(tag) + "/"
+			}
+			return "/" + locale + "/tags/" + toSlug(tag) + "/"
 		},
-		// categoryURL returns the canonical URL for a category.
-		"categoryURL": func(cat string) string {
-			return "/categories/" + toSlug(cat) + "/"
+		// categoryURL returns the locale-aware canonical URL for a category.
+		"categoryURL": func(locale, cat string) string {
+			if locale == "" || locale == defaultLocale {
+				return "/categories/" + toSlug(cat) + "/"
+			}
+			return "/" + locale + "/categories/" + toSlug(cat) + "/"
 		},
 		// markdownify converts a Markdown string to safe HTML.
 		"markdownify": func(s string) (template.HTML, error) {
@@ -96,7 +109,7 @@ func builtinFuncs() template.FuncMap {
 		// suitable for rendering a pagination control. For example, for
 		// current=5 total=10 it returns [1 -1 4 5 6 -1 10].
 		"paginationPages": func(current, total int) []int {
-			if total <= 1 {
+			if total <= 1 || current < 1 {
 				return nil
 			}
 			pages := []int{}
@@ -129,12 +142,27 @@ func builtinFuncs() template.FuncMap {
 	}
 }
 
-// toSlug converts a display name to a URL-friendly slug by lowercasing and
-// replacing spaces with hyphens.
+// toSlug converts a display name to a URL-friendly slug by lowercasing ASCII
+// letters and replacing spaces with hyphens. Non-ASCII characters (e.g.
+// Japanese, accented Latin) are kept intact, matching the behaviour of
+// tagNorm in the generator so template links are consistent with page paths.
+// Returns "untitled" when the input produces an empty result.
 func toSlug(s string) string {
-	s = strings.ToLower(s)
-	s = strings.ReplaceAll(s, " ", "-")
-	return s
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			b.WriteRune(r + 32)
+		case r == ' ':
+			b.WriteRune('-')
+		default:
+			b.WriteRune(r)
+		}
+	}
+	if b.Len() == 0 {
+		return "untitled"
+	}
+	return b.String()
 }
 
 // Ensure Engine implements TemplateEngine at compile time.

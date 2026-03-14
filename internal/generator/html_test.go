@@ -18,7 +18,7 @@ type mockEngine struct {
 	calls []string
 }
 
-func (m *mockEngine) Load(_ string, _ htmltemplate.FuncMap) error { return nil }
+func (m *mockEngine) Load(_ string, _ htmltemplate.FuncMap, _ string) error { return nil }
 func (m *mockEngine) Render(w io.Writer, name string, _ *model.Site) error {
 	m.mu.Lock()
 	m.calls = append(m.calls, name)
@@ -38,7 +38,7 @@ type captureEngine struct {
 	renders []captureRender
 }
 
-func (c *captureEngine) Load(_ string, _ htmltemplate.FuncMap) error { return nil }
+func (c *captureEngine) Load(_ string, _ htmltemplate.FuncMap, _ string) error { return nil }
 func (c *captureEngine) Render(w io.Writer, name string, data *model.Site) error {
 	// Copy the site value so mutations after Render don't affect captured state.
 	dataCopy := *data
@@ -174,18 +174,6 @@ func TestTagNorm(t *testing.T) {
 		if got := tagNorm(c.in); got != c.want {
 			t.Errorf("tagNorm(%q) = %q, want %q", c.in, got, c.want)
 		}
-	}
-}
-
-func TestFilteredSite(t *testing.T) {
-	site := makeSite()
-	got := filteredSite(site, func(a *model.ProcessedArticle) bool { return true })
-	if len(got.Articles) != 1 {
-		t.Errorf("expected 1, got %d", len(got.Articles))
-	}
-	empty := filteredSite(site, func(a *model.ProcessedArticle) bool { return false })
-	if len(empty.Articles) != 0 {
-		t.Errorf("expected 0, got %d", len(empty.Articles))
 	}
 }
 
@@ -412,13 +400,26 @@ func TestGenerate_ArchiveCurrentArchivePath(t *testing.T) {
 		switch {
 		case locale == "en" && path == "/archives/2024/03/":
 			enMonthPath = path
+			if !r.data.CurrentArchiveIsMonth {
+				t.Error("EN month archive: CurrentArchiveIsMonth should be true")
+			}
 		case locale == "en" && path == "/archives/2024/":
 			enYearPath = path
-		case locale == "ja" && path == "/archives/2024/03/":
+			if r.data.CurrentArchiveIsMonth {
+				t.Error("EN year archive: CurrentArchiveIsMonth should be false")
+			}
+		case locale == "ja" && path == "/ja/archives/2024/03/":
 			jaMonthPath = path
-		case locale == "ja" && path == "/archives/2024/":
+			if !r.data.CurrentArchiveIsMonth {
+				t.Error("JA month archive: CurrentArchiveIsMonth should be true")
+			}
+		case locale == "ja" && path == "/ja/archives/2024/":
 			jaYearPath = path
-		}	}
+			if r.data.CurrentArchiveIsMonth {
+				t.Error("JA year archive: CurrentArchiveIsMonth should be false")
+			}
+		}
+	}
 	if enMonthPath == "" {
 		t.Error("EN month archive: CurrentArchivePath not set to /archives/2024/03/")
 	}
@@ -426,10 +427,10 @@ func TestGenerate_ArchiveCurrentArchivePath(t *testing.T) {
 		t.Error("EN year archive: CurrentArchivePath not set to /archives/2024/")
 	}
 	if jaMonthPath == "" {
-		t.Error("JA month archive: CurrentArchivePath not set to /archives/2024/03/")
+		t.Error("JA month archive: CurrentArchivePath not set to /ja/archives/2024/03/")
 	}
 	if jaYearPath == "" {
-		t.Error("JA year archive: CurrentArchivePath not set to /archives/2024/")
+		t.Error("JA year archive: CurrentArchivePath not set to /ja/archives/2024/")
 	}
 }
 
@@ -543,12 +544,25 @@ func TestSortByDateDesc(t *testing.T) {
 	older := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 	newer := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
 	articles := []*model.ProcessedArticle{
-		{Article: model.Article{FrontMatter: model.FrontMatter{Title: "Old", Date: older}}},
-		{Article: model.Article{FrontMatter: model.FrontMatter{Title: "New", Date: newer}}},
+		{Article: model.Article{FilePath: "/content/old.md", FrontMatter: model.FrontMatter{Title: "Old", Date: older}}},
+		{Article: model.Article{FilePath: "/content/new.md", FrontMatter: model.FrontMatter{Title: "New", Date: newer}}},
 	}
 	sortByDateDesc(articles)
 	if articles[0].FrontMatter.Title != "New" {
 		t.Errorf("expected 'New' first after sortByDateDesc, got %q", articles[0].FrontMatter.Title)
+	}
+
+	// Same-date articles must be ordered deterministically by FilePath.
+	sameDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	tied := []*model.ProcessedArticle{
+		{Article: model.Article{FilePath: "/content/z-last.md", FrontMatter: model.FrontMatter{Title: "Z", Date: sameDate}}},
+		{Article: model.Article{FilePath: "/content/a-first.md", FrontMatter: model.FrontMatter{Title: "A", Date: sameDate}}},
+		{Article: model.Article{FilePath: "/content/m-middle.md", FrontMatter: model.FrontMatter{Title: "M", Date: sameDate}}},
+	}
+	sortByDateDesc(tied)
+	if tied[0].FrontMatter.Title != "A" || tied[1].FrontMatter.Title != "M" || tied[2].FrontMatter.Title != "Z" {
+		t.Errorf("same-date articles should be sorted by FilePath ascending; got %q, %q, %q",
+			tied[0].FrontMatter.Title, tied[1].FrontMatter.Title, tied[2].FrontMatter.Title)
 	}
 }
 
@@ -876,5 +890,149 @@ func TestArticleOutputPath_FallbackWhenEmpty(t *testing.T) {
 	want := filepath.Join(outDir, "posts", "hello", "index.html")
 	if got != want {
 		t.Errorf("articleOutputPath fallback: got %q, want %q", got, want)
+	}
+}
+
+// TestArchive_PaginationJobs verifies that archive pages are paginated when the
+// article count exceeds perPage, and that CurrentArchivePath is set on all pages.
+func TestArchive_PaginationJobs(t *testing.T) {
+	date := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	var articles []*model.ProcessedArticle
+	for i := 0; i < 25; i++ {
+		articles = append(articles, &model.ProcessedArticle{
+			Article: model.Article{FrontMatter: model.FrontMatter{
+				Title: fmt.Sprintf("Article %d", i),
+				Slug:  fmt.Sprintf("article-%d", i),
+				Date:  date,
+			}},
+		})
+	}
+	site := &model.Site{
+		Config: model.Config{
+			Build: model.BuildConfig{Parallelism: 1, PerPage: 10},
+		},
+		Articles: articles,
+	}
+	g := NewHTMLGenerator(t.TempDir(), &mockEngine{}, site.Config)
+	jobs := g.buildJobs(site)
+
+	var archiveJobs []writeJob
+	for _, j := range jobs {
+		if j.tmpl == "archive.html" {
+			archiveJobs = append(archiveJobs, j)
+		}
+	}
+
+	// 25 articles / 10 per page = 3 pages for month + year archives (month same count)
+	monthJobs := 0
+	yearJobs := 0
+	for _, j := range archiveJobs {
+		switch j.data.CurrentArchivePath {
+		case "/archives/2024/03/":
+			monthJobs++
+		case "/archives/2024/":
+			yearJobs++
+		}
+	}
+	if monthJobs != 3 {
+		t.Errorf("expected 3 paginated month-archive jobs for 25 articles with perPage=10, got %d", monthJobs)
+	}
+	if yearJobs != 3 {
+		t.Errorf("expected 3 paginated year-archive jobs for 25 articles with perPage=10, got %d", yearJobs)
+	}
+}
+
+// TestArchive_PaginationJobs_I18n verifies locale-aware archive pagination.
+func TestArchive_PaginationJobs_I18n(t *testing.T) {
+	date := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	var articles []*model.ProcessedArticle
+	for i := 0; i < 15; i++ {
+		articles = append(articles, &model.ProcessedArticle{
+			Article: model.Article{FrontMatter: model.FrontMatter{
+				Title: fmt.Sprintf("EN %d", i), Slug: fmt.Sprintf("en-%d", i), Date: date,
+			}},
+			Locale: "en",
+		})
+		articles = append(articles, &model.ProcessedArticle{
+			Article: model.Article{FrontMatter: model.FrontMatter{
+				Title: fmt.Sprintf("JA %d", i), Slug: fmt.Sprintf("ja-%d", i), Date: date,
+			}},
+			Locale: "ja",
+		})
+	}
+	site := &model.Site{
+		Config: model.Config{
+			Build: model.BuildConfig{Parallelism: 1, PerPage: 10},
+			I18n:  model.I18nConfig{Locales: []string{"en", "ja"}, DefaultLocale: "en"},
+		},
+		Articles: articles,
+	}
+	g := NewHTMLGenerator(t.TempDir(), &mockEngine{}, site.Config)
+	jobs := g.buildJobs(site)
+
+	enMonthJobs, jaMonthJobs := 0, 0
+	for _, j := range jobs {
+		if j.tmpl != "archive.html" {
+			continue
+		}
+		switch {
+		case j.data.CurrentLocale == "en" && j.data.CurrentArchivePath == "/archives/2024/03/":
+			enMonthJobs++
+		case j.data.CurrentLocale == "ja" && j.data.CurrentArchivePath == "/ja/archives/2024/03/":
+			jaMonthJobs++
+		}
+	}
+	// 15 articles each locale, perPage=10 → 2 pages each
+	if enMonthJobs != 2 {
+		t.Errorf("expected 2 EN month-archive pages, got %d", enMonthJobs)
+	}
+	if jaMonthJobs != 2 {
+		t.Errorf("expected 2 JA month-archive pages, got %d", jaMonthJobs)
+	}
+}
+
+// TestLocaleTaxonomyBase_NoFallback verifies that localeTaxonomyBase does NOT
+// fall back to cross-locale tags/categories when a locale's articles have none.
+// Previously the function returned base.Tags for locales with untagged articles,
+// which caused JA tags to appear in the EN sidebar and vice-versa.
+func TestLocaleTaxonomyBase_NoFallback(t *testing.T) {
+	date := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	enArticle := &model.ProcessedArticle{
+		Article: model.Article{
+			FrontMatter: model.FrontMatter{
+				Title: "EN Post",
+				Slug:  "en-post",
+				Date:  date,
+				// No tags — should NOT fall back to JA tags
+			},
+		},
+		Locale: "en",
+	}
+	jaArticle := &model.ProcessedArticle{
+		Article: model.Article{
+			FrontMatter: model.FrontMatter{
+				Title: "JA Post",
+				Slug:  "ja-post",
+				Date:  date,
+				Tags:  []string{"golang", "書評"},
+			},
+		},
+		Locale: "ja",
+	}
+	base := &model.Site{
+		Articles: []*model.ProcessedArticle{enArticle, jaArticle},
+		Tags:     []model.Taxonomy{{Name: "golang"}, {Name: "書評"}},
+	}
+
+	// EN locale has no tags — must return empty, not JA tags.
+	enBase := localeTaxonomyBase(base, []*model.ProcessedArticle{enArticle})
+	if len(enBase.Tags) != 0 {
+		t.Errorf("EN localeTaxonomyBase: expected 0 tags, got %d: %v", len(enBase.Tags), enBase.Tags)
+	}
+
+	// JA locale has tags — must return only JA tags.
+	jaBase := localeTaxonomyBase(base, []*model.ProcessedArticle{jaArticle})
+	if len(jaBase.Tags) != 2 {
+		t.Errorf("JA localeTaxonomyBase: expected 2 tags, got %d: %v", len(jaBase.Tags), jaBase.Tags)
 	}
 }

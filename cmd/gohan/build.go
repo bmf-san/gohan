@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/bmf-san/gohan/internal/config"
@@ -142,11 +143,13 @@ func runBuild(args []string) error {
 	proc.BuildTranslationMap(processed)
 
 	// Validate that no two articles resolve to the same output path.
-	// Duplicate output paths cause silent page overwrites during HTML generation.
+	// Duplicate output paths would cause non-deterministic page overwrites.
 	if errs := processor.ValidateOutputPaths(processed); len(errs) > 0 {
+		var msgs []string
 		for _, e := range errs {
-			fmt.Fprintf(os.Stderr, "warn: output path: %v\n", e)
+			msgs = append(msgs, e.Error())
 		}
+		return fmt.Errorf("duplicate output paths: %s", strings.Join(msgs, "; "))
 	}
 
 	// Build taxonomy registry.
@@ -200,8 +203,8 @@ func runBuild(args []string) error {
 	outDir := cfg.Build.OutputDir
 	templateDir := filepath.Join(rootDir, cfg.Theme.Dir, "templates")
 	tmpl := gohantemplate.NewEngine()
-	if loadErr := tmpl.Load(templateDir, nil); loadErr != nil {
-		fmt.Fprintf(os.Stderr, "warn: load templates: %v\n", loadErr)
+	if loadErr := tmpl.Load(templateDir, nil, cfg.I18n.DefaultLocale); loadErr != nil {
+		return fmt.Errorf("load templates: %w", loadErr)
 	}
 	gen := generator.NewHTMLGenerator(outDir, tmpl, *cfg)
 	if err := gen.Generate(site, changeSet); err != nil {
@@ -212,7 +215,7 @@ func runBuild(args []string) error {
 	if err := generator.GenerateSitemap(outDir, cfg.Site.BaseURL, processed, *cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "warn: sitemap: %v\n", err)
 	}
-	if err := generator.GenerateFeeds(outDir, cfg.Site.BaseURL, cfg.Site.Title, processed); err != nil {
+	if err := generator.GenerateFeeds(outDir, cfg.Site.BaseURL, cfg.Site.Title, processed, *cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "warn: feeds: %v\n", err)
 	}
 
@@ -220,7 +223,10 @@ func runBuild(args []string) error {
 	newManifest := diff.NewManifest(configHash)
 	hashEngine := diff.NewGitDiffEngine(contentDir)
 	for _, a := range articles {
-		rel, _ := filepath.Rel(contentDir, a.FilePath)
+		rel, relErr := filepath.Rel(contentDir, a.FilePath)
+		if relErr != nil {
+			continue
+		}
 		if h, herr := hashEngine.Hash(a.FilePath); herr == nil {
 			newManifest.FileHashes[rel] = h
 		}
