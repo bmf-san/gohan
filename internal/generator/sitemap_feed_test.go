@@ -63,7 +63,7 @@ func TestGenerateSitemap_WellFormedXML(t *testing.T) {
 
 func TestGenerateFeeds_Valid(t *testing.T) {
 	dir := t.TempDir()
-	if err := GenerateFeeds(dir, "https://example.com", "My Blog", makeArticles()); err != nil {
+	if err := GenerateFeeds(dir, "https://example.com", "My Blog", makeArticles(), model.Config{}); err != nil {
 		t.Fatalf("GenerateFeeds: %v", err)
 	}
 	for _, name := range []string{"feed.xml", "atom.xml"} {
@@ -80,7 +80,7 @@ func TestGenerateFeeds_Valid(t *testing.T) {
 
 func TestGenerateFeeds_NewestFirst(t *testing.T) {
 	dir := t.TempDir()
-	if err := GenerateFeeds(dir, "https://example.com", "Blog", makeArticles()); err != nil {
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", makeArticles(), model.Config{}); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"feed.xml", "atom.xml"} {
@@ -94,7 +94,7 @@ func TestGenerateFeeds_NewestFirst(t *testing.T) {
 
 func TestGenerateFeeds_WellFormedXML(t *testing.T) {
 	dir := t.TempDir()
-	if err := GenerateFeeds(dir, "https://example.com", "Blog", makeArticles()); err != nil {
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", makeArticles(), model.Config{}); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"feed.xml", "atom.xml"} {
@@ -111,7 +111,7 @@ func TestGenerateFeeds_SlugifiesTitle(t *testing.T) {
 	articles := []*model.ProcessedArticle{
 		{Article: model.Article{FrontMatter: model.FrontMatter{Title: "Hello World", Date: time.Now()}}},
 	}
-	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles); err != nil {
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles, model.Config{}); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "feed.xml"))
@@ -206,7 +206,7 @@ func TestGenerateFeeds_I18nUsesPrecomputedURL(t *testing.T) {
 			Locale: "ja",
 		},
 	}
-	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles); err != nil {
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles, model.Config{}); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"feed.xml", "atom.xml"} {
@@ -233,7 +233,7 @@ func TestGenerateFeeds_NoURLFallsBackToSlug(t *testing.T) {
 			// URL is empty (no i18n)
 		},
 	}
-	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles); err != nil {
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles, model.Config{}); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"feed.xml", "atom.xml"} {
@@ -313,5 +313,96 @@ func TestGenerateSitemap_XDefault_NotEmittedWithoutConfig(t *testing.T) {
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
 	if strings.Contains(string(data), "x-default") {
 		t.Errorf("x-default should NOT be emitted when DefaultLocale is not configured:\n%s", data)
+	}
+}
+
+// TestGenerateFeeds_I18n_LocaleFilter verifies that when i18n is configured:
+//   - root feed.xml / atom.xml contain only default-locale articles
+//   - locale subdirectory feeds contain only that locale's articles
+func TestGenerateFeeds_I18n_LocaleFilter(t *testing.T) {
+	date := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+	cfg := model.Config{}
+	cfg.I18n.DefaultLocale = "en"
+	cfg.I18n.Locales = []string{"en", "ja"}
+
+	articles := []*model.ProcessedArticle{
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{Title: "EN Post", Slug: "en-post", Date: date}},
+			URL:     "/posts/en-post/",
+			Locale:  "en",
+		},
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{Title: "JA Post", Slug: "ja-post", Date: date}},
+			URL:     "/ja/posts/ja-post/",
+			Locale:  "ja",
+		},
+	}
+	dir := t.TempDir()
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles, cfg); err != nil {
+		t.Fatalf("GenerateFeeds: %v", err)
+	}
+
+	// Root feeds (EN only)
+	for _, name := range []string{"feed.xml", "atom.xml"} {
+		data, _ := os.ReadFile(filepath.Join(dir, name))
+		s := string(data)
+		if !strings.Contains(s, "EN Post") {
+			t.Errorf("root %s: expected EN Post", name)
+		}
+		if strings.Contains(s, "JA Post") {
+			t.Errorf("root %s: must NOT contain JA Post", name)
+		}
+	}
+
+	// JA locale feeds
+	for _, name := range []string{"feed.xml", "atom.xml"} {
+		data, _ := os.ReadFile(filepath.Join(dir, "ja", name))
+		s := string(data)
+		if !strings.Contains(s, "JA Post") {
+			t.Errorf("ja/%s: expected JA Post", name)
+		}
+		if strings.Contains(s, "EN Post") {
+			t.Errorf("ja/%s: must NOT contain EN Post", name)
+		}
+		// Article link must not double the locale prefix
+		if strings.Contains(s, "/ja/ja/") {
+			t.Errorf("ja/%s: double locale prefix /ja/ja/ detected:\n%s", name, s)
+		}
+		// Channel link should point to locale root
+		if !strings.Contains(s, "https://example.com/ja") {
+			t.Errorf("ja/%s: channel link should be https://example.com/ja", name)
+		}
+	}
+}
+
+// TestGenerateFeeds_I18n_NoDefaultLocale verifies backward compatibility:
+// when no locales are configured, a single combined feed is written.
+func TestGenerateFeeds_I18n_NoDefaultLocale(t *testing.T) {
+	date := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+	articles := []*model.ProcessedArticle{
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{Title: "EN Post", Slug: "en-post", Date: date}},
+			Locale:  "en",
+		},
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{Title: "JA Post", Slug: "ja-post", Date: date}},
+			Locale:  "ja",
+		},
+	}
+	dir := t.TempDir()
+	if err := GenerateFeeds(dir, "https://example.com", "Blog", articles, model.Config{}); err != nil {
+		t.Fatalf("GenerateFeeds: %v", err)
+	}
+	// Both articles must appear in root feed
+	for _, name := range []string{"feed.xml", "atom.xml"} {
+		data, _ := os.ReadFile(filepath.Join(dir, name))
+		s := string(data)
+		if !strings.Contains(s, "EN Post") || !strings.Contains(s, "JA Post") {
+			t.Errorf("%s: expected both EN and JA posts in non-i18n feed:\n%s", name, s)
+		}
+	}
+	// No locale subdirectory should exist
+	if _, err := os.Stat(filepath.Join(dir, "ja")); err == nil {
+		t.Error("ja/ subdirectory should NOT be created when i18n is not configured")
 	}
 }

@@ -212,7 +212,7 @@ func runBuild(args []string) error {
 	if err := generator.GenerateSitemap(outDir, cfg.Site.BaseURL, processed, *cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "warn: sitemap: %v\n", err)
 	}
-	if err := generator.GenerateFeeds(outDir, cfg.Site.BaseURL, cfg.Site.Title, processed); err != nil {
+	if err := generator.GenerateFeeds(outDir, cfg.Site.BaseURL, cfg.Site.Title, processed, *cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "warn: feeds: %v\n", err)
 	}
 

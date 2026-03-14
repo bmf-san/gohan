@@ -59,7 +59,13 @@ type atomEntry struct {
 
 // GenerateFeeds writes feed.xml (RSS 2.0) and atom.xml (Atom 1.0) to outDir.
 // Articles are sorted newest-first. baseURL must not have a trailing slash.
-func GenerateFeeds(outDir, baseURL, siteTitle string, articles []*model.ProcessedArticle) error {
+// When cfg has I18n.Locales configured, per-locale feeds are also written:
+//
+//	{locale}/feed.xml and {locale}/atom.xml for each non-default locale.
+//
+// The root feed.xml / atom.xml contain only articles from the default locale
+// (or all articles when i18n is not configured).
+func GenerateFeeds(outDir, baseURL, siteTitle string, articles []*model.ProcessedArticle, cfg model.Config) error {
 	sorted := make([]*model.ProcessedArticle, len(articles))
 	copy(sorted, articles)
 	sort.Slice(sorted, func(i, j int) bool {
@@ -69,6 +75,45 @@ func GenerateFeeds(outDir, baseURL, siteTitle string, articles []*model.Processe
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return err
 	}
+
+	// When i18n is active, filter root feeds to the default locale only and
+	// write per-locale feeds under their locale subdirectory.
+	if len(cfg.I18n.Locales) > 0 {
+		rootArticles := filterFeedArticles(sorted, cfg.I18n.DefaultLocale)
+		if err := writeRSS(outDir, baseURL, siteTitle, rootArticles); err != nil {
+			return err
+		}
+		if err := writeAtom(outDir, baseURL, siteTitle, rootArticles); err != nil {
+			return err
+		}
+		for _, loc := range cfg.I18n.Locales {
+			if loc == cfg.I18n.DefaultLocale {
+				continue // already written at root
+			}
+			locDir := filepath.Join(outDir, loc)
+			if err := os.MkdirAll(locDir, 0o755); err != nil {
+				return err
+			}
+			locArticles := filterFeedArticles(sorted, loc)
+			// channelURL is the locale index (used for <channel><link>).
+			// Article item links use the site root baseURL because a.URL already
+			// includes the locale prefix (e.g. /ja/posts/hello/).
+			var channelURL string
+			if baseURL != "" {
+				channelURL = baseURL + "/" + loc
+			} else {
+				channelURL = "/" + loc
+			}
+			if err := writeRSSWithChannelURL(locDir, baseURL, channelURL, siteTitle, locArticles); err != nil {
+				return err
+			}
+			if err := writeAtomWithChannelURL(locDir, baseURL, channelURL, siteTitle, locArticles); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	if err := writeRSS(outDir, baseURL, siteTitle, sorted); err != nil {
 		return err
 	}
@@ -76,15 +121,19 @@ func GenerateFeeds(outDir, baseURL, siteTitle string, articles []*model.Processe
 }
 
 func writeRSS(outDir, baseURL, title string, articles []*model.ProcessedArticle) error {
+	return writeRSSWithChannelURL(outDir, baseURL, baseURL, title, articles)
+}
+
+func writeRSSWithChannelURL(outDir, itemBaseURL, channelURL, title string, articles []*model.ProcessedArticle) error {
 	now := time.Now().UTC().Format(time.RFC1123Z)
 	ch := rssChannel{
 		Title:       title,
-		Link:        baseURL,
+		Link:        channelURL,
 		Description: title,
 		PubDate:     now,
 	}
 	for _, a := range articles {
-		link := articleLink(baseURL, a)
+		link := articleLink(itemBaseURL, a)
 		ch.Items = append(ch.Items, rssItem{
 			Title:       a.FrontMatter.Title,
 			Link:        link,
@@ -98,6 +147,10 @@ func writeRSS(outDir, baseURL, title string, articles []*model.ProcessedArticle)
 }
 
 func writeAtom(outDir, baseURL, title string, articles []*model.ProcessedArticle) error {
+	return writeAtomWithChannelURL(outDir, baseURL, baseURL, title, articles)
+}
+
+func writeAtomWithChannelURL(outDir, itemBaseURL, channelURL, title string, articles []*model.ProcessedArticle) error {
 	updated := time.Now().UTC().Format(time.RFC3339)
 	if len(articles) > 0 {
 		updated = articles[0].FrontMatter.Date.UTC().Format(time.RFC3339)
@@ -105,13 +158,13 @@ func writeAtom(outDir, baseURL, title string, articles []*model.ProcessedArticle
 	feed := atomFeed{
 		Xmlns:   "http://www.w3.org/2005/Atom",
 		Title:   title,
-		Link:    atomLink{Href: baseURL},
+		Link:    atomLink{Href: channelURL},
 		Updated: updated,
 	}
 	for _, a := range articles {
 		feed.Entries = append(feed.Entries, atomEntry{
 			Title:   a.FrontMatter.Title,
-			Link:    atomLink{Href: articleLink(baseURL, a)},
+			Link:    atomLink{Href: articleLink(itemBaseURL, a)},
 			Updated: a.FrontMatter.Date.UTC().Format(time.RFC3339),
 			Summary: a.Summary,
 		})
@@ -147,4 +200,15 @@ func writeXML(path string, v interface{}) error {
 		return err
 	}
 	return writeFileAtomic(path, buf.Bytes(), 0o644)
+}
+
+// filterFeedArticles returns only articles whose Locale matches locale.
+func filterFeedArticles(articles []*model.ProcessedArticle, locale string) []*model.ProcessedArticle {
+	var out []*model.ProcessedArticle
+	for _, a := range articles {
+		if a.Locale == locale {
+			out = append(out, a)
+		}
+	}
+	return out
 }
