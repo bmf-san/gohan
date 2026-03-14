@@ -40,21 +40,30 @@ type rssItem struct {
 type atomFeed struct {
 	XMLName xml.Name    `xml:"feed"`
 	Xmlns   string      `xml:"xmlns,attr"`
+	ID      string      `xml:"id"`
 	Title   string      `xml:"title"`
-	Link    atomLink    `xml:"link"`
+	Links   []atomLink  `xml:"link"`
+	Author  atomAuthor  `xml:"author"`
 	Updated string      `xml:"updated"`
 	Entries []atomEntry `xml:"entry"`
 }
 
 type atomLink struct {
+	Rel  string `xml:"rel,attr,omitempty"`
+	Type string `xml:"type,attr,omitempty"`
 	Href string `xml:"href,attr"`
 }
 
+type atomAuthor struct {
+	Name string `xml:"name"`
+}
+
 type atomEntry struct {
-	Title   string   `xml:"title"`
-	Link    atomLink `xml:"link"`
-	Updated string   `xml:"updated"`
-	Summary string   `xml:"summary"`
+	ID      string     `xml:"id"`
+	Title   string     `xml:"title"`
+	Link    atomLink   `xml:"link"`
+	Updated string     `xml:"updated"`
+	Summary string     `xml:"summary"`
 }
 
 // GenerateFeeds writes feed.xml (RSS 2.0) and atom.xml (Atom 1.0) to outDir.
@@ -83,7 +92,7 @@ func GenerateFeeds(outDir, baseURL, siteTitle string, articles []*model.Processe
 		if err := writeRSS(outDir, baseURL, siteTitle, rootArticles); err != nil {
 			return err
 		}
-		if err := writeAtom(outDir, baseURL, siteTitle, rootArticles); err != nil {
+		if err := writeAtom(outDir, baseURL, siteTitle, rootArticles, cfg); err != nil {
 			return err
 		}
 		for _, loc := range cfg.I18n.Locales {
@@ -107,7 +116,7 @@ func GenerateFeeds(outDir, baseURL, siteTitle string, articles []*model.Processe
 			if err := writeRSSWithChannelURL(locDir, baseURL, channelURL, siteTitle, locArticles); err != nil {
 				return err
 			}
-			if err := writeAtomWithChannelURL(locDir, baseURL, channelURL, siteTitle, locArticles); err != nil {
+			if err := writeAtomWithChannelURL(locDir, baseURL, channelURL, siteTitle, locArticles, cfg); err != nil {
 				return err
 			}
 		}
@@ -117,7 +126,7 @@ func GenerateFeeds(outDir, baseURL, siteTitle string, articles []*model.Processe
 	if err := writeRSS(outDir, baseURL, siteTitle, sorted); err != nil {
 		return err
 	}
-	return writeAtom(outDir, baseURL, siteTitle, sorted)
+	return writeAtom(outDir, baseURL, siteTitle, sorted, cfg)
 }
 
 func writeRSS(outDir, baseURL, title string, articles []*model.ProcessedArticle) error {
@@ -149,11 +158,11 @@ func writeRSSWithChannelURL(outDir, itemBaseURL, channelURL, title string, artic
 	return writeXML(filepath.Join(outDir, "feed.xml"), root)
 }
 
-func writeAtom(outDir, baseURL, title string, articles []*model.ProcessedArticle) error {
-	return writeAtomWithChannelURL(outDir, baseURL, baseURL, title, articles)
+func writeAtom(outDir, baseURL, title string, articles []*model.ProcessedArticle, cfg model.Config) error {
+	return writeAtomWithChannelURL(outDir, baseURL, baseURL+"/", title, articles, cfg)
 }
 
-func writeAtomWithChannelURL(outDir, itemBaseURL, channelURL, title string, articles []*model.ProcessedArticle) error {
+func writeAtomWithChannelURL(outDir, itemBaseURL, channelURL, title string, articles []*model.ProcessedArticle, cfg model.Config) error {
 	updated := time.Now().UTC().Format(time.RFC3339)
 	for _, a := range articles {
 		if !a.FrontMatter.Date.IsZero() {
@@ -161,19 +170,28 @@ func writeAtomWithChannelURL(outDir, itemBaseURL, channelURL, title string, arti
 			break
 		}
 	}
+	author := cfg.Theme.Params["author"]
+	baseAtomURL := channelURL + "atom.xml"
 	feed := atomFeed{
 		Xmlns:   "http://www.w3.org/2005/Atom",
+		ID:      baseAtomURL,
 		Title:   title,
-		Link:    atomLink{Href: channelURL},
+		Links: []atomLink{
+			{Rel: "alternate", Type: "text/html", Href: channelURL},
+			{Rel: "self", Type: "application/atom+xml", Href: baseAtomURL},
+		},
+		Author:  atomAuthor{Name: author},
 		Updated: updated,
 	}
 	for _, a := range articles {
 		if a.FrontMatter.Date.IsZero() {
 			continue // skip articles with no publication date
 		}
+		link := articleLink(itemBaseURL, a)
 		feed.Entries = append(feed.Entries, atomEntry{
+			ID:      link,
 			Title:   a.FrontMatter.Title,
-			Link:    atomLink{Href: articleLink(itemBaseURL, a)},
+			Link:    atomLink{Rel: "alternate", Type: "text/html", Href: link},
 			Updated: a.FrontMatter.Date.UTC().Format(time.RFC3339),
 			Summary: a.Summary,
 		})
