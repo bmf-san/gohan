@@ -268,3 +268,92 @@ func TestValidateArticleTaxonomiesLocale_FallbackToGlobal(t *testing.T) {
 		t.Errorf("expected 1 error (unknown tag), got %d: %v", len(errs), errs)
 	}
 }
+
+func TestLoadTaxonomyRegistry_InvalidCategoriesYAML(t *testing.T) {
+	dir := t.TempDir()
+	writeTaxFile(t, dir, "tags.yaml", "- name: go\n")
+	writeTaxFile(t, dir, "categories.yaml", "invalid: {[")
+	_, err := LoadTaxonomyRegistry(dir)
+	if err == nil {
+		t.Error("expected error for invalid categories YAML")
+	}
+}
+
+func TestLoadTaxonomyFile_ReadError(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("skipping permission test when running as root")
+	}
+	dir := t.TempDir()
+	path := filepath.Join(dir, "tags.yaml")
+	if err := os.WriteFile(path, []byte("- name: go\n"), 0o000); err != nil {
+		t.Fatal(err)
+	}
+	_, err := loadTaxonomyFile(path)
+	if err == nil {
+		t.Error("expected error for unreadable file")
+	}
+}
+
+func TestLoadLocaleAwareTaxonomyRegistries_ErrorOnGlobalRegistry(t *testing.T) {
+	dir := t.TempDir()
+	writeTaxFile(t, dir, "tags.yaml", "invalid: {[")
+	_, err := LoadLocaleAwareTaxonomyRegistries(dir, nil)
+	if err == nil {
+		t.Error("expected error when global tags.yaml is invalid")
+	}
+}
+
+func TestLoadLocaleAwareTaxonomyRegistries_ErrorOnLocaleTags(t *testing.T) {
+	dir := t.TempDir()
+	writeTaxFile(t, dir, "tags.yaml", "- name: go\n")
+	writeTaxFile(t, dir, "categories.yaml", "- name: tutorials\n")
+	if err := os.MkdirAll(filepath.Join(dir, "ja"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTaxFile(t, filepath.Join(dir, "ja"), "tags.yaml", "invalid: {[")
+
+	_, err := LoadLocaleAwareTaxonomyRegistries(dir, []string{"ja"})
+	if err == nil {
+		t.Error("expected error when locale tags.yaml is invalid")
+	}
+}
+
+func TestLoadLocaleAwareTaxonomyRegistries_ErrorOnLocaleCategories(t *testing.T) {
+	dir := t.TempDir()
+	writeTaxFile(t, dir, "tags.yaml", "- name: go\n")
+	writeTaxFile(t, dir, "categories.yaml", "- name: tutorials\n")
+	if err := os.MkdirAll(filepath.Join(dir, "ja"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTaxFile(t, filepath.Join(dir, "ja"), "tags.yaml", "- name: golang\n")
+	writeTaxFile(t, filepath.Join(dir, "ja"), "categories.yaml", "invalid: {[")
+
+	_, err := LoadLocaleAwareTaxonomyRegistries(dir, []string{"ja"})
+	if err == nil {
+		t.Error("expected error when locale categories.yaml is invalid")
+	}
+}
+
+func TestMergeTaxonomyRegistries_CategoriesDeduplication(t *testing.T) {
+	regs := map[string]*model.TaxonomyRegistry{
+		"en": {Categories: []model.Taxonomy{{Name: "tools"}, {Name: "news"}}},
+		"ja": {Categories: []model.Taxonomy{{Name: "tools"}, {Name: "技術"}}},
+	}
+	merged := MergeTaxonomyRegistries(regs)
+	if len(merged.Categories) != 3 {
+		t.Errorf("expected 3 unique categories, got %d: %v", len(merged.Categories), merged.Categories)
+	}
+}
+
+func TestValidateArticleTaxonomiesLocale_UnknownCategory(t *testing.T) {
+	regs := map[string]*model.TaxonomyRegistry{
+		"": {Categories: []model.Taxonomy{{Name: "tools"}}},
+	}
+	articles := []*model.ProcessedArticle{
+		{Article: *testArticle("en/a.md", "", "", nil, []string{"unknown-cat"}, time.Time{}), Locale: "en"},
+	}
+	errs := ValidateArticleTaxonomiesLocale(articles, regs)
+	if len(errs) != 1 {
+		t.Errorf("expected 1 error for unknown category, got %d: %v", len(errs), errs)
+	}
+}
