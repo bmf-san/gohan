@@ -49,6 +49,116 @@ func loadTaxonomyFile(path string) ([]model.Taxonomy, error) {
 	return entries, nil
 }
 
+// loadTaxonomyFileWithFallback returns entries from primary if the file exists,
+// otherwise falls back to fallback. A missing primary is not an error.
+func loadTaxonomyFileWithFallback(primary, fallback string) ([]model.Taxonomy, error) {
+	if _, err := os.Stat(primary); err == nil {
+		return loadTaxonomyFile(primary)
+	}
+	return loadTaxonomyFile(fallback)
+}
+
+// LoadLocaleAwareTaxonomyRegistries loads a taxonomy registry per locale.
+// For each locale it looks for {contentDir}/{locale}/tags.yaml (and categories.yaml),
+// falling back to the global {contentDir}/tags.yaml when the locale file is absent.
+// The returned map also has an "" (empty string) key holding the global registry.
+func LoadLocaleAwareTaxonomyRegistries(contentDir string, locales []string) (map[string]*model.TaxonomyRegistry, error) {
+	registries := make(map[string]*model.TaxonomyRegistry, len(locales)+1)
+
+	global, err := LoadTaxonomyRegistry(contentDir)
+	if err != nil {
+		return nil, err
+	}
+	registries[""] = global
+
+	for _, locale := range locales {
+		tags, err := loadTaxonomyFileWithFallback(
+			filepath.Join(contentDir, locale, "tags.yaml"),
+			filepath.Join(contentDir, "tags.yaml"),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("taxonomy: locale %q tags: %w", locale, err)
+		}
+		cats, err := loadTaxonomyFileWithFallback(
+			filepath.Join(contentDir, locale, "categories.yaml"),
+			filepath.Join(contentDir, "categories.yaml"),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("taxonomy: locale %q categories: %w", locale, err)
+		}
+		registries[locale] = &model.TaxonomyRegistry{Tags: tags, Categories: cats}
+	}
+	return registries, nil
+}
+
+// MergeTaxonomyRegistries returns a single registry that is the deduplicated
+// union of all registries in the map. Useful for populating site.Tags/Categories.
+func MergeTaxonomyRegistries(registries map[string]*model.TaxonomyRegistry) *model.TaxonomyRegistry {
+	tagSeen := make(map[string]bool)
+	catSeen := make(map[string]bool)
+	merged := &model.TaxonomyRegistry{}
+	for _, reg := range registries {
+		for _, t := range reg.Tags {
+			if !tagSeen[t.Name] {
+				tagSeen[t.Name] = true
+				merged.Tags = append(merged.Tags, t)
+			}
+		}
+		for _, c := range reg.Categories {
+			if !catSeen[c.Name] {
+				catSeen[c.Name] = true
+				merged.Categories = append(merged.Categories, c)
+			}
+		}
+	}
+	return merged
+}
+
+// ValidateArticleTaxonomiesLocale validates each article against its locale's
+// registry from the registries map. Falls back to the "" key when no
+// locale-specific registry is found. Only validates when the registry has entries.
+func ValidateArticleTaxonomiesLocale(articles []*model.ProcessedArticle, registries map[string]*model.TaxonomyRegistry) []error {
+	type setsPair struct {
+		tags map[string]bool
+		cats map[string]bool
+	}
+	sets := make(map[string]setsPair, len(registries))
+	for locale, reg := range registries {
+		ts := make(map[string]bool, len(reg.Tags))
+		for _, t := range reg.Tags {
+			ts[t.Name] = true
+		}
+		cs := make(map[string]bool, len(reg.Categories))
+		for _, c := range reg.Categories {
+			cs[c.Name] = true
+		}
+		sets[locale] = setsPair{ts, cs}
+	}
+
+	var errs []error
+	for _, a := range articles {
+		sp, ok := sets[a.Locale]
+		if !ok {
+			sp = sets[""]
+		}
+		if len(sp.tags) > 0 {
+			for _, t := range a.FrontMatter.Tags {
+				if !sp.tags[t] {
+					errs = append(errs, fmt.Errorf("article %q: unknown tag %q", a.FilePath, t))
+				}
+			}
+		}
+		if len(sp.cats) > 0 {
+			for _, c := range a.FrontMatter.Categories {
+				if !sp.cats[c] {
+					errs = append(errs, fmt.Errorf("article %q: unknown category %q", a.FilePath, c))
+				}
+			}
+		}
+	}
+	return errs
+}
+
 // ValidateArticleTaxonomies checks that every tag and category referenced in
 // an article exists in the registry.  It returns one error per violation.
 func ValidateArticleTaxonomies(articles []*model.ProcessedArticle, registry *model.TaxonomyRegistry) []error {

@@ -156,3 +156,115 @@ func TestBuildCategoryIndex(t *testing.T) {
 		t.Errorf("cat web: got %d articles, want 1", len(idx["web"]))
 	}
 }
+
+// --- Locale-aware taxonomy tests ---
+
+func TestLoadLocaleAwareTaxonomyRegistries_GlobalOnly(t *testing.T) {
+	dir := t.TempDir()
+	writeTaxFile(t, dir, "tags.yaml", "- name: go\n")
+	writeTaxFile(t, dir, "categories.yaml", "- name: tutorials\n")
+
+	regs, err := LoadLocaleAwareTaxonomyRegistries(dir, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if regs[""] == nil || len(regs[""].Tags) != 1 {
+		t.Error("global registry should have 1 tag")
+	}
+}
+
+func TestLoadLocaleAwareTaxonomyRegistries_LocaleFile(t *testing.T) {
+	dir := t.TempDir()
+	writeTaxFile(t, dir, "tags.yaml", "- name: go\n")
+	if err := os.MkdirAll(filepath.Join(dir, "ja"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTaxFile(t, filepath.Join(dir, "ja"), "tags.yaml", "- name: golang\n- name: 書評\n")
+
+	regs, err := LoadLocaleAwareTaxonomyRegistries(dir, []string{"en", "ja"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// "en" has no locale file → falls back to global
+	if len(regs["en"].Tags) != 1 || regs["en"].Tags[0].Name != "go" {
+		t.Errorf("en should fall back to global: got %v", regs["en"].Tags)
+	}
+	// "ja" has its own file
+	if len(regs["ja"].Tags) != 2 {
+		t.Errorf("ja should have 2 tags, got %d", len(regs["ja"].Tags))
+	}
+}
+
+func TestLoadLocaleAwareTaxonomyRegistries_FallbackWhenNoFiles(t *testing.T) {
+	dir := t.TempDir()
+	regs, err := LoadLocaleAwareTaxonomyRegistries(dir, []string{"en", "ja"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, locale := range []string{"", "en", "ja"} {
+		if regs[locale] == nil {
+			t.Errorf("locale %q: registry should not be nil", locale)
+			continue
+		}
+		if len(regs[locale].Tags) != 0 || len(regs[locale].Categories) != 0 {
+			t.Errorf("locale %q: expected empty registry", locale)
+		}
+	}
+}
+
+func TestMergeTaxonomyRegistries_Deduplication(t *testing.T) {
+	regs := map[string]*model.TaxonomyRegistry{
+		"en": {Tags: []model.Taxonomy{{Name: "go"}, {Name: "arch"}}},
+		"ja": {Tags: []model.Taxonomy{{Name: "go"}, {Name: "アーキテクチャ"}}},
+	}
+	merged := MergeTaxonomyRegistries(regs)
+	if len(merged.Tags) != 3 {
+		t.Errorf("expected 3 unique tags, got %d: %v", len(merged.Tags), merged.Tags)
+	}
+}
+
+func TestValidateArticleTaxonomiesLocale_PerLocale(t *testing.T) {
+	regs := map[string]*model.TaxonomyRegistry{
+		"": {
+			Tags:       []model.Taxonomy{{Name: "go"}},
+			Categories: []model.Taxonomy{{Name: "tools"}},
+		},
+		"en": {
+			Tags:       []model.Taxonomy{{Name: "go"}, {Name: "arch"}},
+			Categories: []model.Taxonomy{{Name: "tools"}},
+		},
+		"ja": {
+			Tags:       []model.Taxonomy{{Name: "go"}, {Name: "アーキテクチャ"}},
+			Categories: []model.Taxonomy{{Name: "ツール"}},
+		},
+	}
+
+	articles := []*model.ProcessedArticle{
+		// EN article using EN tag → OK
+		{Article: *testArticle("en/a.md", "", "", []string{"arch"}, []string{"tools"}, time.Time{}), Locale: "en"},
+		// JA article using JA tag → OK
+		{Article: *testArticle("ja/b.md", "", "", []string{"アーキテクチャ"}, []string{"ツール"}, time.Time{}), Locale: "ja"},
+		// EN article using JA-only tag → error
+		{Article: *testArticle("en/c.md", "", "", []string{"アーキテクチャ"}, nil, time.Time{}), Locale: "en"},
+	}
+
+	errs := ValidateArticleTaxonomiesLocale(articles, regs)
+	if len(errs) != 1 {
+		t.Errorf("expected 1 error, got %d: %v", len(errs), errs)
+	}
+}
+
+func TestValidateArticleTaxonomiesLocale_FallbackToGlobal(t *testing.T) {
+	regs := map[string]*model.TaxonomyRegistry{
+		"": {Tags: []model.Taxonomy{{Name: "go"}}},
+	}
+	// article with locale "fr" — no "fr" key, falls back to ""
+	articles := []*model.ProcessedArticle{
+		{Article: *testArticle("fr/a.md", "", "", []string{"go"}, nil, time.Time{}), Locale: "fr"},
+		{Article: *testArticle("fr/b.md", "", "", []string{"unknown"}, nil, time.Time{}), Locale: "fr"},
+	}
+	errs := ValidateArticleTaxonomiesLocale(articles, regs)
+	if len(errs) != 1 {
+		t.Errorf("expected 1 error (unknown tag), got %d: %v", len(errs), errs)
+	}
+}

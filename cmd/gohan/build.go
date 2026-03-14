@@ -149,29 +149,33 @@ func runBuild(args []string) error {
 		}
 	}
 
-	// Build taxonomy.
-	// If tags.yaml / categories.yaml exist in the content directory they are
-	// treated as the authoritative registry and every article is validated
-	// against them.  When the files are absent the registry is derived from
-	// the articles themselves (no validation errors are possible).
+	// Build taxonomy registry.
+	// When i18n is active, locale-specific files are preferred:
+	//   {contentDir}/{locale}/tags.yaml        (falls back to {contentDir}/tags.yaml)
+	//   {contentDir}/{locale}/categories.yaml  (falls back to {contentDir}/categories.yaml)
+	// When no registry files exist, the registry is derived from article frontmatter
+	// (no validation is performed).
 	var taxo *model.TaxonomyRegistry
-	loaded, loadErr := processor.LoadTaxonomyRegistry(contentDir)
-	if loadErr != nil {
-		return fmt.Errorf("load taxonomy registry: %w", loadErr)
-	}
-	if len(loaded.Tags) > 0 || len(loaded.Categories) > 0 {
-		taxo = loaded
-		if errs := processor.ValidateArticleTaxonomies(processed, taxo); len(errs) > 0 {
-			for _, e := range errs {
-				fmt.Fprintf(os.Stderr, "warn: taxonomy: %v\n", e)
+	{
+		regs, loadErr := processor.LoadLocaleAwareTaxonomyRegistries(contentDir, cfg.I18n.Locales)
+		if loadErr != nil {
+			return fmt.Errorf("load taxonomy registries: %w", loadErr)
+		}
+		merged := processor.MergeTaxonomyRegistries(regs)
+		if len(merged.Tags) > 0 || len(merged.Categories) > 0 {
+			taxo = merged
+			if errs := processor.ValidateArticleTaxonomiesLocale(processed, regs); len(errs) > 0 {
+				for _, e := range errs {
+					fmt.Fprintf(os.Stderr, "warn: taxonomy: %v\n", e)
+				}
 			}
+		} else {
+			computed, err := proc.BuildTaxonomyRegistry(processed, *cfg)
+			if err != nil {
+				return fmt.Errorf("build taxonomy: %w", err)
+			}
+			taxo = computed
 		}
-	} else {
-		computed, err := proc.BuildTaxonomyRegistry(processed, *cfg)
-		if err != nil {
-			return fmt.Errorf("build taxonomy: %w", err)
-		}
-		taxo = computed
 	}
 
 	site := &model.Site{
