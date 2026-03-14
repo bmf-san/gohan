@@ -11,6 +11,7 @@ type Site struct {
 	CurrentLocale   string              // locale for the current page; empty when i18n is not configured
 	RelatedArticles []*ProcessedArticle // articles sharing at least one category with the current article (article pages only)
 	CurrentTaxonomy *Taxonomy           // set on tag and category listing pages; nil elsewhere
+	CurrentArchivePath string            // set on archive pages; locale-neutral path e.g. "/archives/2024/01/"
 }
 
 // Pagination holds computed paging metadata for listing pages.

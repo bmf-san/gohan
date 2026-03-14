@@ -286,6 +286,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				k := key
 				d := siteFor(site, as)
 				d.CurrentLocale = locale
+				d.CurrentArchivePath = fmt.Sprintf("/archives/%04d/%02d/", k.year, int(k.month))
 				jobs = append(jobs, writeJob{
 					path: filepath.Join(g.outDir, archivePrefix, "archives",
 						fmt.Sprintf("%04d", k.year),
@@ -303,6 +304,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 				y := year
 				d := siteFor(site, as)
 				d.CurrentLocale = locale
+				d.CurrentArchivePath = fmt.Sprintf("/archives/%04d/", y)
 				jobs = append(jobs, writeJob{
 					path: filepath.Join(g.outDir, archivePrefix, "archives",
 						fmt.Sprintf("%04d", y),
