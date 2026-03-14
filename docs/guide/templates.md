@@ -36,9 +36,11 @@ type Site struct {
     Articles        []*ProcessedArticle // Articles for the current page (filtered)
     Tags            []Taxonomy          // All tags across the site
     Categories      []Taxonomy          // All categories across the site
+    ArchiveYears    []int               // Unique years that have articles, sorted newest-first
     Pagination      *Pagination         // Paging metadata; nil when pagination is disabled or for non-listing pages
     CurrentLocale   string              // Locale for the current page (e.g. "en", "ja"); empty when i18n is not configured
     RelatedArticles []*ProcessedArticle // Articles sharing at least one category with the current article (article pages only; nil on all other pages)
+    CurrentTaxonomy *Taxonomy           // The tag or category being listed; nil on all other pages
 }
 ```
 
@@ -134,11 +136,11 @@ type Taxonomy struct {
 
 | Template | `.Articles` contains | Extra fields available |
 |---|---|---|
-| `index.html` | All articles on the site | `.Pagination` |
+| `index.html` | All articles on the site | `.Pagination`, `.ArchiveYears`, `.Tags`, `.Categories` |
 | `article.html` | The single article being rendered | `.RelatedArticles`, `.CurrentLocale` |
-| `tag.html` | Articles that have this tag | `.Pagination` |
-| `category.html` | Articles that belong to this category | `.Pagination` |
-| `archive.html` | Articles published in this year | — |
+| `tag.html` | Articles that have this tag | `.Pagination`, `.CurrentTaxonomy` |
+| `category.html` | Articles that belong to this category | `.Pagination`, `.CurrentTaxonomy` |
+| `archive.html` | Articles published in this year | `.CurrentLocale` |
 
 > **Note on `article.html`:** inside a `{{range .Articles}}` loop, use `$` to access root-level fields — e.g. `$.RelatedArticles`, `$.CurrentLocale`, `$.Config`.
 

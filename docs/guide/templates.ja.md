@@ -36,9 +36,11 @@ type Site struct {
     Articles        []*ProcessedArticle // ページに対応する記事一覧（絞り込み済み）
     Tags            []Taxonomy          // サイト全体のタグ一覧
     Categories      []Taxonomy          // サイト全体のカテゴリー一覧
+    ArchiveYears    []int               // 記事が存在する年の一覧（新しい順）
     Pagination      *Pagination         // ページング情報。ページネーション無効または一覧ページ以外は nil
     CurrentLocale   string              // 現在ページのロケールコード（例: "en", "ja"）。i18n 未設定時は空
     RelatedArticles []*ProcessedArticle // 現在記事と同一カテゴリーを持つ関連記事（記事ページのみ。他ページは nil）
+    CurrentTaxonomy *Taxonomy           // 一覧表示中のタグまたはカテゴリー。他ページは nil
 }
 ```
 
@@ -111,11 +113,11 @@ type Taxonomy struct {
 
 | テンプレート | `.Articles` の内容 | 追加フィールド |
 |---|---|---|
-| `index.html` | サイト全体の全記事 | `.Pagination` |
+| `index.html` | サイト全体の全記事 | `.Pagination`、`.ArchiveYears`、`.Tags`、`.Categories` |
 | `article.html` | その記事 1 件のみ | `.RelatedArticles`、`.CurrentLocale` |
-| `tag.html` | そのタグを持つ記事 | `.Pagination` |
-| `category.html` | そのカテゴリーを持つ記事 | `.Pagination` |
-| `archive.html` | その年の記事 | — |
+| `tag.html` | そのタグを持つ記事 | `.Pagination`、`.CurrentTaxonomy` |
+| `category.html` | そのカテゴリーを持つ記事 | `.Pagination`、`.CurrentTaxonomy` |
+| `archive.html` | その年の記事 | `.CurrentLocale` |
 
 > **`article.html` の注意:** `{{range .Articles}}` ループの内側では `$` でルートフィールドにアクセスします。例: `$.RelatedArticles`、`$.CurrentLocale`、`$.Config`。
 
