@@ -418,7 +418,8 @@ func TestGenerate_ArchiveCurrentArchivePath(t *testing.T) {
 			jaMonthPath = path
 		case locale == "ja" && path == "/archives/2024/":
 			jaYearPath = path
-		}	}
+		}
+	}
 	if enMonthPath == "" {
 		t.Error("EN month archive: CurrentArchivePath not set to /archives/2024/03/")
 	}
