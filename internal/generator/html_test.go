@@ -544,12 +544,25 @@ func TestSortByDateDesc(t *testing.T) {
 	older := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 	newer := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
 	articles := []*model.ProcessedArticle{
-		{Article: model.Article{FrontMatter: model.FrontMatter{Title: "Old", Date: older}}},
-		{Article: model.Article{FrontMatter: model.FrontMatter{Title: "New", Date: newer}}},
+		{Article: model.Article{FilePath: "/content/old.md", FrontMatter: model.FrontMatter{Title: "Old", Date: older}}},
+		{Article: model.Article{FilePath: "/content/new.md", FrontMatter: model.FrontMatter{Title: "New", Date: newer}}},
 	}
 	sortByDateDesc(articles)
 	if articles[0].FrontMatter.Title != "New" {
 		t.Errorf("expected 'New' first after sortByDateDesc, got %q", articles[0].FrontMatter.Title)
+	}
+
+	// Same-date articles must be ordered deterministically by FilePath.
+	sameDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	tied := []*model.ProcessedArticle{
+		{Article: model.Article{FilePath: "/content/z-last.md", FrontMatter: model.FrontMatter{Title: "Z", Date: sameDate}}},
+		{Article: model.Article{FilePath: "/content/a-first.md", FrontMatter: model.FrontMatter{Title: "A", Date: sameDate}}},
+		{Article: model.Article{FilePath: "/content/m-middle.md", FrontMatter: model.FrontMatter{Title: "M", Date: sameDate}}},
+	}
+	sortByDateDesc(tied)
+	if tied[0].FrontMatter.Title != "A" || tied[1].FrontMatter.Title != "M" || tied[2].FrontMatter.Title != "Z" {
+		t.Errorf("same-date articles should be sorted by FilePath ascending; got %q, %q, %q",
+			tied[0].FrontMatter.Title, tied[1].FrontMatter.Title, tied[2].FrontMatter.Title)
 	}
 }
 

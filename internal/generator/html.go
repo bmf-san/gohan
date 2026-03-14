@@ -694,9 +694,15 @@ func siteWithPagination(base *model.Site, articles []*model.ProcessedArticle, pg
 }
 
 // sortByDateDesc sorts a slice of processed articles newest-first in place.
+// When two articles share the same date, FilePath is used as a tiebreaker so
+// that builds with same-dated articles are deterministic across runs.
 func sortByDateDesc(articles []*model.ProcessedArticle) {
 	sort.Slice(articles, func(i, j int) bool {
-		return articles[i].FrontMatter.Date.After(articles[j].FrontMatter.Date)
+		di, dj := articles[i].FrontMatter.Date, articles[j].FrontMatter.Date
+		if !di.Equal(dj) {
+			return di.After(dj)
+		}
+		return articles[i].FilePath < articles[j].FilePath
 	})
 }
 
