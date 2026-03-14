@@ -683,6 +683,61 @@ func TestGenerate_SkipsDateZeroArchiveI18n(t *testing.T) {
 	}
 }
 
+func TestArchiveYears_SortedDesc(t *testing.T) {
+	articles := []*model.ProcessedArticle{
+		{Article: model.Article{FrontMatter: model.FrontMatter{Date: time.Date(2023, 5, 1, 0, 0, 0, 0, time.UTC)}}},
+		{Article: model.Article{FrontMatter: model.FrontMatter{Date: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)}}},
+		{Article: model.Article{FrontMatter: model.FrontMatter{Date: time.Date(2023, 9, 1, 0, 0, 0, 0, time.UTC)}}}, // duplicate year
+		{Article: model.Article{FrontMatter: model.FrontMatter{Date: time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)}}},
+		{Article: model.Article{FrontMatter: model.FrontMatter{}}}, // zero date — must be skipped
+	}
+	got := archiveYears(articles)
+	want := []int{2025, 2024, 2023}
+	if len(got) != len(want) {
+		t.Fatalf("archiveYears: got %v, want %v", got, want)
+	}
+	for i, y := range want {
+		if got[i] != y {
+			t.Errorf("archiveYears[%d]: got %d, want %d", i, got[i], y)
+		}
+	}
+}
+
+func TestArchiveYears_Empty(t *testing.T) {
+	if got := archiveYears(nil); len(got) != 0 {
+		t.Errorf("archiveYears(nil): expected empty, got %v", got)
+	}
+}
+
+func TestLocaleTaxonomyBase_SetsArchiveYears(t *testing.T) {
+	base := &model.Site{Config: model.Config{}}
+	articles := []*model.ProcessedArticle{
+		{Article: model.Article{FrontMatter: model.FrontMatter{Tags: []string{"go"}, Date: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)}}},
+		{Article: model.Article{FrontMatter: model.FrontMatter{Tags: []string{"go"}, Date: time.Date(2022, 6, 1, 0, 0, 0, 0, time.UTC)}}},
+	}
+	got := localeTaxonomyBase(base, articles)
+	want := []int{2024, 2022}
+	if len(got.ArchiveYears) != len(want) {
+		t.Fatalf("ArchiveYears: got %v, want %v", got.ArchiveYears, want)
+	}
+	for i, y := range want {
+		if got.ArchiveYears[i] != y {
+			t.Errorf("ArchiveYears[%d]: got %d, want %d", i, got.ArchiveYears[i], y)
+		}
+	}
+}
+
+func TestSiteFor_PropagatesArchiveYears(t *testing.T) {
+	base := &model.Site{
+		Config:       model.Config{},
+		ArchiveYears: []int{2025, 2024, 2023},
+	}
+	got := siteFor(base, nil)
+	if len(got.ArchiveYears) != 3 || got.ArchiveYears[0] != 2025 {
+		t.Errorf("siteFor: ArchiveYears not propagated: %v", got.ArchiveYears)
+	}
+}
+
 func TestArticleOutputPath_UsesOutputPath(t *testing.T) {
 	outDir := "/abs/public"
 	cfg := model.Config{Build: model.BuildConfig{OutputDir: "public"}}

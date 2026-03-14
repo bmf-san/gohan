@@ -563,10 +563,11 @@ func tagNorm(s string) string {
 // siteFor creates a site copy with a custom article list.
 func siteFor(base *model.Site, articles []*model.ProcessedArticle) *model.Site {
 	return &model.Site{
-		Config:     base.Config,
-		Articles:   articles,
-		Tags:       base.Tags,
-		Categories: base.Categories,
+		Config:       base.Config,
+		Articles:     articles,
+		Tags:         base.Tags,
+		Categories:   base.Categories,
+		ArchiveYears: base.ArchiveYears,
 	}
 }
 
@@ -602,11 +603,28 @@ func localeTaxonomyBase(base *model.Site, articles []*model.ProcessedArticle) *m
 		cats = base.Categories
 	}
 	return &model.Site{
-		Config:     base.Config,
-		Articles:   base.Articles,
-		Tags:       tags,
-		Categories: cats,
+		Config:       base.Config,
+		Articles:     base.Articles,
+		Tags:         tags,
+		Categories:   cats,
+		ArchiveYears: archiveYears(articles),
 	}
+}
+
+// archiveYears returns the unique years present in articles, sorted newest-first.
+func archiveYears(articles []*model.ProcessedArticle) []int {
+	seen := make(map[int]bool)
+	for _, a := range articles {
+		if !a.FrontMatter.Date.IsZero() {
+			seen[a.FrontMatter.Date.Year()] = true
+		}
+	}
+	years := make([]int, 0, len(seen))
+	for y := range seen {
+		years = append(years, y)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(years)))
+	return years
 }
 
 // siteWithPagination creates a site copy with a custom article list and pagination metadata.

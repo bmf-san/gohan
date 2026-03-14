@@ -6,6 +6,7 @@ type Site struct {
 	Articles        []*ProcessedArticle
 	Tags            []Taxonomy
 	Categories      []Taxonomy
+	ArchiveYears    []int               // unique years that have articles, sorted newest-first
 	Pagination      *Pagination         // nil when pagination is disabled or not a listing page
 	CurrentLocale   string              // locale for the current page; empty when i18n is not configured
 	RelatedArticles []*ProcessedArticle // articles sharing at least one category with the current article (article pages only)
