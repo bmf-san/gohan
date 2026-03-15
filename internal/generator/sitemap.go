@@ -75,7 +75,7 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle,
 		}
 		if len(a.Translations) > 0 {
 			// Self-referencing hreflang (recommended by Google).
-			// BUG-E: href values must be XML-escaped (consistent with <loc>).
+			// href values must be XML-escaped (consistent with <loc>).
 			locale := a.Locale
 			if locale == "" {
 				locale = "x-default"

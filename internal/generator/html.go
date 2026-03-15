@@ -642,7 +642,7 @@ func localeTaxonomyBase(base *model.Site, articles []*model.ProcessedArticle) *m
 	}
 	sort.Slice(tags, func(i, j int) bool { return tags[i].Name < tags[j].Name })
 	sort.Slice(cats, func(i, j int) bool { return cats[i].Name < cats[j].Name })
-	// BUG-B: preserve Taxonomy.Description from base.Tags / base.Categories.
+	// Preserve Taxonomy.Description from base.Tags / base.Categories.
 	// Without this, locale-filtered listing pages always show empty descriptions.
 	tagDesc := make(map[string]string, len(base.Tags))
 	for _, t := range base.Tags {
@@ -746,7 +746,7 @@ func articleOutputPath(a *model.ProcessedArticle, outDir string, cfg model.Confi
 		}
 	}
 	// Fallback: construct from slug and locale.
-	// BUG-7: sanitize slug to prevent path traversal outside the output directory.
+	// Sanitize slug to prevent path traversal outside the output directory.
 	slug := slugify(a.FrontMatter.Slug)
 	if slug == "untitled" {
 		slug = slugify(a.FrontMatter.Title)
