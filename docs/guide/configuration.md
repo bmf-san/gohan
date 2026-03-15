@@ -14,15 +14,19 @@ site:
   description: "A personal tech blog"
   base_url: "https://myblog.example.com"
   language: "en"
+  github_repo: "https://github.com/owner/repo"  # optional: enables "Edit this page" links
+  github_branch: "main"                          # optional: branch used for edit links (default: main)
 
 build:
   content_dir: "content"
   output_dir: "public"
   assets_dir: "assets"
+  static_dir: "static"   # optional: copied verbatim to output_dir root
   exclude_files:
     - "*.draft.md"
     - "_*"
   parallelism: 4
+  per_page: 20           # optional: articles per paginated listing page (0 = no pagination)
 
 theme:
   name: "default"
@@ -34,6 +38,19 @@ theme:
 syntax_highlight:
   theme: "github"
   line_numbers: false
+
+ogp:
+  enabled: false         # optional: generate OGP images at build time
+  logo_file: ""          # optional: path to logo file (relative to project root)
+  width: 1200
+  height: 630
+
+i18n:
+  locales: [en, ja]      # optional: ordered locale codes; empty = single-language mode
+  default_locale: en     # optional: locale served at root URL (default: site.language)
+
+plugins:               # optional: plugin configuration (key = plugin name)
+  amazon_books: {}
 ```
 
 ---
@@ -48,6 +65,8 @@ Site-wide metadata.
 | `description` | string | `""` | Site description. Used in meta tags and the Atom feed |
 | `base_url` | string | *(required)* | Base URL without a trailing slash (e.g. `https://example.com`) |
 | `language` | string | `"en"` | BCP 47 language code used in `<html lang="">` |
+| `github_repo` | string | `""` | GitHub repository base URL (e.g. `https://github.com/owner/repo`). When set, templates can render an "Edit this page" link using `.ContentPath` |
+| `github_branch` | string | `"main"` | Branch used to build the edit URL |
 
 > `base_url` is used to generate absolute URLs in `sitemap.xml` and `atom.xml`. Do not include a trailing slash.
 
@@ -61,9 +80,11 @@ File paths and build behaviour.
 |---|---|---|---|
 | `content_dir` | string | `"content"` | Markdown content directory (relative to project root) |
 | `output_dir` | string | `"public"` | HTML output directory |
-| `assets_dir` | string | `"assets"` | Static files directory (CSS, images, etc.) |
+| `assets_dir` | string | `"assets"` | Processed assets directory (CSS, images, etc.) |
+| `static_dir` | string | `""` | Static files directory copied verbatim to output root (e.g. `static/404.html` → `public/404.html`) |
 | `exclude_files` | []string | `[]` | Glob patterns for files to exclude from the build |
 | `parallelism` | int | `4` | Number of parallel HTML generation workers |
+| `per_page` | int | `0` | Articles per paginated listing page. `0` disables pagination |
 
 ### `exclude_files` examples
 
@@ -172,3 +193,44 @@ When `slug` is omitted it is derived from `title`:
 - Spaces → hyphens
 - Uppercase → lowercase
 - Example: `"Hello World"` → `hello-world`
+
+---
+
+## `ogp` section
+
+Build-time OGP image generation.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool | `false` | Generate OGP images during build |
+| `logo_file` | string | `""` | Path to a logo file to embed in generated images (relative to project root). Empty = no logo |
+| `width` | int | `1200` | Output image width in pixels |
+| `height` | int | `630` | Output image height in pixels |
+
+See [docs/features/ogp.md](../features/ogp.md) for the full OGP guide.
+
+---
+
+## `i18n` section
+
+Multi-language site configuration.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `locales` | []string | `[]` | Ordered locale codes present under the content directory. Empty = single-language mode |
+| `default_locale` | string | `site.language` | Locale served at the root URL without a language prefix |
+
+See [docs/features/i18n.md](../features/i18n.md) for the full i18n guide.
+
+---
+
+## `plugins` section
+
+Plugin configuration. Keys are plugin names; values are plugin-specific settings.
+
+```yaml
+plugins:
+  amazon_books: {}
+```
+
+See [docs/features/plugin-system.md](../features/plugin-system.md) for the full plugin guide.
