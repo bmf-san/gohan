@@ -70,12 +70,16 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle,
 
 		buf.WriteString("  <url>\n")
 		buf.WriteString("    <loc>" + html.EscapeString(loc) + "</loc>\n")
-		if !a.FrontMatter.Date.IsZero() {
+		if lm, ok := a.FrontMatter.Extra["lastmod"]; ok && lm != nil {
+			if lmStr, ok := lm.(string); ok && lmStr != "" {
+				buf.WriteString("    <lastmod>" + html.EscapeString(lmStr) + "</lastmod>\n")
+			}
+		} else if !a.FrontMatter.Date.IsZero() {
 			buf.WriteString("    <lastmod>" + a.FrontMatter.Date.UTC().Format("2006-01-02") + "</lastmod>\n")
 		}
 		if len(a.Translations) > 0 {
 			// Self-referencing hreflang (recommended by Google).
-			// href values must be XML-escaped (consistent with <loc>).
+			// BUG-E: href values must be XML-escaped (consistent with <loc>).
 			locale := a.Locale
 			if locale == "" {
 				locale = "x-default"
