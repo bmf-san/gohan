@@ -18,7 +18,7 @@ All `.html` files inside the theme directory (`themes/default/templates/` by def
 | `article.html` | `/posts/<slug>/` | Individual article page |
 | `tag.html` | `/tags/<name>/` | Tag article list page |
 | `category.html` | `/categories/<name>/` | Category article list page |
-| `archive.html` | `/archive/<year>/` | Year-based archive page |
+| `archive.html` | `/archives/<year>/` | Year-based archive page |
 
 > All template files are optional. If a template does not exist, that page is simply not generated (no error is raised).
 
@@ -69,19 +69,27 @@ type Config struct {
     Site  SiteConfig
     Theme ThemeConfig
     Build BuildConfig
+    I18n  I18nConfig
 }
 
 type SiteConfig struct {
-    Title       string // .Config.Site.Title
-    Description string // .Config.Site.Description
-    BaseURL     string // .Config.Site.BaseURL
-    Language    string // .Config.Site.Language
+    Title        string // .Config.Site.Title
+    Description  string // .Config.Site.Description
+    BaseURL      string // .Config.Site.BaseURL
+    Language     string // .Config.Site.Language
+    GitHubRepo   string // .Config.Site.GitHubRepo — GitHub repo base URL for edit links
+    GitHubBranch string // .Config.Site.GitHubBranch — branch used for edit links
 }
 
 type ThemeConfig struct {
     Name   string
     Dir    string
     Params map[string]string // .Config.Theme.Params
+}
+
+type I18nConfig struct {
+    Locales       []string // .Config.I18n.Locales
+    DefaultLocale string   // .Config.I18n.DefaultLocale
 }
 ```
 
@@ -157,6 +165,8 @@ type Taxonomy struct {
 | `tagURL` | `{{tagURL .CurrentLocale "go"}}` → `/tags/go/` (EN) or `/ja/tags/go/` (JA) | Generate a locale-aware tag page URL |
 | `categoryURL` | `{{categoryURL .CurrentLocale "tech"}}` → `/categories/tech/` (EN) | Generate a locale-aware category page URL |
 | `markdownify` | `{{markdownify "**bold**"}}` | Convert a Markdown string to HTML |
+| `paginationPages` | `{{paginationPages .Pagination.CurrentPage .Pagination.TotalPages}}` | Return a slice of page numbers (with `-1` as ellipsis placeholder) for rendering a pagination control |
+| `pageURL` | `{{pageURL .Pagination.BaseURL 3}}` → `/tags/go/page/3/` | Return the URL for a given page number within a base path; page 1 returns `baseURL + "/"` |
 
 `formatDate` uses Go's [reference time](https://pkg.go.dev/time#Layout) layout:
 
