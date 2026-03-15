@@ -120,14 +120,15 @@ func TestGenerateFeeds_SlugifiesTitle(t *testing.T) {
 	}
 }
 
-func TestGenerateSitemap_LastmodFromExtra(t *testing.T) {
+func TestGenerateSitemap_LastmodFromField(t *testing.T) {
 	date := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	lastmod := time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC)
 	articles := []*model.ProcessedArticle{
 		{
 			Article: model.Article{FrontMatter: model.FrontMatter{
-				Slug: "my-post",
-				Date: date,
-				Extra: map[string]interface{}{"lastmod": "2026-03-15"},
+				Slug:    "my-post",
+				Date:    date,
+				LastMod: lastmod,
 			}},
 			URL: "/posts/my-post/",
 		},
@@ -139,10 +140,10 @@ func TestGenerateSitemap_LastmodFromExtra(t *testing.T) {
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
 	s := string(data)
 	if !strings.Contains(s, "<lastmod>2026-03-15</lastmod>") {
-		t.Errorf("expected lastmod from Extra to be used, got:\n%s", s)
+		t.Errorf("expected lastmod field to be used, got:\n%s", s)
 	}
 	if strings.Contains(s, "<lastmod>2020-01-01</lastmod>") {
-		t.Errorf("expected date not to be used when lastmod Extra is set, got:\n%s", s)
+		t.Errorf("expected date not to be used when LastMod is set, got:\n%s", s)
 	}
 }
 

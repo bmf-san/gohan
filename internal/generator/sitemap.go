@@ -70,10 +70,8 @@ func GenerateSitemap(outDir, baseURL string, articles []*model.ProcessedArticle,
 
 		buf.WriteString("  <url>\n")
 		buf.WriteString("    <loc>" + html.EscapeString(loc) + "</loc>\n")
-		if lm, ok := a.FrontMatter.Extra["lastmod"]; ok && lm != nil {
-			if lmStr, ok := lm.(string); ok && lmStr != "" {
-				buf.WriteString("    <lastmod>" + html.EscapeString(lmStr) + "</lastmod>\n")
-			}
+		if !a.FrontMatter.LastMod.IsZero() {
+			buf.WriteString("    <lastmod>" + a.FrontMatter.LastMod.UTC().Format("2006-01-02") + "</lastmod>\n")
 		} else if !a.FrontMatter.Date.IsZero() {
 			buf.WriteString("    <lastmod>" + a.FrontMatter.Date.UTC().Format("2006-01-02") + "</lastmod>\n")
 		}
