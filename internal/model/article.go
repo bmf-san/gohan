@@ -47,8 +47,6 @@ type LocaleRef struct {
 type FrontMatter struct {
 	Title       string    `yaml:"title"`
 	Date        time.Time `yaml:"date"`
-	// LastMod is the date the article was last reviewed or updated.
-	// When set, it overrides Date in sitemap.xml <lastmod> and JSON-LD dateModified.
 	LastMod     time.Time `yaml:"lastmod"`
 	Draft       bool      `yaml:"draft"`
 	Tags        []string  `yaml:"tags"`
