@@ -72,7 +72,7 @@ func (g *OGPGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) er
 	changed := changedSet(changeSet)
 
 	for _, a := range site.Articles {
-		// BUG-7: sanitize slug to prevent path traversal (slugify strips dots, slashes, etc.).
+		// Sanitize slug to prevent path traversal (slugify strips dots, slashes, etc.).
 		slug := slugify(a.FrontMatter.Slug)
 		if slug == "untitled" {
 			slug = slugify(a.FrontMatter.Title)
@@ -80,7 +80,7 @@ func (g *OGPGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) er
 		outPath := filepath.Join(ogpDir, slug+".png")
 
 		// Skip if already exists and article not in change set.
-		// BUG-1: changeSet entries are relative to contentDir, but a.FilePath is
+		// changeSet entries are relative to contentDir, but a.FilePath is
 		// absolute — compute the relative path for the lookup.
 		if _, statErr := os.Stat(outPath); statErr == nil && changeSet != nil {
 			lookupPath := a.FilePath

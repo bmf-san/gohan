@@ -66,7 +66,7 @@ categories: []
 
 `, articleTitle, today)
 
-	// BUG-D: use O_CREATE|O_EXCL for an atomic create-or-fail, eliminating the
+	// Use O_CREATE|O_EXCL for an atomic create-or-fail, eliminating the
 	// TOCTOU race between the old os.Stat check and os.WriteFile.
 	f, err := os.OpenFile(filePath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
 	if err != nil {
