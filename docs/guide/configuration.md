@@ -173,6 +173,7 @@ Every Markdown file begins with a YAML Front Matter block.
 ---
 title: "Article title"       # required: Article title
 date: 2024-01-15             # required: Publication date (YYYY-MM-DD)
+lastmod: "2026-03-15"        # optional: Last-reviewed date. When set, overrides date in sitemap.xml <lastmod> and JSON-LD dateModified
 slug: "my-post"              # optional: URL slug (auto-generated from title if omitted)
 draft: false                 # optional: Exclude from build when true (default: false)
 tags:                        # optional: Tag list
@@ -185,6 +186,8 @@ author: "Your Name"          # optional: Author name
 template: "article.html"     # optional: Override the template file
 ---
 ```
+
+> **`lastmod`** is stored in `FrontMatter.Extra["lastmod"]` (gohan's catch-all for unknown front matter keys). Templates can read it via `index .FrontMatter.Extra "lastmod"`.
 
 ### Automatic slug generation
 
