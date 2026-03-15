@@ -206,7 +206,7 @@ func computeOutputPath(a *model.Article, cfg model.Config) string {
 	dir := filepath.Dir(rel)
 	base := strings.TrimSuffix(filepath.Base(rel), filepath.Ext(rel))
 	if a.FrontMatter.Slug != "" {
-		// BUG-A+F: sanitise slug against path traversal — take only the last path
+		// Sanitise slug against path traversal — take only the last path
 		// component so that "../../etc/passwd" reduces to "passwd".
 		// Also reject "." and ".." (degenerate), and the path separator itself
 		// (filepath.Base("///") returns "/" on Unix which would collapse the
