@@ -120,6 +120,51 @@ func TestGenerateFeeds_SlugifiesTitle(t *testing.T) {
 	}
 }
 
+func TestGenerateSitemap_LastmodFromField(t *testing.T) {
+	date := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	lastmod := time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC)
+	articles := []*model.ProcessedArticle{
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{
+				Slug:    "my-post",
+				Date:    date,
+				LastMod: lastmod,
+			}},
+			URL: "/posts/my-post/",
+		},
+	}
+	dir := t.TempDir()
+	if err := GenerateSitemap(dir, "https://example.com", articles, model.Config{}); err != nil {
+		t.Fatalf("GenerateSitemap: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
+	s := string(data)
+	if !strings.Contains(s, "<lastmod>2026-03-15</lastmod>") {
+		t.Errorf("expected lastmod field to be used, got:\n%s", s)
+	}
+	if strings.Contains(s, "<lastmod>2020-01-01</lastmod>") {
+		t.Errorf("expected date not to be used when LastMod is set, got:\n%s", s)
+	}
+}
+
+func TestGenerateSitemap_LastmodFallsBackToDate(t *testing.T) {
+	date := time.Date(2020, 6, 15, 0, 0, 0, 0, time.UTC)
+	articles := []*model.ProcessedArticle{
+		{
+			Article: model.Article{FrontMatter: model.FrontMatter{Slug: "no-lastmod", Date: date}},
+			URL:     "/posts/no-lastmod/",
+		},
+	}
+	dir := t.TempDir()
+	if err := GenerateSitemap(dir, "https://example.com", articles, model.Config{}); err != nil {
+		t.Fatalf("GenerateSitemap: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
+	if !strings.Contains(string(data), "<lastmod>2020-06-15</lastmod>") {
+		t.Errorf("expected fallback to date, got:\n%s", data)
+	}
+}
+
 func TestGenerateSitemap_HreflangAlternates(t *testing.T) {
 	newer := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
 	articles := []*model.ProcessedArticle{

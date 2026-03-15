@@ -173,6 +173,7 @@ syntax_highlight:
 ---
 title: "記事タイトル"              # required: 記事タイトル
 date: 2024-01-15                  # required: 公開日 (YYYY-MM-DD)
+lastmod: 2026-03-15               # optional: 最終確認日。設定すると sitemap.xml の <lastmod> および JSON-LD の dateModified に使われる
 slug: "my-post"                   # optional: URL スラッグ（省略時はタイトルから生成）
 draft: false                      # optional: true の場合ビルドから除外 (default: false)
 tags:                             # optional: タグ一覧
@@ -185,6 +186,8 @@ author: "Your Name"               # optional: 著者名
 template: "article.html"          # optional: 使用するテンプレートファイル名
 ---
 ```
+
+> **`lastmod`** (`time.Time`) は `date` を上書きして sitemap の `<lastmod>` および JSON-LD の `dateModified` に使われます。テンプレートからは `.FrontMatter.LastMod` で参照できます。
 
 ### `slug` の自動生成
 

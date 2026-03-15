@@ -47,6 +47,7 @@ type LocaleRef struct {
 type FrontMatter struct {
 	Title       string    `yaml:"title"`
 	Date        time.Time `yaml:"date"`
+	LastMod     time.Time `yaml:"lastmod"`
 	Draft       bool      `yaml:"draft"`
 	Tags        []string  `yaml:"tags"`
 	Categories  []string  `yaml:"categories"`
