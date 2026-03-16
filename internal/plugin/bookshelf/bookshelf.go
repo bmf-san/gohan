@@ -11,8 +11,10 @@
 // # Front-matter (article .md) — same key used by amazon_books plugin
 //
 //	books:
-//	  - asin: "4781920004"
+//	  - asin: "4781920004"           # Amazon ASIN — generates image + Amazon link
 //	    title: "組織を変える5つの対話"   # optional; used for alt text
+//	  - url: "https://booth.pm/..."  # non-Amazon: direct sales URL (no cover image)
+//	    title: "同人誌タイトル"
 //
 // # Template usage (bookshelf.html)
 //
@@ -129,15 +131,28 @@ func (b *Bookshelf) VirtualPages(site *model.Site, cfg map[string]interface{}) (
 				continue
 			}
 			asin := strVal(m, "asin", "")
-			if asin == "" {
+			directURL := strVal(m, "url", "")
+			if asin == "" && directURL == "" {
 				continue
 			}
-			title := strVal(m, "title", asin)
+			titleDef := asin
+			if titleDef == "" {
+				titleDef = directURL
+			}
+			title := strVal(m, "title", titleDef)
+			var imageURL, linkURL string
+			if asin != "" {
+				imageURL = fmt.Sprintf(imageURLTemplate, asin)
+				linkURL = fmt.Sprintf(linkURLTemplate, asin, url.QueryEscape(tag))
+			} else {
+				imageURL = ""
+				linkURL = directURL
+			}
 			entry := BookEntry{
 				ASIN:         asin,
 				Title:        title,
-				ImageURL:     fmt.Sprintf(imageURLTemplate, asin),
-				LinkURL:      fmt.Sprintf(linkURLTemplate, asin, url.QueryEscape(tag)),
+				ImageURL:     imageURL,
+				LinkURL:      linkURL,
 				ArticleSlug:  article.FrontMatter.Slug,
 				ArticleTitle: article.FrontMatter.Title,
 				ArticleURL:   article.URL,
