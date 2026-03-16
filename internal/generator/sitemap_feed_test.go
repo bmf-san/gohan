@@ -22,7 +22,7 @@ func makeArticles() []*model.ProcessedArticle {
 
 func TestGenerateSitemap_Valid(t *testing.T) {
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", makeArticles(), nil, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", makeArticles(), nil, nil, model.Config{}); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -40,7 +40,7 @@ func TestGenerateSitemap_Valid(t *testing.T) {
 
 func TestGenerateSitemap_Empty(t *testing.T) {
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", nil, nil, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", nil, nil, nil, model.Config{}); err != nil {
 		t.Fatalf("GenerateSitemap empty: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -51,7 +51,7 @@ func TestGenerateSitemap_Empty(t *testing.T) {
 
 func TestGenerateSitemap_WellFormedXML(t *testing.T) {
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", makeArticles(), nil, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", makeArticles(), nil, nil, model.Config{}); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -126,7 +126,7 @@ func TestGenerateSitemap_VirtualPages(t *testing.T) {
 		{URL: "/bookshelf/"},
 		{URL: "/ja/bookshelf/"},
 	}
-	if err := GenerateSitemap(dir, "https://example.com", nil, vps, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", nil, vps, nil, model.Config{}); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -153,7 +153,7 @@ func TestGenerateSitemap_LastmodFromField(t *testing.T) {
 		},
 	}
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", articles, nil, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", articles, nil, nil, model.Config{}); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -175,7 +175,7 @@ func TestGenerateSitemap_LastmodFallsBackToDate(t *testing.T) {
 		},
 	}
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", articles, nil, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", articles, nil, nil, model.Config{}); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -201,7 +201,7 @@ func TestGenerateSitemap_HreflangAlternates(t *testing.T) {
 		},
 	}
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", articles, nil, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", articles, nil, nil, model.Config{}); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -222,7 +222,7 @@ func TestGenerateSitemap_I18nIndexPages(t *testing.T) {
 	cfg := model.Config{}
 	cfg.I18n.DefaultLocale = "en"
 	cfg.I18n.Locales = []string{"en", "ja"}
-	if err := GenerateSitemap(dir, "https://example.com", nil, nil, cfg); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", nil, nil, nil, cfg); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -243,7 +243,7 @@ func TestGenerateSitemap_UsesPrecomputedURL(t *testing.T) {
 			URL:     "/ja/posts/my-url/",
 		},
 	}
-	if err := GenerateSitemap(dir, "https://example.com", articles, nil, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", articles, nil, nil, model.Config{}); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -322,7 +322,7 @@ func TestGenerateSitemap_XDefault_DefaultLocale(t *testing.T) {
 		},
 	}
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", articles, nil, cfg); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", articles, nil, nil, cfg); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -347,7 +347,7 @@ func TestGenerateSitemap_XDefault_NonDefaultLocale(t *testing.T) {
 		},
 	}
 	dir := t.TempDir()
-	if err := GenerateSitemap(dir, "https://example.com", articles, nil, cfg); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", articles, nil, nil, cfg); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -371,7 +371,7 @@ func TestGenerateSitemap_XDefault_NotEmittedWithoutConfig(t *testing.T) {
 	}
 	dir := t.TempDir()
 	// model.Config{} has an empty DefaultLocale
-	if err := GenerateSitemap(dir, "https://example.com", articles, nil, model.Config{}); err != nil {
+	if err := GenerateSitemap(dir, "https://example.com", articles, nil, nil, model.Config{}); err != nil {
 		t.Fatalf("GenerateSitemap: %v", err)
 	}
 	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
@@ -468,5 +468,75 @@ func TestGenerateFeeds_I18n_NoDefaultLocale(t *testing.T) {
 	// No locale subdirectory should exist
 	if _, err := os.Stat(filepath.Join(dir, "ja")); err == nil {
 		t.Error("ja/ subdirectory should NOT be created when i18n is not configured")
+	}
+}
+
+func TestGenerateSitemap_ExtraURLs(t *testing.T) {
+	dir := t.TempDir()
+	extra := []string{"/tags/go/", "/categories/architecture/", "/archives/2024/", "/archives/2024/01/"}
+	if err := GenerateSitemap(dir, "https://example.com", nil, nil, extra, model.Config{}); err != nil {
+		t.Fatalf("GenerateSitemap: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
+	s := string(data)
+	for _, u := range extra {
+		want := "https://example.com" + u
+		if !strings.Contains(s, want) {
+			t.Errorf("expected %q in sitemap:\n%s", want, s)
+		}
+	}
+}
+
+func TestTaxonomyURLs_I18n(t *testing.T) {
+	cfg := model.Config{}
+	cfg.I18n.DefaultLocale = "en"
+	cfg.I18n.Locales = []string{"en", "ja"}
+
+	date := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
+	site := &model.Site{
+		Config:     cfg,
+		Tags:       []model.Taxonomy{{Name: "Go"}},
+		Categories: []model.Taxonomy{{Name: "Architecture"}},
+		Articles: []*model.ProcessedArticle{
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Slug:       "en-post",
+					Date:       date,
+					Tags:       []string{"Go"},
+					Categories: []string{"Architecture"},
+				}},
+				Locale: "en",
+			},
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Slug:       "ja-post",
+					Date:       date,
+					Tags:       []string{"Go"},
+					Categories: []string{"Architecture"},
+				}},
+				Locale: "ja",
+			},
+		},
+	}
+
+	urls := TaxonomyURLs(site, cfg)
+	wantContains := []string{
+		"/tags/go/",
+		"/ja/tags/go/",
+		"/categories/architecture/",
+		"/ja/categories/architecture/",
+		"/archives/2024/",
+		"/ja/archives/2024/",
+		"/archives/2024/03/",
+		"/ja/archives/2024/03/",
+	}
+	urlSet := map[string]bool{}
+	for _, u := range urls {
+		urlSet[u] = true
+	}
+	for _, want := range wantContains {
+		if !urlSet[want] {
+			t.Errorf("TaxonomyURLs missing %q; got: %v", want, urls)
+		}
 	}
 }
