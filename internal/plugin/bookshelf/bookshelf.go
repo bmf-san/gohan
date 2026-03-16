@@ -27,7 +27,7 @@ package bookshelf
 import (
 	"fmt"
 	"net/url"
-	"path/filepath"
+	"path"
 	"sort"
 	"time"
 
@@ -150,10 +150,10 @@ func (b *Bookshelf) VirtualPages(site *model.Site, cfg map[string]interface{}) (
 
 		var outputPath, pageURL string
 		if locale == defaultLocale || locale == "" {
-			outputPath = filepath.Join("bookshelf", "index.html")
+			outputPath = path.Join("bookshelf", "index.html")
 			pageURL = "/bookshelf/"
 		} else {
-			outputPath = filepath.Join(locale, "bookshelf", "index.html")
+			outputPath = path.Join(locale, "bookshelf", "index.html")
 			pageURL = "/" + locale + "/bookshelf/"
 		}
 
