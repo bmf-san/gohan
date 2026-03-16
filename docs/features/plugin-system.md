@@ -96,8 +96,101 @@ books:
 3. Register in `internal/plugin/registry.go` → `DefaultRegistry()`
 4. Document in this section
 
+---
+
+## SitePlugin — Cross-article page generation
+
+While `Plugin` operates on individual articles, **`SitePlugin`** operates on the full site and generates **VirtualPages** — pages with no corresponding Markdown source file.
+
+```
+cmd/gohan/build.go
+  └── plugin.DefaultRegistry().EnrichVirtual(site)  ← called after Enrich()
+        └── for each enabled SitePlugin:
+              SitePlugin.VirtualPages(site, cfg) → appended to site.VirtualPages
+                                                   ↓
+                                    HTMLGenerator.buildJobs() renders them
+```
+
+Template access pattern (the page-specific data is at `.VirtualPageData`):
+```html
+{{range index .VirtualPageData "books"}}
+  <a href="{{.LinkURL}}" target="_blank" rel="noopener">
+    <img src="{{.ImageURL}}" alt="{{.Title}}">
+  </a>
+  {{if .ArticleURL}}<a href="{{.ArticleURL}}">{{.ArticleTitle}}</a>{{end}}
+{{end}}
+```
+
+### SitePlugin Interface
+
+Defined in `internal/plugin/plugin.go`:
+
+```go
+type SitePlugin interface {
+    Name() string
+    Enabled(cfg map[string]interface{}) bool
+    VirtualPages(site *model.Site, cfg map[string]interface{}) ([]*model.VirtualPage, error)
+}
+```
+
+- **`Name()`** — unique key used in `config.yaml` under `plugins.<name>`
+- **`Enabled()`** — controls whether the plugin runs
+- **`VirtualPages()`** — inspects the full site and returns zero or more `VirtualPage` values
+
+### VirtualPage fields
+
+```
+VirtualPage.OutputPath  string   // file path relative to output dir, e.g. "bookshelf/index.html"
+VirtualPage.URL         string   // canonical URL path, e.g. "/bookshelf/"
+VirtualPage.Template    string   // theme template filename, e.g. "bookshelf.html"
+VirtualPage.Locale      string   // locale code, e.g. "en" or "ja"
+VirtualPage.Data        map[string]interface{}  // exposed as .VirtualPageData in templates
+```
+
+### Built-in SitePlugins
+
+#### bookshelf
+
+Aggregates all book entries from every article's `books:` front-matter and generates one bookshelf page per locale.
+
+**config.yaml:**
+```yaml
+plugins:
+  bookshelf:
+    enabled: true
+    tag: "your-associate-tag-22"   # Amazon Associates tracking tag
+```
+
+**Generated URLs:**
+- Default locale (en): `/bookshelf/`
+- Non-default locale (ja): `/ja/bookshelf/`
+
+**Template data shape** (`.VirtualPageData`):**
+```
+.VirtualPageData["books"] → []BookEntry
+  BookEntry.ASIN          string
+  BookEntry.Title         string
+  BookEntry.ImageURL      string   # images-na.ssl-images-amazon.com CDN
+  BookEntry.LinkURL       string   # amazon.co.jp/dp/{ASIN}?tag={tag}
+  BookEntry.ArticleSlug   string   # slug of the source article (book review)
+  BookEntry.ArticleTitle  string   # title of the source article
+  BookEntry.ArticleURL    string   # canonical URL of the source article
+  BookEntry.Date          time.Time
+```
+
+Entries are sorted by date descending (newest first).
+
+### Adding a New SitePlugin
+
+1. Create `internal/plugin/<name>/<name>.go` implementing `plugin.SitePlugin`
+2. Add a compile-time interface check: `var _ plugin.SitePlugin = (*MyPlugin)(nil)`
+3. Register in `internal/plugin/registry.go` → `DefaultRegistry()` under `sitePlugins`
+4. Create a theme template that reads `.VirtualPageData`
+5. Document in this section
+
 ## Scope
 
 - Dynamic plugin loading (`plugin` package) is intentionally out of scope — it adds OS constraints and complexity that are unnecessary for a static site generator
 - Plugins do not generate HTML; they supply data to themes, keeping UI fully under the theme's control
 - Per-article data is read-only from the plugin's perspective
+- VirtualPages are not included in Atom feeds or the index article listing

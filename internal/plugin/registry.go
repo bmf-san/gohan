@@ -5,11 +5,13 @@ import (
 
 	"github.com/bmf-san/gohan/internal/model"
 	"github.com/bmf-san/gohan/internal/plugin/amazonbooks"
+	"github.com/bmf-san/gohan/internal/plugin/bookshelf"
 )
 
 // Registry holds the set of built-in plugins.
 type Registry struct {
-	plugins []Plugin
+	plugins     []Plugin
+	sitePlugins []SitePlugin
 }
 
 // DefaultRegistry returns a Registry pre-loaded with all built-in plugins.
@@ -17,6 +19,9 @@ func DefaultRegistry() *Registry {
 	return &Registry{
 		plugins: []Plugin{
 			amazonbooks.New(),
+		},
+		sitePlugins: []SitePlugin{
+			bookshelf.New(),
 		},
 	}
 }
@@ -42,6 +47,26 @@ func (r *Registry) Enrich(site *model.Site) error {
 			}
 			article.PluginData[p.Name()] = data
 		}
+	}
+	return nil
+}
+
+// EnrichVirtual runs all enabled SitePlugins over the full site, collecting
+// VirtualPages and appending them to site.VirtualPages.
+// Call this after Enrich and before generating HTML.
+func (r *Registry) EnrichVirtual(site *model.Site) error {
+	pluginsCfg := site.Config.Plugins
+
+	for _, sp := range r.sitePlugins {
+		cfg := pluginCfg(pluginsCfg, sp.Name())
+		if !sp.Enabled(cfg) {
+			continue
+		}
+		pages, err := sp.VirtualPages(site, cfg)
+		if err != nil {
+			return fmt.Errorf("site plugin %s: %w", sp.Name(), err)
+		}
+		site.VirtualPages = append(site.VirtualPages, pages...)
 	}
 	return nil
 }
