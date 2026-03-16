@@ -385,3 +385,57 @@ func TestBookshelf_CategoryGroups(t *testing.T) {
 		}
 	}
 }
+func TestBookshelf_NonAsinURL(t *testing.T) {
+	b := bookshelf.New()
+	date := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	site := &model.Site{
+		Config: model.Config{},
+		Articles: []*model.ProcessedArticle{
+			{
+				Article: model.Article{
+					FrontMatter: model.FrontMatter{
+						Title: "Booth Book",
+						Slug:  "booth-book",
+						Date:  date,
+						Extra: map[string]interface{}{
+							"books": []interface{}{
+								map[string]interface{}{
+									"title": "My Doujinshi",
+									"url":   "https://example.booth.pm/items/123",
+								},
+							},
+						},
+					},
+				},
+				URL: "/posts/booth-book/",
+			},
+		},
+	}
+	pages, err := b.VirtualPages(site, cfg(true, "tag"))
+	if err != nil {
+		t.Fatalf("VirtualPages: %v", err)
+	}
+	if len(pages) != 1 {
+		t.Fatalf("expected 1 page, got %d", len(pages))
+	}
+	books := pages[0].Data["books"].([]bookshelf.BookEntry)
+	if len(books) != 1 {
+		t.Fatalf("expected 1 book, got %d", len(books))
+	}
+	bk := books[0]
+	if bk.Title != "My Doujinshi" {
+		t.Errorf("Title = %q, want My Doujinshi", bk.Title)
+	}
+	if bk.LinkURL != "https://example.booth.pm/items/123" {
+		t.Errorf("LinkURL = %q, want direct URL", bk.LinkURL)
+	}
+	if bk.ImageURL != "" {
+		t.Errorf("ImageURL should be empty for non-ASIN book, got %q", bk.ImageURL)
+	}
+	if bk.ASIN != "" {
+		t.Errorf("ASIN should be empty, got %q", bk.ASIN)
+	}
+	if !strings.Contains(bk.ArticleURL, "booth-book") {
+		t.Errorf("ArticleURL = %q, expected to contain article slug", bk.ArticleURL)
+	}
+}
