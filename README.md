@@ -88,49 +88,6 @@ gohan serve   # open http://127.0.0.1:1313
 
 ---
 
-## Plugins
-
-Plugins are compiled into gohan and toggled via `config.yaml`. No Go code is required to use them.
-
-### amazon_books
-
-Generates Amazon book card data (cover image, product URL, title) from ASIN values in an article's front-matter. Designed for affiliate link integration.
-
-**config.yaml:**
-```yaml
-plugins:
-  amazon_books:
-    enabled: true
-    tag: "your-associate-tag-22"   # Amazon Associates tracking tag
-```
-
-**Article front-matter:**
-```yaml
-books:
-  - asin: "4873119464"
-    title: "Learning Go"   # optional; used for alt text
-```
-
-**Template usage** (in your theme's `article.html`):
-```html
-{{with index .PluginData "amazon_books"}}
-{{if .books}}
-<section class="book-cards">
-  {{range .books}}
-  <a href="{{.LinkURL}}" target="_blank" rel="noopener">
-    <img src="{{.ImageURL}}" alt="{{.Title}}">
-    <span>{{.Title}}</span>
-  </a>
-  {{end}}
-</section>
-{{end}}
-{{end}}
-```
-
-See [docs/DESIGN_DOC.md §20](docs/DESIGN_DOC.md) for the full plugin architecture.
-
----
-
 ## User Guide
 
 | Guide | Description |
