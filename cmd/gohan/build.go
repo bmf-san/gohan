@@ -217,7 +217,7 @@ func runBuild(args []string) error {
 	}
 
 	// Sitemap + feeds.
-	if err := generator.GenerateSitemap(outDir, cfg.Site.BaseURL, processed, site.VirtualPages, *cfg); err != nil {
+	if err := generator.GenerateSitemap(outDir, cfg.Site.BaseURL, processed, site.VirtualPages, generator.TaxonomyURLs(site, *cfg), *cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "warn: sitemap: %v\n", err)
 	}
 	if err := generator.GenerateFeeds(outDir, cfg.Site.BaseURL, cfg.Site.Title, processed, *cfg); err != nil {
