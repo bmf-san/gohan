@@ -284,3 +284,104 @@ func TestBookshelf_InvalidBooksField(t *testing.T) {
 		t.Error("expected error for invalid books field type, got nil")
 	}
 }
+
+func TestBookshelf_CategoryGroups(t *testing.T) {
+	b := bookshelf.New()
+	date := time.Date(2024, 5, 4, 0, 0, 0, 0, time.UTC)
+	site := &model.Site{
+		Config: model.Config{
+			Site: model.SiteConfig{Language: "en"},
+			I18n: model.I18nConfig{DefaultLocale: "en"},
+		},
+		Articles: []*model.ProcessedArticle{
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Title:      "Go Book",
+					Slug:       "go-book",
+					Date:       date,
+					Categories: []string{"Programming"},
+					Extra: map[string]interface{}{
+						"books": []interface{}{
+							map[string]interface{}{"asin": "GO1", "title": "Learning Go"},
+						},
+					},
+				}},
+				Locale: "en",
+				URL:    "/posts/go-book/",
+			},
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Title:      "Agile Book",
+					Slug:       "agile-book",
+					Date:       date,
+					Categories: []string{"Agile"},
+					Extra: map[string]interface{}{
+						"books": []interface{}{
+							map[string]interface{}{"asin": "AG1", "title": "Agile Samurai"},
+						},
+					},
+				}},
+				Locale: "en",
+				URL:    "/posts/agile-book/",
+			},
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Title: "No Category Book",
+					Slug:  "no-cat",
+					Date:  date,
+					Extra: map[string]interface{}{
+						"books": []interface{}{
+							map[string]interface{}{"asin": "NC1", "title": "Unknown Category"},
+						},
+					},
+				}},
+				Locale: "en",
+				URL:    "/posts/no-cat/",
+			},
+		},
+	}
+
+	pages, err := b.VirtualPages(site, cfg(true, ""))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(pages) != 1 {
+		t.Fatalf("expected 1 page, got %d", len(pages))
+	}
+
+	cats, ok := pages[0].Data["categories"].([]bookshelf.CategoryGroup)
+	if !ok {
+		t.Fatalf("Data[\"categories\"] type = %T, want []bookshelf.CategoryGroup", pages[0].Data["categories"])
+	}
+
+	// Expect: Agile, Programming (alphabetical), then "" (uncategorized) last.
+	if len(cats) != 3 {
+		t.Fatalf("expected 3 category groups, got %d", len(cats))
+	}
+	if cats[0].Name != "Agile" {
+		t.Errorf("cats[0].Name = %q, want Agile", cats[0].Name)
+	}
+	if cats[1].Name != "Programming" {
+		t.Errorf("cats[1].Name = %q, want Programming", cats[1].Name)
+	}
+	if cats[2].Name != "" {
+		t.Errorf("cats[2].Name = %q, want empty (uncategorized)", cats[2].Name)
+	}
+	if len(cats[0].Books) != 1 || cats[0].Books[0].ASIN != "AG1" {
+		t.Errorf("Agile group books mismatch")
+	}
+	if len(cats[1].Books) != 1 || cats[1].Books[0].ASIN != "GO1" {
+		t.Errorf("Programming group books mismatch")
+	}
+	if len(cats[2].Books) != 1 || cats[2].Books[0].ASIN != "NC1" {
+		t.Errorf("uncategorized group books mismatch")
+	}
+
+	// Categories field on BookEntry should be populated.
+	books := pages[0].Data["books"].([]bookshelf.BookEntry)
+	for _, bk := range books {
+		if bk.ASIN == "GO1" && len(bk.Categories) == 0 {
+			t.Error("BookEntry.Categories should be populated for GO1")
+		}
+	}
+}

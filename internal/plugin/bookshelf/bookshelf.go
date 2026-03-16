@@ -16,11 +16,14 @@
 //
 // # Template usage (bookshelf.html)
 //
-//	{{range index .VirtualPageData "books"}}
-//	  <a href="{{.LinkURL}}" target="_blank" rel="noopener">
-//	    <img src="{{.ImageURL}}" alt="{{.Title}}">
-//	  </a>
-//	  {{if .ArticleURL}}<a href="{{.ArticleURL}}">{{.ArticleTitle}}</a>{{end}}
+//	{{range index .VirtualPageData "categories"}}
+//	  <h2>{{if .Name}}{{.Name}}{{else}}Uncategorized{{end}}</h2>
+//	  {{range .Books}}
+//	    <a href="{{.LinkURL}}" target="_blank" rel="noopener">
+//	      <img src="{{.ImageURL}}" alt="{{.Title}}">
+//	    </a>
+//	    {{if .ArticleURL}}<a href="{{.ArticleURL}}">{{.ArticleTitle}}</a>{{end}}
+//	  {{end}}
 //	{{end}}
 package bookshelf
 
@@ -53,6 +56,14 @@ type BookEntry struct {
 	ArticleTitle string
 	ArticleURL   string
 	Date         time.Time
+	Categories   []string
+}
+
+// CategoryGroup groups BookEntries under a single category name.
+// When Name is empty the books have no category assigned.
+type CategoryGroup struct {
+	Name  string
+	Books []BookEntry
 }
 
 // Bookshelf implements SitePlugin.
@@ -83,6 +94,10 @@ func (b *Bookshelf) Enabled(cfg map[string]interface{}) bool {
 
 // VirtualPages collects all book entries from article front-matter and returns
 // one VirtualPage per locale containing the aggregated bookshelf data.
+// Each page's Data map contains:
+//
+//	"books"      []BookEntry       — all entries sorted by date descending
+//	"categories" []CategoryGroup   — entries grouped by article category, sorted alphabetically
 func (b *Bookshelf) VirtualPages(site *model.Site, cfg map[string]interface{}) ([]*model.VirtualPage, error) {
 	tag := strVal(cfg, "tag", defaultTag)
 
@@ -127,6 +142,7 @@ func (b *Bookshelf) VirtualPages(site *model.Site, cfg map[string]interface{}) (
 				ArticleTitle: article.FrontMatter.Title,
 				ArticleURL:   article.URL,
 				Date:         article.FrontMatter.Date,
+				Categories:   article.FrontMatter.Categories,
 			}
 			byLocale[locale].entries = append(byLocale[locale].entries, entry)
 		}
@@ -143,7 +159,7 @@ func (b *Bookshelf) VirtualPages(site *model.Site, cfg map[string]interface{}) (
 
 	var pages []*model.VirtualPage
 	for locale, le := range byLocale {
-		// Sort by date descending (newest first).
+		// Sort all entries by date descending (newest first).
 		sort.Slice(le.entries, func(i, j int) bool {
 			return le.entries[i].Date.After(le.entries[j].Date)
 		})
@@ -163,12 +179,52 @@ func (b *Bookshelf) VirtualPages(site *model.Site, cfg map[string]interface{}) (
 			Template:   "bookshelf.html",
 			Locale:     locale,
 			Data: map[string]interface{}{
-				"books": le.entries,
+				"books":      le.entries,
+				"categories": buildCategoryGroups(le.entries),
 			},
 		})
 	}
 
 	return pages, nil
+}
+
+// buildCategoryGroups groups entries by category and returns them sorted
+// alphabetically by category name. Entries with no categories are placed
+// in a group with an empty Name at the end.
+func buildCategoryGroups(entries []BookEntry) []CategoryGroup {
+	catMap := map[string][]BookEntry{}
+	for _, e := range entries {
+		if len(e.Categories) == 0 {
+			catMap[""] = append(catMap[""], e)
+		} else {
+			for _, cat := range e.Categories {
+				catMap[cat] = append(catMap[cat], e)
+			}
+		}
+	}
+
+	// Collect and sort names; empty (uncategorized) goes last.
+	names := make([]string, 0, len(catMap))
+	for name := range catMap {
+		names = append(names, name)
+	}
+	sort.Slice(names, func(i, j int) bool {
+		if names[i] == "" {
+			return false
+		}
+		if names[j] == "" {
+			return true
+		}
+		return names[i] < names[j]
+	})
+
+	groups := make([]CategoryGroup, 0, len(names))
+	for _, name := range names {
+		books := catMap[name]
+		// Books within each group are already date-sorted via le.entries order.
+		groups = append(groups, CategoryGroup{Name: name, Books: books})
+	}
+	return groups
 }
 
 // strVal extracts a string value from a map, returning def when missing or wrong type.
