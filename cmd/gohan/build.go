@@ -193,6 +193,11 @@ func runBuild(args []string) error {
 		return fmt.Errorf("plugin enrichment: %w", err)
 	}
 
+	// Run site-level plugins (generate virtual pages).
+	if err := plugin.DefaultRegistry().EnrichVirtual(site); err != nil {
+		return fmt.Errorf("plugin virtual pages: %w", err)
+	}
+
 	if *dryRun {
 		elapsed := time.Since(start)
 		fmt.Printf("dry-run: %d articles, %s\n", len(processed), elapsed.Round(time.Millisecond))
