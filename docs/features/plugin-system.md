@@ -161,6 +161,17 @@ plugins:
     tag: "your-associate-tag-22"   # Amazon Associates tracking tag
 ```
 
+**Article front-matter:**
+```yaml
+books:
+  - asin: "4873119464"          # Amazon ASIN — generates cover image + Amazon link
+    title: "入門 Go"
+  - url: "https://booth.pm/..."  # non-Amazon: direct sales URL (no cover image)
+    title: "My Zine"
+```
+
+When `url:` is provided instead of `asin:`, `ImageURL` is empty and `LinkURL` is the direct URL.
+
 **Generated URLs:**
 - Default locale (en): `/bookshelf/`
 - Non-default locale (ja): `/ja/bookshelf/`
@@ -170,15 +181,32 @@ plugins:
 .VirtualPageData["books"] → []BookEntry
   BookEntry.ASIN          string
   BookEntry.Title         string
-  BookEntry.ImageURL      string   # images-na.ssl-images-amazon.com CDN
-  BookEntry.LinkURL       string   # amazon.co.jp/dp/{ASIN}?tag={tag}
+  BookEntry.ImageURL      string   # images-na.ssl-images-amazon.com CDN; empty for url:-only entries
+  BookEntry.LinkURL       string   # amazon.co.jp/dp/{ASIN}?tag={tag}, or the direct url: value
   BookEntry.ArticleSlug   string   # slug of the source article (book review)
   BookEntry.ArticleTitle  string   # title of the source article
   BookEntry.ArticleURL    string   # canonical URL of the source article
+  BookEntry.Categories    []string # categories of the source article
   BookEntry.Date          time.Time
+
+.VirtualPageData["categories"] → []CategoryGroup  # entries grouped by category
+  CategoryGroup.Name      string       # category name; empty string = uncategorised
+  CategoryGroup.Books     []BookEntry
 ```
 
-Entries are sorted by date descending (newest first).
+`books` is sorted by date descending (newest first). `categories` is sorted alphabetically by category name; uncategorised entries appear last.
+
+**Template example (category grouping):**
+```html
+{{range index .VirtualPageData "categories"}}
+  <h2>{{if .Name}}{{.Name}}{{else}}Uncategorised{{end}}</h2>
+  {{range .Books}}
+    <a href="{{.LinkURL}}" target="_blank" rel="noopener">
+      {{if .ImageURL}}<img src="{{.ImageURL}}" alt="{{.Title}}">{{else}}{{.Title}}{{end}}
+    </a>
+  {{end}}
+{{end}}
+```
 
 ### Adding a New SitePlugin
 
