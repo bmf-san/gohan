@@ -158,7 +158,12 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		if base == nil {
 			base = localeTaxonomyBase(site, site.Articles)
 		}
-		d := siteFor(base, []*model.ProcessedArticle{a})
+		// When picks_slugs is present in extra, pass the picked articles (in
+		// declared order) as .Articles instead of only the current article.
+		// This allows a dedicated template (e.g. picks.html) to render a
+		// curated list of articles with full metadata, just like a listing page.
+		articleList := articlesForPicksSlugs(a, base.Articles)
+		d := siteFor(base, articleList)
 		d.CurrentLocale = a.Locale
 		d.RelatedArticles = relatedArticles(site.Articles, a, 5)
 		jobs = append(jobs, writeJob{
@@ -888,4 +893,38 @@ func articleOutputPath(a *model.ProcessedArticle, outDir string, cfg model.Confi
 		return filepath.Join(outDir, a.Locale, "posts", slug, "index.html")
 	}
 	return filepath.Join(outDir, "posts", slug, "index.html")
+}
+
+// articlesForPicksSlugs returns the article list to pass to the template for
+// article a.  When a's front-matter Extra contains a "picks_slugs" key (a YAML
+// sequence of slug strings), the returned slice contains the matching articles
+// from src in the order declared in picks_slugs.  Otherwise the returned slice
+// contains only a itself (the normal case for article and page templates).
+func articlesForPicksSlugs(a *model.ProcessedArticle, src []*model.ProcessedArticle) []*model.ProcessedArticle {
+	rawSlugs, ok := a.FrontMatter.Extra["picks_slugs"]
+	if !ok {
+		return []*model.ProcessedArticle{a}
+	}
+	slugsIface, ok := rawSlugs.([]interface{})
+	if !ok {
+		return []*model.ProcessedArticle{a}
+	}
+	bySlug := make(map[string]*model.ProcessedArticle, len(src))
+	for _, pa := range src {
+		bySlug[pa.FrontMatter.Slug] = pa
+	}
+	var result []*model.ProcessedArticle
+	for _, s := range slugsIface {
+		slug, ok := s.(string)
+		if !ok {
+			continue
+		}
+		if pa, found := bySlug[slug]; found {
+			result = append(result, pa)
+		}
+	}
+	if len(result) == 0 {
+		return []*model.ProcessedArticle{a}
+	}
+	return result
 }
