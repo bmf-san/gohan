@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -158,23 +159,15 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		if base == nil {
 			base = localeTaxonomyBase(site, site.Articles)
 		}
-		// When picks_slugs is present in extra, pass the picked articles (in
-		// declared order) as .Articles instead of only the current article.
-		// This allows a dedicated template (e.g. picks.html) to render a
-		// curated list of articles with full metadata, just like a listing page.
-		articleList := articlesForPicksSlugs(a, base.Articles)
-		d := siteFor(base, articleList)
+		d := siteFor(base, []*model.ProcessedArticle{a})
 		d.CurrentLocale = a.Locale
 		d.RelatedArticles = relatedArticles(site.Articles, a, 5)
-		// Populate VirtualPageData for picks pages so templates can generate
-		// correct page-level SEO (title, canonical URL, hreflang, JSON-LD).
-		if _, hasSlugs := a.FrontMatter.Extra["picks_slugs"]; hasSlugs {
-			d.VirtualPageData = map[string]interface{}{
-				"page_type":    "picks",
-				"page_title":   a.FrontMatter.Title,
-				"page_url":     a.URL,
-				"page_desc":    a.FrontMatter.Description,
-			}
+		// Resolve listing_slugs into Site.ListingArticles.
+		// base.Articles is already filtered to a.Locale, so the resolution is
+		// locale-aware: each locale's listing page finds only its own locale's
+		// articles, even when en/picks.md and ja/picks.md share the same slug list.
+		if len(a.FrontMatter.ListingSlugs) > 0 {
+			d.ListingArticles = resolveListingSlugs(a.FrontMatter.ListingSlugs, a.Locale, a.FilePath, base.Articles)
 		}
 		jobs = append(jobs, writeJob{
 			path: articlePath,
@@ -905,36 +898,25 @@ func articleOutputPath(a *model.ProcessedArticle, outDir string, cfg model.Confi
 	return filepath.Join(outDir, "posts", slug, "index.html")
 }
 
-// articlesForPicksSlugs returns the article list to pass to the template for
-// article a.  When a's front-matter Extra contains a "picks_slugs" key (a YAML
-// sequence of slug strings), the returned slice contains the matching articles
-// from src in the order declared in picks_slugs.  Otherwise the returned slice
-// contains only a itself (the normal case for article and page templates).
-func articlesForPicksSlugs(a *model.ProcessedArticle, src []*model.ProcessedArticle) []*model.ProcessedArticle {
-	rawSlugs, ok := a.FrontMatter.Extra["picks_slugs"]
-	if !ok {
-		return []*model.ProcessedArticle{a}
-	}
-	slugsIface, ok := rawSlugs.([]interface{})
-	if !ok {
-		return []*model.ProcessedArticle{a}
-	}
+// resolveListingSlugs looks up each slug in slugs within src and returns the
+// matched articles in declared order.  Unknown slugs are skipped with a warning
+// log message.
+//
+// src must be pre-filtered to the locale of the owning article.  This makes the
+// resolution locale-aware: if en/picks.md and ja/picks.md declare the same slug
+// list, the EN page receives EN articles and the JA page receives JA articles.
+func resolveListingSlugs(slugs []string, locale, filePath string, src []*model.ProcessedArticle) []*model.ProcessedArticle {
 	bySlug := make(map[string]*model.ProcessedArticle, len(src))
 	for _, pa := range src {
 		bySlug[pa.FrontMatter.Slug] = pa
 	}
-	var result []*model.ProcessedArticle
-	for _, s := range slugsIface {
-		slug, ok := s.(string)
-		if !ok {
-			continue
-		}
+	result := make([]*model.ProcessedArticle, 0, len(slugs))
+	for _, slug := range slugs {
 		if pa, found := bySlug[slug]; found {
 			result = append(result, pa)
+		} else {
+			log.Printf("[warn] listing_slugs: slug %q not found (locale=%q file=%s)", slug, locale, filePath)
 		}
-	}
-	if len(result) == 0 {
-		return []*model.ProcessedArticle{a}
 	}
 	return result
 }

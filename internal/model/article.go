@@ -59,6 +59,10 @@ type FrontMatter struct {
 	// Articles sharing the same key are treated as translations of each other,
 	// enabling language-switcher links via ProcessedArticle.Translations.
 	TranslationKey string `yaml:"translation_key"`
+	// ListingSlugs declares an ordered list of article slugs for curated
+	// listing pages.  When non-empty the generator resolves these slugs and
+	// exposes them via Site.ListingArticles for template rendering.
+	ListingSlugs []string `yaml:"listing_slugs"`
 	// Extra captures any front-matter keys not listed above.
 	// Plugins read their configuration from this field.
 	Extra map[string]interface{} `yaml:",inline"`
