@@ -166,6 +166,16 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 		d := siteFor(base, articleList)
 		d.CurrentLocale = a.Locale
 		d.RelatedArticles = relatedArticles(site.Articles, a, 5)
+		// Populate VirtualPageData for picks pages so templates can generate
+		// correct page-level SEO (title, canonical URL, hreflang, JSON-LD).
+		if _, hasSlugs := a.FrontMatter.Extra["picks_slugs"]; hasSlugs {
+			d.VirtualPageData = map[string]interface{}{
+				"page_type":    "picks",
+				"page_title":   a.FrontMatter.Title,
+				"page_url":     a.URL,
+				"page_desc":    a.FrontMatter.Description,
+			}
+		}
 		jobs = append(jobs, writeJob{
 			path: articlePath,
 			tmpl: tmplName,
