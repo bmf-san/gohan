@@ -670,43 +670,45 @@ type OutputFile struct {
 
 ### 12.1 差分検出メカニズム
 
-#### 検出方式の選択ロジック
+#### 実装方式
 
-1. カレントディレクトリが Git リポジトリかどうかを `git rev-parse --is-inside-work-tree` で確認
-2. Git リポジトリであれば **Git diff ベースの差分検出** を使用
-3. Git リポジトリでなければ **ファイルハッシュベースのフルビルド** にフォールバック
-
-> **Note**: 差分ビルド機能は Git リポジトリであることが前提。非 Git 環境ではフルビルドのみ動作する。
-
-#### Gitベースの差分検出（`os/exec` 利用）
-
-外部ライブラリを使用せず、`os/exec` で `git` コマンドを呼び出す。これにより外部依存を最小化しつつ、Git のすべての差分情報を活用できる。
+Gohanの差分検出は、Gitの有無にかかわらず常に **SHA-256コンテンツハッシュベース** で動作する。`os/exec`経由の`git diff`呼び出しは行わない。
 
 ```go
-type GitDiffDetector struct {
-    repoDir string
-}
-
-func (d *GitDiffDetector) DetectChanges(fromCommit, toCommit string) (*ChangeSet, error) {
-    out, err := exec.Command(
-        "git", "-C", d.repoDir,
-        "diff", "--name-status", fromCommit, toCommit,
-    ).Output()
+// GitDiffEngine は全現在SHA-256ハッシュベース。Gitへの依存はない。
+func (g *GitDiffEngine) Detect(manifest *model.BuildManifest) (*model.ChangeSet, error) {
+    current, err := hashAllFiles(g.rootDir)
     if err != nil {
         return nil, err
     }
-    return parseNameStatus(out), nil
-}
 
-func IsGitRepo(dir string) bool {
-    err := exec.Command("git", "-C", dir, "rev-parse", "--is-inside-work-tree").Run()
-    return err == nil
+    if manifest == nil {
+        // 初回ビルドやマニフェストなしの場合は全ファイルをAddedとみなす
+        cs := &model.ChangeSet{}
+        for path := range current {
+            cs.AddedFiles = append(cs.AddedFiles, path)
+        }
+        return cs, nil
+    }
+
+    cs := &model.ChangeSet{}
+    for path, hash := range current {
+        if prev, ok := manifest.FileHashes[path]; !ok {
+            cs.AddedFiles = append(cs.AddedFiles, path)
+        } else if prev != hash {
+            cs.ModifiedFiles = append(cs.ModifiedFiles, path)
+        }
+    }
+    for path := range manifest.FileHashes {
+        if _, ok := current[path]; !ok {
+            cs.DeletedFiles = append(cs.DeletedFiles, path)
+        }
+    }
+    return cs, nil
 }
 ```
 
-#### フォールバック：ファイルハッシュベースのフルビルド
-
-Git リポジトリでない場合、ビルドマニフェスト（`.gohan/cache/manifest.json`）に記録したファイルハッシュと現在のファイルハッシュを比較し、変更ファイルを特定する。ただし依存グラフが存在しないため差分ビルドは行わず、フルビルドを実行する。
+`config.yaml`自体もビルドごとにハッシュされる。変更を検知するとキャッシュをクリアしてフルビルドに切り替わる（`diff.CheckConfigChange()`）。
 
 ### 12.2 影響範囲の計算
 
@@ -750,20 +752,13 @@ func (g *DependencyGraph) CalculateImpact(changedFiles []string) []string {
 ```
 .gohan/
 └── cache/
-    ├── manifest.json     # ファイルハッシュ・依存関係・出力ファイル一覧
-    ├── ast/              # パース済みMarkdown AST（gob形式）
-    └── html/             # レンダリング済みHTML
+    └── manifest.json     # ファイルハッシュ一覧
 ```
 
 `.gohan/` はプロジェクトルートに自動生成する。初回 `gohan build` 実行時に `.gohan/` を作成する際、`.gitignore` への追加を推奨する旨をメッセージとして表示する。
 
-#### ビルドキャッシュ
-- **パース済みMarkdown**: パース済みASTを gob 形式で `.gohan/cache/ast/` に保存
-- **レンダリング済みHTML**: テンプレート適用後のHTMLを `.gohan/cache/html/` に保存
-
 #### キャッシュ無効化
 - **ファイル変更**: ファイルの SHA-256 ハッシュが変わった場合に該当キャッシュを無効化
-- **依存関係の変更**: 影響範囲のキャッシュを一括無効化
 - **設定変更**: `config.yaml` のハッシュが変わった場合はキャッシュ全クリア
 
 ---

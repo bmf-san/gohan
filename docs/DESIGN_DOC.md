@@ -670,43 +670,45 @@ type OutputFile struct {
 
 ### 12.1 Diff Detection Mechanism
 
-#### Detection Method Selection Logic
+#### Implementation
 
-1. Check whether the current directory is a Git repository using `git rev-parse --is-inside-work-tree`
-2. If it is a Git repository, use **Git diff-based diff detection**
-3. If it is not a Git repository, fall back to **file hash-based full build**
-
-> **Note**: The differential build feature requires a Git repository. In non-Git environments, only full builds are supported.
-
-#### Git-based Diff Detection (using `os/exec`)
-
-Calls the `git` command via `os/exec` without using external libraries. This minimizes external dependencies while leveraging all of Git's diff information.
+Gohan's diff detection always uses **SHA-256 content hashing**, regardless of whether the directory is a Git repository. There is no `os/exec`-based `git diff` call.
 
 ```go
-type GitDiffDetector struct {
-    repoDir string
-}
-
-func (d *GitDiffDetector) DetectChanges(fromCommit, toCommit string) (*ChangeSet, error) {
-    out, err := exec.Command(
-        "git", "-C", d.repoDir,
-        "diff", "--name-status", fromCommit, toCommit,
-    ).Output()
+// GitDiffEngine is entirely SHA-256 hash-based; it has no Git dependency.
+func (g *GitDiffEngine) Detect(manifest *model.BuildManifest) (*model.ChangeSet, error) {
+    current, err := hashAllFiles(g.rootDir)
     if err != nil {
         return nil, err
     }
-    return parseNameStatus(out), nil
-}
 
-func IsGitRepo(dir string) bool {
-    err := exec.Command("git", "-C", dir, "rev-parse", "--is-inside-work-tree").Run()
-    return err == nil
+    if manifest == nil {
+        // First build or no manifest: treat every file as Added.
+        cs := &model.ChangeSet{}
+        for path := range current {
+            cs.AddedFiles = append(cs.AddedFiles, path)
+        }
+        return cs, nil
+    }
+
+    cs := &model.ChangeSet{}
+    for path, hash := range current {
+        if prev, ok := manifest.FileHashes[path]; !ok {
+            cs.AddedFiles = append(cs.AddedFiles, path)
+        } else if prev != hash {
+            cs.ModifiedFiles = append(cs.ModifiedFiles, path)
+        }
+    }
+    for path := range manifest.FileHashes {
+        if _, ok := current[path]; !ok {
+            cs.DeletedFiles = append(cs.DeletedFiles, path)
+        }
+    }
+    return cs, nil
 }
 ```
 
-#### Fallback: File Hash-based Full Build
-
-When not in a Git repository, changed files are identified by comparing file hashes recorded in the build manifest (`.gohan/cache/manifest.json`) with the current file hashes. However, since no dependency graph exists, a full build is performed instead of a differential build.
+`config.yaml` is itself hashed on every build. When a change is detected, the cache is cleared automatically and a full rebuild runs (`diff.CheckConfigChange()`).
 
 ### 12.2 Impact Scope Calculation
 
@@ -750,20 +752,13 @@ func (g *DependencyGraph) CalculateImpact(changedFiles []string) []string {
 ```
 .gohan/
 └── cache/
-    ├── manifest.json     # File hashes, dependencies, and output file list
-    ├── ast/              # Parsed Markdown AST (gob format)
-    └── html/             # Rendered HTML
+    └── manifest.json     # file hash registry
 ```
 
 `.gohan/` is automatically generated in the project root. When `.gohan/` is created on the first `gohan build` run, a message is displayed recommending that it be added to `.gitignore`.
 
-#### Build Cache
-- **Parsed Markdown**: Parsed AST saved in gob format to `.gohan/cache/ast/`
-- **Rendered HTML**: Template-applied HTML saved to `.gohan/cache/html/`
-
 #### Cache Invalidation
 - **File changes**: Invalidate the corresponding cache when a file's SHA-256 hash changes
-- **Dependency changes**: Bulk-invalidate caches within the impact scope
 - **Configuration changes**: Clear all caches when the hash of `config.yaml` changes
 
 ---
