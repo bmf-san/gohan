@@ -118,9 +118,9 @@ UC-1 と同じだが、ステップ2-3をスキップし、すべての記事を
 **トリガー**: `gohan new "記事タイトル"` を実行
 
 **メインフロー**:
-1. gohan が `config.yaml` を読み込み、コンテンツディレクトリを取得する。
-2. gohan がタイトルからスラッグを生成する（小文字化、スペース -> ハイフン）。
-3. gohan が `content/posts/<slug>.md` をFront Mattterテンプレート（title・date・`draft: true`）付きで作成する。
+1. gohan がスラッグを引数から受け取る（`--title` でタイトルも指定可能）。
+2. `--type=page` を指定した場合は `content/pages/`、それ以外は `content/posts/` を出力先とする（`config.yaml` は参照しない）。
+3. gohan が `content/posts/<slug>.md`（またはpages）をFront Matterテンプレート（title・date・`draft: true`）付きで作成する。
 4. gohan が作成したファイルのパスを表示する。
 
 **事後条件**: 新しいMarkdownファイルが編集可能な状態になる。`draft: true` のためビルドに含まれない。
@@ -393,29 +393,37 @@ graph TB
 #### パーサー層
 ```go
 type Parser interface {
-    ParseMarkdown(content []byte) (*Article, error)
-    ParseFrontMatter(data []byte) (*FrontMatter, error)
-    ValidateContent(*Article) error
+    // Parse は filePath のファイルを読み込んで Article を返す。
+    Parse(filePath string) (*Article, error)
+
+    // ParseAll は contentDir を再帰的に走査し、Markdownファイルごとに Article を返す。
+    ParseAll(contentDir string) ([]*Article, error)
 }
 ```
 
 #### 処理層
 ```go
 type Processor interface {
-    BuildDependencyGraph(articles []*Article) *DependencyGraph
-    CalculateDiff(oldGraph, newGraph *DependencyGraph) *ChangeSet
-    ProcessArticles(articles []*Article) ([]*ProcessedArticle, error)
+    // Process は Article スライスを ProcessedArticle に変換する。
+    Process(articles []*Article, cfg Config) ([]*ProcessedArticle, error)
+
+    // BuildDependencyGraph は ProcessedArticle の全セットから依存関係グラフを構築する。
+    BuildDependencyGraph(articles []*ProcessedArticle) (*DependencyGraph, error)
+
+    // BuildTaxonomyRegistry は全記事のタグ・カテゴリーを収集しレジストリを構築する。
+    BuildTaxonomyRegistry(articles []*ProcessedArticle, cfg Config) (*TaxonomyRegistry, error)
+
+    // BuildTranslationMap は TranslationKey で結び付けられた記事間の翻訳リンクを構築する。
+    BuildTranslationMap(articles []*ProcessedArticle)
 }
 ```
 
 #### テンプレートエンジン
 ```go
 type TemplateEngine interface {
-    // LoadTemplates はテーマディレクトリ配下の全テンプレートを読み込む
-    LoadTemplates(themePath string) error
-    RegisterFunctions(funcMap template.FuncMap) error
+    // Load は templateDir 配下の全テンプレートを読み込む。
+    Load(templateDir string, funcMap template.FuncMap, defaultLocale string) error
     Render(templateName string, data interface{}) ([]byte, error)
-    GetAvailableTemplates() []string
 }
 ```
 
@@ -428,6 +436,7 @@ const (
     NodeTypeTag
     NodeTypeCategory
     NodeTypeArchive
+    NodeTypePage
 )
 
 // ChangeSet は差分検出結果。変更・追加・削除ファイルのパス一覧を保持する。
@@ -438,28 +447,21 @@ type ChangeSet struct {
 }
 
 type DiffEngine interface {
-    // fromCommit/toCommitに空文字列を指定した場合は直前ビルドとの差分を返す
-    DetectChanges(fromCommit, toCommit string) (*ChangeSet, error)
-    IsGitRepo() bool
+    Detect(manifest *BuildManifest) (*ChangeSet, error)
+    Hash(filePath string) (string, error)
 }
 ```
 
 #### 出力ジェネレーター
 ```go
-// Site はテンプレートに渡すサイト全体情報。Configと記事一覧を保持する。
-type Site struct {
-    Config   Config
-    Articles []*ProcessedArticle
-    Tags     []Taxonomy
-    Categories []Taxonomy
-}
-
 type OutputGenerator interface {
-    Write(articles []*ProcessedArticle, site *Site) error
-    CopyDir(srcDir, dstDir string) error
-    GenerateSitemap(pages []string) error
-    GenerateFeeds(articles []*ProcessedArticle) error
+    // Generate は全HTMLページの書き出し、静的アセットのコピー、OGP画像生成を行う。
+    // changeSet が nil の場合は全ページを書き出す。
+    Generate(site *Site, changeSet *ChangeSet) error
 }
+// サイトマップ・フィード生成はパッケージレベル関数として実装される。
+// GenerateSitemap(outDir, baseURL string, articles []*ProcessedArticle, ...) error
+// GenerateFeeds(outDir, baseURL, title string, articles []*ProcessedArticle, ...) error
 ```
 
 ---
@@ -545,12 +547,9 @@ sequenceDiagram
 sequenceDiagram
     participant User as ユーザー
     participant CLI as gohan CLI
-    participant Config as Config Loader
     participant FS as ファイルシステム
 
     User->>CLI: gohan new "記事タイトル"
-    CLI->>Config: config.yaml を読み込む
-    Config-->>CLI: cfg（contentDir）
     CLI->>CLI: スラッグ生成（"article-title"）
     CLI->>FS: content/posts/article-title.md を作成
     FS-->>CLI: ok
@@ -565,29 +564,39 @@ sequenceDiagram
 ```go
 // Article: パーサーが生成する入力データ
 type Article struct {
-    FrontMatter  FrontMatter `yaml:"frontmatter"`
-    RawContent   string      `yaml:"raw_content"`
-    FilePath     string      `yaml:"file_path"`
-    LastModified time.Time   `yaml:"last_modified"`
+    FrontMatter  FrontMatter
+    RawContent   string
+    FilePath     string
+    LastModified time.Time
 }
 
 // ProcessedArticle: ビルド時にレンダラーが生成する派生データ
 type ProcessedArticle struct {
     Article
-    HTMLContent template.HTML
-    Summary     string
-    OutputPath  string
+    HTMLContent  template.HTML
+    Summary      string
+    OutputPath   string
+    ContentPath  string              // ソースパス（GitHubリンク生成用）
+    Locale       string              // i18nロケールコード
+    URL          string              // 正規URLパス
+    Translations []LocaleRef         // 翻訳リンク
+    PluginData   map[string]interface{} // プラグインデータ
 }
 
 type FrontMatter struct {
-    Title       string    `yaml:"title"`
-    Date        time.Time `yaml:"date"`
-    Draft       bool      `yaml:"draft"`
-    Tags        []string  `yaml:"tags"`
-    Categories  []string  `yaml:"categories"`
-    Description string    `yaml:"description"`
-    Author      string    `yaml:"author"`
-    Slug        string    `yaml:"slug"`
+    Title          string    `yaml:"title"`
+    Date           time.Time `yaml:"date"`
+    LastMod        time.Time `yaml:"lastmod"`
+    Draft          bool      `yaml:"draft"`
+    Tags           []string  `yaml:"tags"`
+    Categories     []string  `yaml:"categories"`
+    Description    string    `yaml:"description"`
+    Author         string    `yaml:"author"`
+    Slug           string    `yaml:"slug"`
+    Template       string    `yaml:"template"`
+    TranslationKey string    `yaml:"translation_key"`
+    ListingSlugs   []string  `yaml:"listing_slugs"`
+    Extra          map[string]interface{} `yaml:",inline"` // プラグイン設定用
 }
 ```
 
@@ -613,31 +622,50 @@ type TaxonomyRegistry struct {
 
 ```go
 type Config struct {
-    Site    SiteConfig             `yaml:"site"`
-    Build   BuildConfig            `yaml:"build"`
-    Theme   ThemeConfig            `yaml:"theme"`
-    Plugins map[string]interface{} `yaml:"plugins"`
+    Site            SiteConfig             `yaml:"site"`
+    Build           BuildConfig            `yaml:"build"`
+    Theme           ThemeConfig            `yaml:"theme"`
+    SyntaxHighlight SyntaxHighlightConfig  `yaml:"syntax_highlight"`
+    OGP             OGPConfig              `yaml:"ogp"`
+    Plugins         map[string]interface{} `yaml:"plugins"`
+    I18n            I18nConfig             `yaml:"i18n"`
 }
 
 type SiteConfig struct {
-    Title       string `yaml:"title"`
-    Description string `yaml:"description"`
-    BaseURL     string `yaml:"base_url"`
-    Language    string `yaml:"language"`
+    Title        string `yaml:"title"`
+    Description  string `yaml:"description"`
+    BaseURL      string `yaml:"base_url"`
+    Language     string `yaml:"language"`
+    GitHubRepo   string `yaml:"github_repo"`
+    GitHubBranch string `yaml:"github_branch"`
 }
 
 type BuildConfig struct {
     ContentDir   string   `yaml:"content_dir"`
     OutputDir    string   `yaml:"output_dir"`
     AssetsDir    string   `yaml:"assets_dir"`
+    StaticDir    string   `yaml:"static_dir"`
     ExcludeFiles []string `yaml:"exclude_files"`
     Parallelism  int      `yaml:"parallelism"`
+    PerPage      int      `yaml:"per_page"`
 }
 
 type ThemeConfig struct {
     Name   string            `yaml:"name"`
     Dir    string            `yaml:"dir"`
     Params map[string]string `yaml:"params"`
+}
+
+type SyntaxHighlightConfig struct {
+    Theme       string `yaml:"theme"`
+    LineNumbers bool   `yaml:"line_numbers"`
+}
+
+type OGPConfig struct {
+    Enabled  bool   `yaml:"enabled"`
+    LogoFile string `yaml:"logo_file"`
+    Width    int    `yaml:"width"`
+    Height   int    `yaml:"height"`
 }
 ```
 
