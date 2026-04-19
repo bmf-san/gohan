@@ -111,7 +111,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 	// Tags and categories live in disjoint namespaces so are tracked separately.
 	// A taxonomy is registered only for locales that actually have articles using
 	// its Name; translation_key entries without article coverage in a locale do
-	// not appear (matches page-generation behaviour).
+	// not appear (matches page-generation behavior).
 	tagTranslations := buildTaxonomyTranslations(site, g.cfg, site.Tags, "tags", func(a *model.ProcessedArticle) []string { return a.FrontMatter.Tags })
 	categoryTranslations := buildTaxonomyTranslations(site, g.cfg, site.Categories, "categories", func(a *model.ProcessedArticle) []string { return a.FrontMatter.Categories })
 
