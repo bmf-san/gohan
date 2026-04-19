@@ -606,8 +606,16 @@ type FrontMatter struct {
 
 ```go
 type Taxonomy struct {
-    Name        string `yaml:"name"`
-    Description string `yaml:"description"`
+    Name           string `yaml:"name"`
+    Description    string `yaml:"description"`
+    // TranslationKey links taxonomies that represent the same concept across
+    // locales (e.g. EN "Application" and JA "アプリケーション").
+    TranslationKey string `yaml:"translation_key"`
+    URL            string `yaml:"-"` // set at render time
+    // Translations maps locale → URL for every other locale's taxonomy that
+    // shares the same TranslationKey. Populated at render time on
+    // CurrentTaxonomy only.
+    Translations   map[string]string `yaml:"-"`
 }
 
 type TaxonomyRegistry struct {
