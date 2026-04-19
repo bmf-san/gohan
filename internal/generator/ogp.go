@@ -127,7 +127,7 @@ func (g *OGPGenerator) renderImage(outPath, slug string, w, h int, logo image.Im
 	return writeFileAtomic(outPath, buf.Bytes(), 0o644)
 }
 
-// drawGradientBackground fills img with a diagonal two-colour gradient whose
+// drawGradientBackground fills img with a diagonal two-color gradient whose
 // hues are derived deterministically from the article slug hash.
 func drawGradientBackground(img *image.RGBA, seed uint64, w, h int) {
 	h1 := float64(seed % 360)

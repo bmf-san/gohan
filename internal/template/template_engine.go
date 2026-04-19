@@ -144,7 +144,7 @@ func builtinFuncs(defaultLocale string) template.FuncMap {
 
 // toSlug converts a display name to a URL-friendly slug by lowercasing ASCII
 // letters and replacing spaces with hyphens. Non-ASCII characters (e.g.
-// Japanese, accented Latin) are kept intact, matching the behaviour of
+// Japanese, accented Latin) are kept intact, matching the behavior of
 // tagNorm in the generator so template links are consistent with page paths.
 // Returns "untitled" when the input produces an empty result.
 func toSlug(s string) string {

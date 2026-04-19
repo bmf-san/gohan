@@ -133,7 +133,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 
 	// Pre-compute per-locale taxonomy bases so that article pages receive
 	// locale-filtered Tags, Categories, and ArchiveYears — matching the
-	// behaviour of listing pages (tag, category, archive, index).
+	// behavior of listing pages (tag, category, archive, index).
 	articleLocaleBases := map[string]*model.Site{}
 	if len(g.cfg.I18n.Locales) > 0 {
 		for _, loc := range g.cfg.I18n.Locales {
@@ -800,7 +800,7 @@ func localeTaxonomyBase(base *model.Site, articles []*model.ProcessedArticle) *m
 		cats[i].Description = catDesc[cats[i].Name]
 	}
 	// No fallback to base.Tags / base.Categories tags themselves: an empty slice
-	// is the correct value when the locale has no tagged/categorised articles.
+	// is the correct value when the locale has no tagged/categorized articles.
 	// Falling back to all-locale data would expose cross-locale entries in the sidebar.
 	return &model.Site{
 		Config:       base.Config,
