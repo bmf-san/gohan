@@ -371,7 +371,7 @@ func TestBuildTaxonomyTranslations(t *testing.T) {
 	}
 	tags := []model.Taxonomy{
 		{Name: "Go", TranslationKey: "go"},
-		{Name: "EN-only", TranslationKey: ""}, // no key
+		{Name: "EN-only", TranslationKey: ""}, // no key, EN-only → no pair emitted
 	}
 	cats := []model.Taxonomy{
 		{Name: "Application", TranslationKey: "app"},
@@ -385,8 +385,12 @@ func TestBuildTaxonomyTranslations(t *testing.T) {
 	if got := tagTrans["go"]["ja"]; got != "/ja/tags/go/" {
 		t.Errorf("tag go ja URL = %q, want /ja/tags/go/", got)
 	}
-	if _, ok := tagTrans[""]; ok {
-		t.Error("empty translation_key must not appear in map")
+	// EN-only taxonomy with implicit Name-as-key: single-locale entry registered.
+	if got := tagTrans["EN-only"]["en"]; got != "/tags/en-only/" {
+		t.Errorf("implicit-key EN-only en URL = %q", got)
+	}
+	if _, ok := tagTrans["EN-only"]["ja"]; ok {
+		t.Error("EN-only must not have ja entry (no article coverage in ja)")
 	}
 
 	catTrans := buildTaxonomyTranslations(site, cfg, cats, "categories", func(a *model.ProcessedArticle) []string { return a.FrontMatter.Categories })
@@ -420,6 +424,18 @@ func TestTaxonomyTranslationsFor(t *testing.T) {
 	only := map[string]map[string]string{"x": {"en": "/x/"}}
 	if got := taxonomyTranslationsFor(only, "x", "en"); got != nil {
 		t.Errorf("only-current-locale should return nil, got %v", got)
+	}
+}
+
+func TestTaxonomyTranslationKey(t *testing.T) {
+	if got := taxonomyTranslationKey(model.Taxonomy{Name: "Go", TranslationKey: "go"}); got != "go" {
+		t.Errorf("explicit key = %q, want go", got)
+	}
+	if got := taxonomyTranslationKey(model.Taxonomy{Name: "Golang"}); got != "Golang" {
+		t.Errorf("implicit name fallback = %q, want Golang", got)
+	}
+	if got := taxonomyTranslationKey(model.Taxonomy{}); got != "" {
+		t.Errorf("empty taxonomy = %q, want \"\"", got)
 	}
 }
 
