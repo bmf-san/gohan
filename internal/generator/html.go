@@ -214,7 +214,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 					basePath = filepath.Join(locale, "tags", tagNorm(t.Name))
 					baseURLPath = "/" + locale + "/tags/" + tagNorm(t.Name)
 				}
-				t.Translations = taxonomyTranslationsFor(tagTranslations, t.TranslationKey, locale)
+				t.Translations = taxonomyTranslationsFor(tagTranslations, taxonomyTranslationKey(t), locale)
 				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, locale, &t)...)
 			}
 		}
@@ -235,7 +235,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			sortByDateDesc(filtered)
 			basePath := filepath.Join("tags", tagNorm(t.Name))
 			baseURLPath := "/tags/" + tagNorm(t.Name)
-			t.Translations = taxonomyTranslationsFor(tagTranslations, t.TranslationKey, "")
+			t.Translations = taxonomyTranslationsFor(tagTranslations, taxonomyTranslationKey(t), "")
 			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, "", &t)...)
 		}
 	}
@@ -269,7 +269,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 					basePath = filepath.Join(locale, "categories", tagNorm(c.Name))
 					baseURLPath = "/" + locale + "/categories/" + tagNorm(c.Name)
 				}
-				c.Translations = taxonomyTranslationsFor(categoryTranslations, c.TranslationKey, locale)
+				c.Translations = taxonomyTranslationsFor(categoryTranslations, taxonomyTranslationKey(c), locale)
 				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, locale, &c)...)
 			}
 		}
@@ -290,7 +290,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			sortByDateDesc(filtered)
 			basePath := filepath.Join("categories", tagNorm(c.Name))
 			baseURLPath := "/categories/" + tagNorm(c.Name)
-			c.Translations = taxonomyTranslationsFor(categoryTranslations, c.TranslationKey, "")
+			c.Translations = taxonomyTranslationsFor(categoryTranslations, taxonomyTranslationKey(c), "")
 			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, "", &c)...)
 		}
 	}
@@ -770,6 +770,13 @@ func tagNorm(s string) string {
 // that locale references the taxonomy by Name; taxonomies with article
 // coverage in no locale are omitted entirely. This mirrors the page-emission
 // logic so no broken URLs are ever produced.
+//
+// When a taxonomy has no explicit TranslationKey, its Name is used as an
+// implicit key. This auto-links taxonomies that share a Name across locales
+// (common for ASCII tag names like "Golang") without requiring per-entry
+// YAML edits. Taxonomies with different Names across locales (e.g. EN
+// "Application" ↔ JA "アプリケーション") still require an explicit
+// translation_key on both entries.
 func buildTaxonomyTranslations(
 	site *model.Site,
 	cfg model.Config,
@@ -782,7 +789,8 @@ func buildTaxonomyTranslations(
 	}
 	out := map[string]map[string]string{}
 	for _, tax := range taxonomies {
-		if tax.TranslationKey == "" {
+		key := taxonomyTranslationKey(tax)
+		if key == "" {
 			continue
 		}
 		for _, locale := range cfg.I18n.Locales {
@@ -810,13 +818,22 @@ func buildTaxonomyTranslations(
 			} else {
 				url = "/" + locale + "/" + urlSegment + "/" + tagNorm(tax.Name) + "/"
 			}
-			if out[tax.TranslationKey] == nil {
-				out[tax.TranslationKey] = map[string]string{}
+			if out[key] == nil {
+				out[key] = map[string]string{}
 			}
-			out[tax.TranslationKey][locale] = url
+			out[key][locale] = url
 		}
 	}
 	return out
+}
+
+// taxonomyTranslationKey returns the effective translation key for a
+// taxonomy: its explicit TranslationKey if set, otherwise its Name.
+func taxonomyTranslationKey(tax model.Taxonomy) string {
+	if tax.TranslationKey != "" {
+		return tax.TranslationKey
+	}
+	return tax.Name
 }
 
 // taxonomyTranslationsFor returns the map of locale → URL for other locales
