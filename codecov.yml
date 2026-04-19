@@ -1,3 +1,4 @@
+# Keep `target` values in sync with Makefile COVERAGE_THRESHOLD.
 coverage:
   status:
     project:
