@@ -357,6 +357,72 @@ func TestPaginatedJobs_TaxonomyURL(t *testing.T) {
 	}
 }
 
+func TestBuildTaxonomyTranslations(t *testing.T) {
+	cfg := model.Config{
+		I18n: model.I18nConfig{Locales: []string{"en", "ja"}, DefaultLocale: "en"},
+	}
+	site := &model.Site{
+		Config: cfg,
+		Articles: []*model.ProcessedArticle{
+			{Locale: "en", Article: model.Article{FrontMatter: model.FrontMatter{Tags: []string{"Go"}, Categories: []string{"Application"}}}},
+			{Locale: "ja", Article: model.Article{FrontMatter: model.FrontMatter{Tags: []string{"Go"}, Categories: []string{"アプリケーション"}}}},
+			{Locale: "en", Article: model.Article{FrontMatter: model.FrontMatter{Tags: []string{"EN-only"}}}},
+		},
+	}
+	tags := []model.Taxonomy{
+		{Name: "Go", TranslationKey: "go"},
+		{Name: "EN-only", TranslationKey: ""}, // no key
+	}
+	cats := []model.Taxonomy{
+		{Name: "Application", TranslationKey: "app"},
+		{Name: "アプリケーション", TranslationKey: "app"},
+	}
+
+	tagTrans := buildTaxonomyTranslations(site, cfg, tags, "tags", func(a *model.ProcessedArticle) []string { return a.FrontMatter.Tags })
+	if got := tagTrans["go"]["en"]; got != "/tags/go/" {
+		t.Errorf("tag go en URL = %q, want /tags/go/", got)
+	}
+	if got := tagTrans["go"]["ja"]; got != "/ja/tags/go/" {
+		t.Errorf("tag go ja URL = %q, want /ja/tags/go/", got)
+	}
+	if _, ok := tagTrans[""]; ok {
+		t.Error("empty translation_key must not appear in map")
+	}
+
+	catTrans := buildTaxonomyTranslations(site, cfg, cats, "categories", func(a *model.ProcessedArticle) []string { return a.FrontMatter.Categories })
+	if got := catTrans["app"]["en"]; got != "/categories/application/" {
+		t.Errorf("cat app en URL = %q", got)
+	}
+	if got := catTrans["app"]["ja"]; got != "/ja/categories/アプリケーション/" {
+		t.Errorf("cat app ja URL = %q", got)
+	}
+}
+
+func TestTaxonomyTranslationsFor(t *testing.T) {
+	all := map[string]map[string]string{
+		"go":  {"en": "/tags/go/", "ja": "/ja/tags/go/"},
+		"app": {"en": "/categories/application/", "ja": "/ja/categories/アプリケーション/"},
+	}
+	// excludes current locale
+	got := taxonomyTranslationsFor(all, "go", "en")
+	if len(got) != 1 || got["ja"] != "/ja/tags/go/" {
+		t.Errorf("taxonomyTranslationsFor(go, en) = %v", got)
+	}
+	// empty key
+	if got := taxonomyTranslationsFor(all, "", "en"); got != nil {
+		t.Errorf("empty key should return nil, got %v", got)
+	}
+	// unknown key
+	if got := taxonomyTranslationsFor(all, "unknown", "en"); got != nil {
+		t.Errorf("unknown key should return nil, got %v", got)
+	}
+	// only current-locale entry → nil
+	only := map[string]map[string]string{"x": {"en": "/x/"}}
+	if got := taxonomyTranslationsFor(only, "x", "en"); got != nil {
+		t.Errorf("only-current-locale should return nil, got %v", got)
+	}
+}
+
 func TestGenerate_ArchiveCurrentArchivePath(t *testing.T) {
 	outDir := t.TempDir()
 	cfg := model.Config{

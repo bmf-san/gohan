@@ -106,6 +106,15 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 	var jobs []writeJob
 	perPage := g.cfg.Build.PerPage
 
+	// Build cross-locale taxonomy translation URL maps keyed by TranslationKey.
+	// translations[translationKey][locale] = locale-aware URL with trailing slash.
+	// Tags and categories live in disjoint namespaces so are tracked separately.
+	// A taxonomy is registered only for locales that actually have articles using
+	// its Name; translation_key entries without article coverage in a locale do
+	// not appear (matches page-generation behaviour).
+	tagTranslations := buildTaxonomyTranslations(site, g.cfg, site.Tags, "tags", func(a *model.ProcessedArticle) []string { return a.FrontMatter.Tags })
+	categoryTranslations := buildTaxonomyTranslations(site, g.cfg, site.Categories, "categories", func(a *model.ProcessedArticle) []string { return a.FrontMatter.Categories })
+
 	// Index pages (paginated) — one set per locale when i18n is active.
 	if len(g.cfg.I18n.Locales) > 0 {
 		for _, loc := range g.cfg.I18n.Locales {
@@ -205,6 +214,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 					basePath = filepath.Join(locale, "tags", tagNorm(t.Name))
 					baseURLPath = "/" + locale + "/tags/" + tagNorm(t.Name)
 				}
+				t.Translations = taxonomyTranslationsFor(tagTranslations, t.TranslationKey, locale)
 				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, locale, &t)...)
 			}
 		}
@@ -225,6 +235,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			sortByDateDesc(filtered)
 			basePath := filepath.Join("tags", tagNorm(t.Name))
 			baseURLPath := "/tags/" + tagNorm(t.Name)
+			t.Translations = taxonomyTranslationsFor(tagTranslations, t.TranslationKey, "")
 			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "tag.html", basePath, baseURLPath, perPage, "", &t)...)
 		}
 	}
@@ -258,6 +269,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 					basePath = filepath.Join(locale, "categories", tagNorm(c.Name))
 					baseURLPath = "/" + locale + "/categories/" + tagNorm(c.Name)
 				}
+				c.Translations = taxonomyTranslationsFor(categoryTranslations, c.TranslationKey, locale)
 				jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, locale, &c)...)
 			}
 		}
@@ -278,6 +290,7 @@ func (g *HTMLGenerator) buildJobs(site *model.Site) []writeJob {
 			sortByDateDesc(filtered)
 			basePath := filepath.Join("categories", tagNorm(c.Name))
 			baseURLPath := "/categories/" + tagNorm(c.Name)
+			c.Translations = taxonomyTranslationsFor(categoryTranslations, c.TranslationKey, "")
 			jobs = append(jobs, paginatedJobs(site, filtered, g.outDir, "category.html", basePath, baseURLPath, perPage, "", &c)...)
 		}
 	}
@@ -745,6 +758,89 @@ func tagNorm(s string) string {
 		}
 	}
 	return b.String()
+}
+
+// buildTaxonomyTranslations groups taxonomies by TranslationKey and returns
+// a map translationKey → locale → URL so templates can jump between matching
+// taxonomies across locales. urlSegment is the URL path segment after the
+// locale prefix (e.g. "tags" or "categories"). articleTaxonomies extracts
+// the relevant slice (tags or categories) from an article's frontmatter.
+//
+// A (taxonomy, locale) pair is included only when at least one article in
+// that locale references the taxonomy by Name; taxonomies with article
+// coverage in no locale are omitted entirely. This mirrors the page-emission
+// logic so no broken URLs are ever produced.
+func buildTaxonomyTranslations(
+	site *model.Site,
+	cfg model.Config,
+	taxonomies []model.Taxonomy,
+	urlSegment string,
+	articleTaxonomies func(*model.ProcessedArticle) []string,
+) map[string]map[string]string {
+	if len(cfg.I18n.Locales) == 0 {
+		return nil
+	}
+	out := map[string]map[string]string{}
+	for _, tax := range taxonomies {
+		if tax.TranslationKey == "" {
+			continue
+		}
+		for _, locale := range cfg.I18n.Locales {
+			hasArticle := false
+			for _, a := range site.Articles {
+				if a.Locale != locale {
+					continue
+				}
+				for _, t := range articleTaxonomies(a) {
+					if t == tax.Name {
+						hasArticle = true
+						break
+					}
+				}
+				if hasArticle {
+					break
+				}
+			}
+			if !hasArticle {
+				continue
+			}
+			var url string
+			if locale == cfg.I18n.DefaultLocale {
+				url = "/" + urlSegment + "/" + tagNorm(tax.Name) + "/"
+			} else {
+				url = "/" + locale + "/" + urlSegment + "/" + tagNorm(tax.Name) + "/"
+			}
+			if out[tax.TranslationKey] == nil {
+				out[tax.TranslationKey] = map[string]string{}
+			}
+			out[tax.TranslationKey][locale] = url
+		}
+	}
+	return out
+}
+
+// taxonomyTranslationsFor returns the map of locale → URL for other locales
+// (excluding currentLocale) matching the given translation key. Returns nil
+// when the key is empty, unknown, or has no non-current-locale entries.
+func taxonomyTranslationsFor(all map[string]map[string]string, key, currentLocale string) map[string]string {
+	if key == "" || len(all) == 0 {
+		return nil
+	}
+	src, ok := all[key]
+	if !ok {
+		return nil
+	}
+	out := make(map[string]string, len(src))
+	for loc, url := range src {
+		if loc == currentLocale {
+			continue
+		}
+		out[loc] = url
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // siteFor creates a site copy with a custom article list.
