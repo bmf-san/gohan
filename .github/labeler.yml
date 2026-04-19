@@ -1,0 +1,56 @@
+# Configuration for actions/labeler
+# Automatically applies labels to pull requests based on changed file paths.
+# Note: `dependencies` is intentionally omitted here because Dependabot attaches it directly.
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - docs/**
+          - "**/*.md"
+          - README*
+          - LICENSE
+
+github_actions:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+
+test:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*_test.go"
+          - internal/**/testdata/**
+
+config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/config/**
+          - codecov.yml
+          - Makefile
+
+cli:
+  - changed-files:
+      - any-glob-to-any-file:
+          - cmd/**
+
+parser:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/parser/**
+          - internal/processor/**
+
+generator:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/generator/**
+          - internal/template/**
+
+server:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/server/**
+
+plugin:
+  - changed-files:
+      - any-glob-to-any-file:
+          - internal/plugin/**
