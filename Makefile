@@ -15,7 +15,11 @@ BIN      = gohan
 CMD      = ./cmd/gohan
 COVERAGE = coverage.out
 
-.PHONY: all build test lint serve clean install coverage tidy vuln tools help
+# ─── Coverage threshold ──────────────────────────────────────────────────────
+# Keep COVERAGE_THRESHOLD in sync with codecov.yml (coverage.status.project.default.target).
+COVERAGE_THRESHOLD ?= 80
+
+.PHONY: all build test lint serve clean install coverage coverage-check tidy vuln tools help
 
 ## all: build the binary (default target)
 all: build
@@ -35,6 +39,12 @@ test:
 ## coverage: print coverage summary (run 'make test' first)
 coverage:
 	@go tool cover -func=$(COVERAGE) | grep total
+
+## coverage-check: fail if total coverage is below COVERAGE_THRESHOLD (default 80)
+coverage-check:
+	@COV=$$(go tool cover -func=$(COVERAGE) | grep total | awk '{print $$3}' | tr -d '%'); \
+	echo "Total coverage: $${COV}%"; \
+	awk -v cov="$${COV}" -v th="$(COVERAGE_THRESHOLD)" 'BEGIN { if (cov+0 < th+0) { printf "Coverage %s%% is below the required %s%%\n", cov, th; exit 1 } }'
 
 ## tools: install development tools (golangci-lint, govulncheck)
 tools:

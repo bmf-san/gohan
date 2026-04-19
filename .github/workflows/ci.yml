@@ -36,13 +36,7 @@ jobs:
 
       - name: Check coverage threshold
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
-          echo "Total coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "Coverage ${COVERAGE}% is below the required 80%"
-            exit 1
-          fi
+        run: make coverage-check
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest'
