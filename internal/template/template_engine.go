@@ -139,6 +139,10 @@ func builtinFuncs(defaultLocale string) template.FuncMap {
 			}
 			return fmt.Sprintf("%s/page/%d/", baseURL, p)
 		},
+		// contains reports whether substr is within s. Mirrors strings.Contains;
+		// useful for conditional logic in templates where the standard
+		// html/template builtins lack string-inspection helpers.
+		"contains": strings.Contains,
 	}
 }
 
