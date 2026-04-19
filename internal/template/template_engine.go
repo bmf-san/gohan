@@ -143,6 +143,18 @@ func builtinFuncs(defaultLocale string) template.FuncMap {
 		// useful for conditional logic in templates where the standard
 		// html/template builtins lack string-inspection helpers.
 		"contains": strings.Contains,
+		// hasNonASCII reports whether s contains any byte with a value > 127.
+		// Handy for templates that need to branch on whether a path/segment
+		// carries non-ASCII runes (e.g. Japanese taxonomy slugs) without
+		// requiring regexp or unicode packages in the template layer.
+		"hasNonASCII": func(s string) bool {
+			for i := 0; i < len(s); i++ {
+				if s[i] > 127 {
+					return true
+				}
+			}
+			return false
+		},
 	}
 }
 
