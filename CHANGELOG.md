@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.8](https://github.com/bmf-san/gohan/compare/v1.1.7...v1.1.8) (2026-05-13)
+
+
+### Continuous Integration
+
+* skip Codecov upload on Dependabot PRs ([#141](https://github.com/bmf-san/gohan/issues/141)) ([1e31149](https://github.com/bmf-san/gohan/commit/1e311498ad37d54fdd3aa37b7054b6d68930bf78))
+
 ## [1.1.7](https://github.com/bmf-san/gohan/compare/v1.1.6...v1.1.7) (2026-04-19)
 
 
