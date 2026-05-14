@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.1.9](https://github.com/bmf-san/gohan/compare/v1.1.8...v1.1.9) (2026-05-14)
+
+
+### Build System
+
+* **deps:** bump github.com/alecthomas/chroma/v2 from 2.23.1 to 2.24.1 ([#137](https://github.com/bmf-san/gohan/issues/137)) ([9c44fb2](https://github.com/bmf-san/gohan/commit/9c44fb26d9fb9af6b0641e6cdca1aa84dc19ba8b))
+* **deps:** bump github.com/fsnotify/fsnotify from 1.9.0 to 1.10.1 ([#139](https://github.com/bmf-san/gohan/issues/139)) ([b7976e2](https://github.com/bmf-san/gohan/commit/b7976e2bd2ffa27ae7149cfb91773934d83eab3e))
+* **deps:** bump golang.org/x/image from 0.39.0 to 0.40.0 ([#140](https://github.com/bmf-san/gohan/issues/140)) ([d705221](https://github.com/bmf-san/gohan/commit/d705221b9ab74272336e9c722440f1f3cf3245fb))
+* **deps:** bump googleapis/release-please-action from 4 to 5 ([#136](https://github.com/bmf-san/gohan/issues/136)) ([ca6cd6a](https://github.com/bmf-san/gohan/commit/ca6cd6a47fc7d4aa71f80132bc7965bb22e73b26))
+
+
+### Continuous Integration
+
+* skip Codecov upload on Dependabot PRs ([#141](https://github.com/bmf-san/gohan/issues/141)) ([1e31149](https://github.com/bmf-san/gohan/commit/1e311498ad37d54fdd3aa37b7054b6d68930bf78))
+
+
+### Miscellaneous
+
+* bump go to 1.26.3 to fix stdlib vulnerabilities ([#143](https://github.com/bmf-san/gohan/issues/143)) ([587384f](https://github.com/bmf-san/gohan/commit/587384f89b3548a0fc7c5bc9640ebb139b907019))
+* **main:** release 1.1.8 ([#142](https://github.com/bmf-san/gohan/issues/142)) ([90ca593](https://github.com/bmf-san/gohan/commit/90ca593fbbcfcbbcdcdeebd98c50ab7f35afce60))
+
 ## [1.1.8](https://github.com/bmf-san/gohan/compare/v1.1.7...v1.1.8) (2026-05-13)
 
 
