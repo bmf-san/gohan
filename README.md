@@ -88,34 +88,9 @@ gohan serve   # open http://127.0.0.1:1313
 
 ---
 
-## User Guide
+## Documentation
 
 Full documentation site: **https://bmf-san.github.io/gohan/**
-
-| Guide | Description |
-|---|---|
-| [Getting Started](https://bmf-san.github.io/gohan/guide/getting-started/) | Installation, first site, build & preview |
-| [Configuration](https://bmf-san.github.io/gohan/guide/configuration/) | All `config.yaml` fields and Front Matter |
-| [Templates](https://bmf-san.github.io/gohan/guide/templates/) | Theme templates, variables, built-in functions |
-| [Taxonomy](https://bmf-san.github.io/gohan/guide/taxonomy/) | Tags, categories, and archive pages |
-| [CLI Reference](https://bmf-san.github.io/gohan/guide/cli/) | All commands and flags |
-
-## Feature Documentation
-
-| Feature | Description |
-|---|---|
-| [i18n](https://bmf-san.github.io/gohan/features/i18n/) | Multi-locale content with translation links and `hreflang` |
-| [OGP Image Generation](https://bmf-san.github.io/gohan/features/ogp/) | Build-time Open Graph images per article |
-| [Pagination](https://bmf-san.github.io/gohan/features/pagination/) | Configurable `per_page` and page navigation |
-| [GitHub Source Link](https://bmf-san.github.io/gohan/features/github-source-link/) | Per-article link to the source file on GitHub |
-| [Plugin System](https://bmf-san.github.io/gohan/features/plugin-system/) | Built-in plugins (`amazon_books`, …) via `config.yaml` |
-| [Related Articles](https://bmf-san.github.io/gohan/features/related-articles/) | Same-category article recommendations on article pages |
-
----
-
-## Design
-
-For architecture and design decisions see [Design Document](https://bmf-san.github.io/gohan/guide/design/).
 
 ---
 
