@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/bmf-san/gohan/compare/v1.2.0...v1.2.1) (2026-05-22)
+
+
+### Documentation
+
+* **readme:** collapse duplicated doc tables to a single docs site link ([#152](https://github.com/bmf-san/gohan/issues/152)) ([860be87](https://github.com/bmf-san/gohan/commit/860be876e3a7577685fb2abd8fa1e034cc3821af))
+
 ## [1.2.0](https://github.com/bmf-san/gohan/compare/v1.1.10...v1.2.0) (2026-05-22)
 
 
