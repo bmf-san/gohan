@@ -1,4 +1,11 @@
-# OGP画像生成
+---
+title: "OGP"
+description: "Open Graph / Twitter Card メタデータを自動生成。"
+slug: "ogp"
+categories:
+  - features
+translation_key: "ogp"
+---
 
 ## 概要
 

@@ -1,4 +1,11 @@
-# Design Document: Gohan - Go-based SSG
+---
+title: "Design Document"
+description: "Architecture and design decisions behind gohan."
+slug: "design"
+categories:
+  - guide
+translation_key: "design"
+---
 
 ## 1. Background & Motivation
 

@@ -1,4 +1,11 @@
-# テンプレートガイド
+---
+title: "テンプレート"
+description: "レイアウト・記事・タクソノミーのテンプレートを書く方法。"
+slug: "templates"
+categories:
+  - guide
+translation_key: "templates"
+---
 
 gohan のテーマは Go 標準ライブラリの `html/template` を使用します。
 

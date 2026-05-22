@@ -1,4 +1,11 @@
-# Design Document: Gohan - GoベースのSSG
+---
+title: "設計ドキュメント"
+description: "gohan のアーキテクチャと設計判断。"
+slug: "design"
+categories:
+  - guide
+translation_key: "design"
+---
 
 ## 1. 背景・動機
 

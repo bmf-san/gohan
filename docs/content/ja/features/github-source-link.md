@@ -1,4 +1,11 @@
-# GitHubソースリンク
+---
+title: "GitHub ソースリンク"
+description: "記事から GitHub のソースへのリンクを生成する。"
+slug: "github-source-link"
+categories:
+  - features
+translation_key: "github-source-link"
+---
 
 ## 概要
 

@@ -1,4 +1,11 @@
-# ページネーション
+---
+title: "ページネーション"
+description: "一覧ページをページ送りで分割する。"
+slug: "pagination"
+categories:
+  - features
+translation_key: "pagination"
+---
 
 ## 概要
 

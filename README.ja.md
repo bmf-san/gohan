@@ -63,7 +63,7 @@ make install
 # 1. プロジェクトディレクトリを作成
 mkdir myblog && cd myblog
 
-# 2. config.yaml を作成（全オプションは docs/guide/configuration.ja.md を参照）
+# 2. config.yaml を作成（全オプションは https://bmf-san.github.io/gohan/ja/guide/configuration/ を参照）
 cat > config.yaml << 'EOF'
 site:
   title: My Blog
@@ -127,36 +127,38 @@ books:
 {{end}}
 ```
 
-プラグインアーキテクチャの詳細は [docs/DESIGN_DOC.ja.md §20](docs/DESIGN_DOC.ja.md) を参照してください。
+プラグインアーキテクチャの詳細は [設計ドキュメント §20](https://bmf-san.github.io/gohan/ja/guide/design/) を参照してください。
 
 ---
 
 ## ユーザーガイド
 
+ドキュメントサイト: **https://bmf-san.github.io/gohan/ja/**
+
 | ガイド | 内容 |
 |---|---|
-| [Getting Started](docs/guide/getting-started.ja.md) | インストール、最初のサイト作成、ビルド、プレビュー |
-| [Configuration](docs/guide/configuration.ja.md) | `config.yaml` の全フィールドと Front Matter |
-| [Templates](docs/guide/templates.ja.md) | テーマテンプレート・変数・組み込み関数 |
-| [Taxonomy](docs/guide/taxonomy.ja.md) | タグ・カテゴリー・アーカイブページ |
-| [CLI リファレンス](docs/guide/cli.ja.md) | 全コマンドとフラグ |
+| [Getting Started](https://bmf-san.github.io/gohan/ja/guide/getting-started/) | インストール、最初のサイト作成、ビルド、プレビュー |
+| [Configuration](https://bmf-san.github.io/gohan/ja/guide/configuration/) | `config.yaml` の全フィールドと Front Matter |
+| [Templates](https://bmf-san.github.io/gohan/ja/guide/templates/) | テーマテンプレート・変数・組み込み関数 |
+| [Taxonomy](https://bmf-san.github.io/gohan/ja/guide/taxonomy/) | タグ・カテゴリー・アーカイブページ |
+| [CLI リファレンス](https://bmf-san.github.io/gohan/ja/guide/cli/) | 全コマンドとフラグ |
 
 ## 機能一覧
 
 | 機能 | 内容 |
 |---|---|
-| [i18n](docs/features/i18n.ja.md) | 多言語コンテンツ、翻訳リンク・`hreflang` 対応 |
-| [OGP 画像生成](docs/features/ogp.ja.md) | ビルド時に記事ごとの Open Graph 画像を自動生成 |
-| [ページネーション](docs/features/pagination.ja.md) | `per_page` 設定とページナビゲーション |
-| [GitHub ソースリンク](docs/features/github-source-link.ja.md) | 記事ごとに GitHub ソースファイルへのリンクを付与 |
-| [プラグインシステム](docs/features/plugin-system.ja.md) | ビルトインプラグイン（`amazon_books` など）を `config.yaml` で管理 |
-| [関連記事](docs/features/related-articles.ja.md) | 記事ページに同カテゴリーの関連記事を自動表示 |
+| [i18n](https://bmf-san.github.io/gohan/ja/features/i18n/) | 多言語コンテンツ、翻訳リンク・`hreflang` 対応 |
+| [OGP 画像生成](https://bmf-san.github.io/gohan/ja/features/ogp/) | ビルド時に記事ごとの Open Graph 画像を自動生成 |
+| [ページネーション](https://bmf-san.github.io/gohan/ja/features/pagination/) | `per_page` 設定とページナビゲーション |
+| [GitHub ソースリンク](https://bmf-san.github.io/gohan/ja/features/github-source-link/) | 記事ごとに GitHub ソースファイルへのリンクを付与 |
+| [プラグインシステム](https://bmf-san.github.io/gohan/ja/features/plugin-system/) | ビルトインプラグイン（`amazon_books` など）を `config.yaml` で管理 |
+| [関連記事](https://bmf-san.github.io/gohan/ja/features/related-articles/) | 記事ページに同カテゴリーの関連記事を自動表示 |
 
 ---
 
 ## 設計
 
-アーキテクチャと設計方針については [docs/DESIGN_DOC.ja.md](docs/DESIGN_DOC.ja.md) を参照してください。
+アーキテクチャと設計方針については [設計ドキュメント](https://bmf-san.github.io/gohan/ja/guide/design/) を参照してください。
 
 ---
 

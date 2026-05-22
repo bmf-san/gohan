@@ -1,4 +1,11 @@
-# 設定リファレンス
+---
+title: "設定"
+description: "config.yaml で gohan のサイト・テーマ・i18n などを設定する方法。"
+slug: "configuration"
+categories:
+  - guide
+translation_key: "configuration"
+---
 
 `config.yaml` はプロジェクトルートに置く唯一の設定ファイルです。
 

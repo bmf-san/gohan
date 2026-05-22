@@ -1,4 +1,11 @@
-# Plugin System
+---
+title: "Plugin System"
+description: "Extend gohan with external plugins."
+slug: "plugin-system"
+categories:
+  - features
+translation_key: "plugin-system"
+---
 
 ## Overview
 
