@@ -1,0 +1,104 @@
+{{- $base := .Config.Theme.Params.base_path -}}
+{{- $article := index .Articles 0 -}}
+{{- $locale := $article.Locale -}}
+{{- $isJa := eq $locale "ja" -}}
+{{- $localeRoot := $base -}}{{if $isJa}}{{- $localeRoot = printf "%s/ja" $base -}}{{end}}
+<!DOCTYPE html>
+<html lang="{{if $isJa}}ja{{else}}en{{end}}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{{$article.FrontMatter.Description}}">
+  <title>{{$article.FrontMatter.Title}} — {{.Config.Site.Title}}</title>
+  <link rel="stylesheet" href="{{.Config.Theme.Params.sleyt_css}}">
+  {{range $article.Translations}}<link rel="alternate" hreflang="{{.Locale}}" href="{{$.Config.Site.BaseURL}}{{.URL}}">
+  {{end}}
+</head>
+<body>
+  <nav class="navbar">
+    <a class="navbar-brand" href="{{$localeRoot}}/">gohan</a>
+    <input type="checkbox" id="navbar-toggle" class="navbar-toggle-checkbox">
+    <label for="navbar-toggle" class="navbar-toggle-label"><span></span><span></span><span></span></label>
+    <ul class="navbar-nav">
+      <li><a class="navbar-item" href="{{$localeRoot}}/guide/getting-started/">{{if $isJa}}ガイド{{else}}Guide{{end}}</a></li>
+      <li><a class="navbar-item" href="{{$localeRoot}}/features/i18n/">{{if $isJa}}機能{{else}}Features{{end}}</a></li>
+      <li><a class="navbar-item" href="{{$.Config.Theme.Params.github_url}}" target="_blank" rel="noopener">GitHub</a></li>
+      {{range $article.Translations}}<li><a class="navbar-item" href="{{$base}}{{.URL}}">{{if eq .Locale "ja"}}日本語{{else}}EN{{end}}</a></li>
+      {{end}}
+    </ul>
+  </nav>
+
+  <div class="dashboard">
+    <input type="checkbox" id="sidebar-toggle" class="sidebar-toggle-checkbox">
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="{{$localeRoot}}/">
+        <span class="sidebar-brand-icon">g</span>
+        gohan docs
+      </a>
+      <nav class="sidebar-nav">
+        <span class="sidebar-section-label">{{if $isJa}}ガイド{{else}}Guide{{end}}</span>
+        <a class="sidebar-link" href="{{$localeRoot}}/guide/getting-started/">{{if $isJa}}はじめに{{else}}Getting Started{{end}}</a>
+        <a class="sidebar-link" href="{{$localeRoot}}/guide/configuration/">{{if $isJa}}設定{{else}}Configuration{{end}}</a>
+        <a class="sidebar-link" href="{{$localeRoot}}/guide/templates/">{{if $isJa}}テンプレート{{else}}Templates{{end}}</a>
+        <a class="sidebar-link" href="{{$localeRoot}}/guide/taxonomy/">{{if $isJa}}タクソノミー{{else}}Taxonomy{{end}}</a>
+        <a class="sidebar-link" href="{{$localeRoot}}/guide/cli/">{{if $isJa}}CLI{{else}}CLI Reference{{end}}</a>
+
+        <span class="sidebar-section-label">{{if $isJa}}機能{{else}}Features{{end}}</span>
+        <a class="sidebar-link" href="{{$localeRoot}}/features/i18n/">i18n</a>
+        <a class="sidebar-link" href="{{$localeRoot}}/features/ogp/">OGP</a>
+        <a class="sidebar-link" href="{{$localeRoot}}/features/pagination/">{{if $isJa}}ページネーション{{else}}Pagination{{end}}</a>
+        <a class="sidebar-link" href="{{$localeRoot}}/features/github-source-link/">{{if $isJa}}GitHubソースリンク{{else}}GitHub Source Link{{end}}</a>
+        <a class="sidebar-link" href="{{$localeRoot}}/features/plugin-system/">{{if $isJa}}プラグイン{{else}}Plugin System{{end}}</a>
+        <a class="sidebar-link" href="{{$localeRoot}}/features/related-articles/">{{if $isJa}}関連記事{{else}}Related Articles{{end}}</a>
+      </nav>
+    </aside>
+
+    <div class="dashboard-main">
+      <div class="dashboard-content">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumbs">
+            <li class="breadcrumbs-item"><a class="breadcrumbs-link" href="{{$localeRoot}}/">{{if $isJa}}ホーム{{else}}Home{{end}}</a></li>
+            <li class="breadcrumbs-separator">/</li>
+            {{if $article.FrontMatter.Categories}}<li class="breadcrumbs-item"><a class="breadcrumbs-link" href="{{$localeRoot}}/categories/{{index $article.FrontMatter.Categories 0}}/">{{index $article.FrontMatter.Categories 0}}</a></li>
+            <li class="breadcrumbs-separator">/</li>{{end}}
+            <li class="breadcrumbs-item active"><span class="breadcrumbs-link">{{$article.FrontMatter.Title}}</span></li>
+          </ol>
+        </nav>
+
+        <article class="prose prose-full mt-6">
+          <h1>{{$article.FrontMatter.Title}}</h1>
+          {{$article.HTMLContent}}
+        </article>
+
+        {{if $.Config.Site.GitHubRepo}}
+        <div class="mt-8 pt-6 border-t">
+          <a class="btn btn-sm btn-outline-primary" href="{{$.Config.Site.GitHubRepo}}/edit/{{$.Config.Site.GitHubBranch}}/docs/content/{{$article.ContentPath}}" target="_blank" rel="noopener">
+            {{if $isJa}}このページを編集{{else}}Edit this page on GitHub{{end}}
+          </a>
+        </div>
+        {{end}}
+
+        {{if $.RelatedArticles}}
+        <section class="mt-12">
+          <h2 class="text-2xl font-bold mb-4">{{if $isJa}}関連ページ{{else}}Related{{end}}</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {{range $.RelatedArticles}}
+            <a class="card" href="{{$base}}{{.URL}}">
+              <div class="card-header-compact">{{.FrontMatter.Title}}</div>
+              <div class="card-body-compact"><p class="text-sm text-secondary">{{.FrontMatter.Description}}</p></div>
+            </a>
+            {{end}}
+          </div>
+        </section>
+        {{end}}
+      </div>
+    </div>
+  </div>
+
+  <footer class="border-t py-8 text-center text-sm text-secondary">
+    <div class="container">
+      <p>&copy; bmf-san. Built with <a href="{{$.Config.Theme.Params.github_url}}">gohan</a> &amp; <a href="https://github.com/bmf-san/sleyt" target="_blank" rel="noopener">sleyt</a>.</p>
+    </div>
+  </footer>
+</body>
+</html>

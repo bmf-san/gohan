@@ -1,0 +1,33 @@
+site:
+  title: "gohan"
+  description: "A simple, fast static site generator written in Go."
+  base_url: "https://bmf-san.github.io/gohan"
+  language: "en"
+  github_repo: "https://github.com/bmf-san/gohan"
+  github_branch: "main"
+
+build:
+  content_dir: "content"
+  output_dir: "public"
+  assets_dir: "assets"
+  static_dir: "static"
+  parallelism: 4
+
+theme:
+  name: "sleyt"
+  dir: "themes/sleyt"
+  params:
+    # GitHub Pages serves the site at https://bmf-san.github.io/gohan/.
+    # All in-template links MUST be prefixed with this base_path; when the
+    # site is published at a custom domain (root), set this to an empty string.
+    base_path: "/gohan"
+    sleyt_css: "/gohan/assets/css/sleyt.css"
+    github_url: "https://github.com/bmf-san/gohan"
+
+syntax_highlight:
+  theme: "github"
+  line_numbers: false
+
+i18n:
+  locales: [en, ja]
+  default_locale: en
