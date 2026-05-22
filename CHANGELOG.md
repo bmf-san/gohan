@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/bmf-san/gohan/compare/v1.1.10...v1.2.0) (2026-05-22)
+
+
+### Features
+
+* **docs:** migrate all guide/features/design docs into content tree ([#150](https://github.com/bmf-san/gohan/issues/150)) ([4d41303](https://github.com/bmf-san/gohan/commit/4d4130343c934f7b7f7d3d08304377bfd1c546e7))
+* **docs:** publish docs site via gohan + sleyt on GitHub Pages ([#148](https://github.com/bmf-san/gohan/issues/148)) ([05439d0](https://github.com/bmf-san/gohan/commit/05439d0a74113ef1611749a9207d8ca6f29a75cb))
+
+
+### Bug Fixes
+
+* **docs:** auto-enable GitHub Pages in deploy workflow ([#151](https://github.com/bmf-san/gohan/issues/151)) ([aa7784a](https://github.com/bmf-san/gohan/commit/aa7784a9581393483c7ac99f16b4ab4b6fc87573))
+
 ## [1.1.10](https://github.com/bmf-san/gohan/compare/v1.1.9...v1.1.10) (2026-05-22)
 
 
