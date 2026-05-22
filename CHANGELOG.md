@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.10](https://github.com/bmf-san/gohan/compare/v1.1.9...v1.1.10) (2026-05-22)
+
+
+### Continuous Integration
+
+* attach pre-compiled binaries to GitHub releases ([#145](https://github.com/bmf-san/gohan/issues/145)) ([#146](https://github.com/bmf-san/gohan/issues/146)) ([9446497](https://github.com/bmf-san/gohan/commit/9446497ea1ea31e356d897e6bdfd3e3d47276374))
+
 ## [1.1.9](https://github.com/bmf-san/gohan/compare/v1.1.8...v1.1.9) (2026-05-14)
 
 
