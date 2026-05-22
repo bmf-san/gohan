@@ -70,3 +70,7 @@ release:
   draft: false
   prerelease: auto
   name_template: "v{{ .Version }}"
+  # Append assets to existing releases so manual backfill runs (workflow_dispatch
+  # on goreleaser.yml) can upload binaries for past tags without recreating the
+  # release entry created by release-please.
+  mode: append
