@@ -1,4 +1,11 @@
-# Related Articles
+---
+title: "Related Articles"
+description: "Surface related articles automatically."
+slug: "related-articles"
+categories:
+  - features
+translation_key: "related-articles"
+---
 
 gohan automatically populates a list of related articles for each article page, making it easy to add a "Related Articles" section to your theme.
 

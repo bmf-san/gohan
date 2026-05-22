@@ -1,4 +1,11 @@
-# Pagination
+---
+title: "Pagination"
+description: "Split listings across pages."
+slug: "pagination"
+categories:
+  - features
+translation_key: "pagination"
+---
 
 ## Overview
 

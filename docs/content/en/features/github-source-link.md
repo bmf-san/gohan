@@ -1,4 +1,11 @@
-# GitHub Source Link
+---
+title: "GitHub Source Link"
+description: "Link articles back to their source on GitHub."
+slug: "github-source-link"
+categories:
+  - features
+translation_key: "github-source-link"
+---
 
 ## Overview
 

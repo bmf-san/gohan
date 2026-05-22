@@ -1,4 +1,11 @@
-# Configuration Reference
+---
+title: "Configuration"
+description: "Configure gohan via config.yaml: site, theme, i18n, and more."
+slug: "configuration"
+categories:
+  - guide
+translation_key: "configuration"
+---
 
 `config.yaml` is the single configuration file placed at the project root.
 

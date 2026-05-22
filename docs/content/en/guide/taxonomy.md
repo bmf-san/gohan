@@ -1,4 +1,11 @@
-# Taxonomy Guide
+---
+title: "Taxonomy"
+description: "Organize content with categories and tags."
+slug: "taxonomy"
+categories:
+  - guide
+translation_key: "taxonomy"
+---
 
 Taxonomy is the system for classifying articles by **tags** and **categories**.
 gohan automatically generates a dedicated page for each tag and category.

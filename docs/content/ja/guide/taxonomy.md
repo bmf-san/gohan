@@ -1,4 +1,11 @@
-# タクソノミーガイド
+---
+title: "タクソノミー"
+description: "カテゴリーとタグでコンテンツを整理する。"
+slug: "taxonomy"
+categories:
+  - guide
+translation_key: "taxonomy"
+---
 
 タクソノミーとは、記事を **タグ** や **カテゴリー** で分類する仕組みです。
 gohan は各タグ・カテゴリーに対応したページを自動生成します。

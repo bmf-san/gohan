@@ -1,4 +1,11 @@
-# 関連記事
+---
+title: "関連記事"
+description: "関連記事を自動で表示する。"
+slug: "related-articles"
+categories:
+  - features
+translation_key: "related-articles"
+---
 
 gohan は各記事ページに自動的に関連記事リストを生成します。テーマに「関連記事」セクションを追加するのが簡単になります。
 

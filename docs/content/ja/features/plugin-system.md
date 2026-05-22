@@ -1,4 +1,11 @@
-# プラグインシステム
+---
+title: "プラグインシステム"
+description: "外部プラグインで gohan を拡張する。"
+slug: "plugin-system"
+categories:
+  - features
+translation_key: "plugin-system"
+---
 
 ## 概要
 

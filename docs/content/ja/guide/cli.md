@@ -1,7 +1,10 @@
-# CLI リファレンス
-
-> English version: [cli.md](cli.md)
-
+---
+title: "CLI リファレンス"
+description: "gohan CLI のコマンドリファレンス。"
+slug: "cli"
+categories:
+  - guide
+translation_key: "cli"
 ---
 
 ## コマンド一覧

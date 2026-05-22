@@ -1,7 +1,10 @@
-# CLI Reference
-
-> 日本語版: [cli.ja.md](cli.ja.md)
-
+---
+title: "CLI Reference"
+description: "Command reference for the gohan CLI."
+slug: "cli"
+categories:
+  - guide
+translation_key: "cli"
 ---
 
 ## Commands

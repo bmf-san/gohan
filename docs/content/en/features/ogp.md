@@ -1,4 +1,11 @@
-# OGP Image Generation
+---
+title: "OGP"
+description: "Auto-generate Open Graph and Twitter Card metadata."
+slug: "ogp"
+categories:
+  - features
+translation_key: "ogp"
+---
 
 ## Overview
 

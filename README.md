@@ -63,7 +63,7 @@ Pre-built binaries are available on [GitHub Releases](https://github.com/bmf-san
 # 1. Create a project directory
 mkdir myblog && cd myblog
 
-# 2. Add config.yaml (see docs/guide/configuration.md for all options)
+# 2. Add config.yaml (see https://bmf-san.github.io/gohan/guide/configuration/ for all options)
 cat > config.yaml << 'EOF'
 site:
   title: My Blog
@@ -90,30 +90,32 @@ gohan serve   # open http://127.0.0.1:1313
 
 ## User Guide
 
+Full documentation site: **https://bmf-san.github.io/gohan/**
+
 | Guide | Description |
 |---|---|
-| [Getting Started](docs/guide/getting-started.md) | Installation, first site, build & preview |
-| [Configuration](docs/guide/configuration.md) | All `config.yaml` fields and Front Matter |
-| [Templates](docs/guide/templates.md) | Theme templates, variables, built-in functions |
-| [Taxonomy](docs/guide/taxonomy.md) | Tags, categories, and archive pages |
-| [CLI Reference](docs/guide/cli.md) | All commands and flags |
+| [Getting Started](https://bmf-san.github.io/gohan/guide/getting-started/) | Installation, first site, build & preview |
+| [Configuration](https://bmf-san.github.io/gohan/guide/configuration/) | All `config.yaml` fields and Front Matter |
+| [Templates](https://bmf-san.github.io/gohan/guide/templates/) | Theme templates, variables, built-in functions |
+| [Taxonomy](https://bmf-san.github.io/gohan/guide/taxonomy/) | Tags, categories, and archive pages |
+| [CLI Reference](https://bmf-san.github.io/gohan/guide/cli/) | All commands and flags |
 
 ## Feature Documentation
 
 | Feature | Description |
 |---|---|
-| [i18n](docs/features/i18n.md) | Multi-locale content with translation links and `hreflang` |
-| [OGP Image Generation](docs/features/ogp.md) | Build-time Open Graph images per article |
-| [Pagination](docs/features/pagination.md) | Configurable `per_page` and page navigation |
-| [GitHub Source Link](docs/features/github-source-link.md) | Per-article link to the source file on GitHub |
-| [Plugin System](docs/features/plugin-system.md) | Built-in plugins (`amazon_books`, …) via `config.yaml` |
-| [Related Articles](docs/features/related-articles.md) | Same-category article recommendations on article pages |
+| [i18n](https://bmf-san.github.io/gohan/features/i18n/) | Multi-locale content with translation links and `hreflang` |
+| [OGP Image Generation](https://bmf-san.github.io/gohan/features/ogp/) | Build-time Open Graph images per article |
+| [Pagination](https://bmf-san.github.io/gohan/features/pagination/) | Configurable `per_page` and page navigation |
+| [GitHub Source Link](https://bmf-san.github.io/gohan/features/github-source-link/) | Per-article link to the source file on GitHub |
+| [Plugin System](https://bmf-san.github.io/gohan/features/plugin-system/) | Built-in plugins (`amazon_books`, …) via `config.yaml` |
+| [Related Articles](https://bmf-san.github.io/gohan/features/related-articles/) | Same-category article recommendations on article pages |
 
 ---
 
 ## Design
 
-For architecture and design decisions see [docs/DESIGN_DOC.md](docs/DESIGN_DOC.md).
+For architecture and design decisions see [Design Document](https://bmf-san.github.io/gohan/guide/design/).
 
 ---
 

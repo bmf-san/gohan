@@ -1,4 +1,11 @@
-# Template Guide
+---
+title: "Templates"
+description: "Author and customize templates for layouts, articles, and taxonomies."
+slug: "templates"
+categories:
+  - guide
+translation_key: "templates"
+---
 
 gohan themes are built with Go's standard `html/template` package.
 
