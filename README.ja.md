@@ -131,34 +131,9 @@ books:
 
 ---
 
-## ユーザーガイド
+## ドキュメント
 
 ドキュメントサイト: **https://bmf-san.github.io/gohan/ja/**
-
-| ガイド | 内容 |
-|---|---|
-| [Getting Started](https://bmf-san.github.io/gohan/ja/guide/getting-started/) | インストール、最初のサイト作成、ビルド、プレビュー |
-| [Configuration](https://bmf-san.github.io/gohan/ja/guide/configuration/) | `config.yaml` の全フィールドと Front Matter |
-| [Templates](https://bmf-san.github.io/gohan/ja/guide/templates/) | テーマテンプレート・変数・組み込み関数 |
-| [Taxonomy](https://bmf-san.github.io/gohan/ja/guide/taxonomy/) | タグ・カテゴリー・アーカイブページ |
-| [CLI リファレンス](https://bmf-san.github.io/gohan/ja/guide/cli/) | 全コマンドとフラグ |
-
-## 機能一覧
-
-| 機能 | 内容 |
-|---|---|
-| [i18n](https://bmf-san.github.io/gohan/ja/features/i18n/) | 多言語コンテンツ、翻訳リンク・`hreflang` 対応 |
-| [OGP 画像生成](https://bmf-san.github.io/gohan/ja/features/ogp/) | ビルド時に記事ごとの Open Graph 画像を自動生成 |
-| [ページネーション](https://bmf-san.github.io/gohan/ja/features/pagination/) | `per_page` 設定とページナビゲーション |
-| [GitHub ソースリンク](https://bmf-san.github.io/gohan/ja/features/github-source-link/) | 記事ごとに GitHub ソースファイルへのリンクを付与 |
-| [プラグインシステム](https://bmf-san.github.io/gohan/ja/features/plugin-system/) | ビルトインプラグイン（`amazon_books` など）を `config.yaml` で管理 |
-| [関連記事](https://bmf-san.github.io/gohan/ja/features/related-articles/) | 記事ページに同カテゴリーの関連記事を自動表示 |
-
----
-
-## 設計
-
-アーキテクチャと設計方針については [設計ドキュメント](https://bmf-san.github.io/gohan/ja/guide/design/) を参照してください。
 
 ---
 
