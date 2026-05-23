@@ -18,6 +18,7 @@ translation_key: "cli"
 | `gohan build --future` | `date` が未来の記事をビルドに含める |
 | `gohan build --stats` | ビルド後にフェーズごとの所要時間と件数を表示 |
 | `gohan build --explain` | 再ビルド対象のファイルとその理由を表示 |
+| `gohan init [--force] [<dir>]` | 新規プロジェクト（config / content / archetypes）をスキャフォールド |
 | `gohan new [--type=post] [--title=<t>] <slug>` | 新規記事スケルトンを作成 |
 | `gohan new --type=page [--title=<t>] <slug>` | 新規ページスケルトンを作成 |
 | `gohan serve` | ライブリロード付き開発サーバーを起動 |
@@ -41,6 +42,28 @@ translation_key: "cli"
 | `--future` | `date` が現在時刻よりも未来の記事をビルドに含める。デフォルトでは未来日付の記事は除外されるため、`date` を未来に設定すれば記事を「予約公開」できる。 |
 | `--stats` | フェーズごと（parse / diff / process / plugins / render / feeds / manifest）の所要時間と合計時間をビルド完了後に表示する。 |
 | `--explain` | 再ビルドのトリガーとなったコンテンツファイルを表示する。フルビルドの場合は理由（`--full` フラグ、設定ハッシュの変化、マニフェスト未生成など）も併せて表示する。 |
+
+---
+
+---
+
+## `gohan init`
+
+指定したディレクトリ（省略時はカレントディレクトリ）に新規 gohan プロジェクトをスキャフォールドします。
+
+**使い方**
+
+```sh
+gohan init [--force] [<dir>]
+```
+
+最小構成の `config.yaml`、標準の `content/` および `archetypes/` ディレクトリ、スタータ用の `README.md` を生成します。対象ディレクトリが空でない場合は `--force` を付けない限り処理を中止します。既存ファイルは上書きされません（`--force` は新規ファイルの追加のみを許可します）。
+
+**フラグ**
+
+| フラグ | 説明 |
+|---|---|
+| `--force` | 空でないディレクトリへのスキャフォールドを許可する。既存ファイルは保持される。 |
 
 ---
 

@@ -25,6 +25,11 @@ func main() {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
+	case "init":
+		if err := runInit(args); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
 	case "new":
 		if err := runNew(args); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -49,6 +54,7 @@ func printUsage() {
 
 Commands:
   build    Build the site
+  init     Scaffold a new gohan project in a directory
   new      Create a new article or page
   serve    Start the development server
   version  Print version information
