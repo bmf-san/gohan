@@ -16,6 +16,8 @@ translation_key: "cli"
 | `gohan build --dry-run` | Simulate a build without writing files |
 | `gohan build --draft` | Include draft articles (`draft: true`) in the build |
 | `gohan build --future` | Include articles whose `date` is in the future |
+| `gohan build --stats` | Print per-phase timing and counts after the build |
+| `gohan build --explain` | Print which files triggered a rebuild and why |
 | `gohan new [--type=post] [--title=<t>] <slug>` | Create a new post skeleton |
 | `gohan new --type=page [--title=<t>] <slug>` | Create a new page skeleton |
 | `gohan serve` | Start the live-reload development server |
@@ -37,6 +39,8 @@ By default, only files that have changed since the last build are regenerated (i
 | `--dry-run` | Print what would be generated without writing any files |
 | `--draft` | Include articles with `draft: true` in their Front Matter. By default drafts are excluded. |
 | `--future` | Include articles whose `date` is later than the current time. By default future-dated articles are excluded, allowing them to be "scheduled" by setting a future `date`. |
+| `--stats` | Print a per-phase timing report (parse / diff / process / plugins / render / feeds / manifest) and total wall-clock time. |
+| `--explain` | Print which content files triggered the rebuild. For a full rebuild it also prints the reason (e.g. `--full` flag, config hash change, missing manifest). |
 
 ---
 
