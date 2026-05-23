@@ -23,12 +23,18 @@ This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77
 ## 特徴
 
 - **差分ビルド** — 変更されたファイルのみを再生成し、ビルド時間を最小化
+- **プロジェクトスカフォルド** — `gohan init` で `config.yaml`・コンテンツフォルダ・archetype を一括生成
+- **コンテンツリンタ** — `gohan check` で重複スラッグ・front matter 不足・孤立した translation_key を検出
+- **Archetype テンプレート** — `gohan new --archetype=<name>` で `archetypes/<name>.md` を雛型としてレンダリング
 - **Markdown + Front Matter** — GFM (GitHub Flavored Markdown) 対応
+- **TOC / 単語数 / 読了時間** — 記事ごとに自動計算しテンプレートに公開
+- **予約投稿** — 未来日付の記事はデフォルトでスキップ。`gohan build --future` で含める
+- **ビルドの可視化** — `--stats` でフェーズごとの所要時間、`--explain` で再ビルド要因を表示
 - **シンタックスハイライト** — [chroma](https://github.com/alecthomas/chroma) によるコードブロックのスタイリング
 - **Mermaid 図** — `mermaid` フェンスコードブロックをインタラクティブな図に変換
 - **タクソノミー** — タグ・カテゴリーページを自動生成
 - **Atom フィード / サイトマップ** — `atom.xml`・`sitemap.xml` を自動生成
-- **ライブリロード開発サーバー** — `gohan serve` でファイル変更を検知してブラウザを自動リロード
+- **ライブリロード開発サーバー** — `gohan serve` でファイル変更を検知してブラウザを自動リロード（CSS のみの変更はスタイルシートをホットスワップ）
 - **カスタマイズ可能なテーマ** — Go `html/template` による完全制御
 - **プラグインシステム** — `config.yaml` で有効化できるビルトインプラグイン（Goコード不要）
 - **i18n** — 多言語コンテンツ、翻訳リンク・`hreflang` 対応
@@ -60,24 +66,14 @@ make install
 ## クイックスタート
 
 ```bash
-# 1. プロジェクトディレクトリを作成
-mkdir myblog && cd myblog
+# 1. プロジェクトをスカフォールド（config.yaml ・content/・archetypes/・README.md を生成）
+gohan init myblog && cd myblog
 
-# 2. config.yaml を作成（全オプションは https://bmf-san.github.io/gohan/ja/guide/configuration/ を参照）
-cat > config.yaml << 'EOF'
-site:
-  title: My Blog
-  base_url: https://example.com
-  language: ja
-build:
-  content_dir: content
-  output_dir: public
-theme:
-  name: default
-EOF
-
-# 3. 最初の記事を作成
+# 2. 最初の記事を作成（archetypes/post.md が使われる）
 gohan new --title="Hello, World!" hello-world
+
+# 3. コンテンツを検証（任意、CI での使用を推奨）
+gohan check
 
 # 4. サイトをビルド
 gohan build
@@ -85,6 +81,8 @@ gohan build
 # 5. 開発サーバーでプレビュー
 gohan serve   # http://127.0.0.1:1313 を開く
 ```
+
+全オプションは [Configuration](https://bmf-san.github.io/gohan/ja/guide/configuration/) を参照してください。
 
 ---
 

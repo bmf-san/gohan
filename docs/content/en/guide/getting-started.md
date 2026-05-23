@@ -44,39 +44,30 @@ Download a pre-built binary for your platform from [GitHub Releases](https://git
 
 ## Create Your First Site
 
-### Step 1: Create a project directory
+### Step 1: Scaffold a new project
 
 ```bash
-mkdir myblog
+gohan init myblog
 cd myblog
 ```
 
-### Step 2: Create `config.yaml`
+This creates:
 
-```yaml
-site:
-  title: My Blog
-  description: A simple personal blog
-  base_url: https://myblog.example.com
-  language: en
-
-build:
-  content_dir: content
-  output_dir: public
-  assets_dir: assets
-  parallelism: 4
-
-theme:
-  name: default
-
-syntax_highlight:
-  theme: github
-  line_numbers: false
+```
+myblog/
+├── config.yaml
+├── README.md
+├── archetypes/
+│   ├── page.md
+│   └── post.md
+└── content/
+    ├── pages/.gitkeep
+    └── posts/.gitkeep
 ```
 
-See [Configuration](configuration.md) for all available fields.
+Edit `config.yaml` to customise the site title, base URL, and other options. See [Configuration](configuration.md) for all available fields.
 
-### Step 3: Create your first article
+### Step 2: Create your first article
 
 ```bash
 gohan new --title="Hello, World!" hello-world
@@ -119,7 +110,7 @@ func main() {
 ```
 ```
 
-### Step 4: Create theme templates
+### Step 3: Create theme templates
 
 ```bash
 mkdir -p themes/default/templates
@@ -190,7 +181,7 @@ mkdir -p themes/default/templates
 
 See [Templates](templates.md) for the complete template reference.
 
-### Step 5: Add static assets (optional)
+### Step 4: Add static assets (optional)
 
 ```bash
 mkdir -p assets
@@ -200,7 +191,7 @@ a { color: #0066cc; }
 EOF
 ```
 
-### Step 6: Build the site
+### Step 5: Build the site
 
 ```bash
 gohan build
@@ -220,7 +211,7 @@ public/
     └── style.css
 ```
 
-### Step 7: Preview with the development server
+### Step 6: Preview with the development server
 
 ```bash
 gohan serve

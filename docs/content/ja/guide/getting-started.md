@@ -44,39 +44,30 @@ make install
 
 ## 最初のサイトを作る
 
-### ステップ 1: プロジェクトを作成する
+### ステップ 1: プロジェクトをスカフォールドする
 
 ```bash
-mkdir myblog
+gohan init myblog
 cd myblog
 ```
 
-### ステップ 2: `config.yaml` を作成する
+次の構造が生成されます:
 
-```yaml
-site:
-  title: My Blog
-  description: A simple personal blog
-  base_url: https://myblog.example.com
-  language: ja
-
-build:
-  content_dir: content
-  output_dir: public
-  assets_dir: assets
-  parallelism: 4
-
-theme:
-  name: default
-
-syntax_highlight:
-  theme: github
-  line_numbers: false
+```
+myblog/
+├── config.yaml
+├── README.md
+├── archetypes/
+│   ├── page.md
+│   └── post.md
+└── content/
+    ├── pages/.gitkeep
+    └── posts/.gitkeep
 ```
 
-全フィールドの詳細は [Configuration](configuration.ja.md) を参照してください。
+サイトタイトル・base URL などは `config.yaml` を編集してカスタマイズしましょう。全フィールドの詳細は [Configuration](configuration.ja.md) を参照してください。
 
-### ステップ 3: 最初の記事を作成する
+### ステップ 2: 最初の記事を作成する
 
 ```bash
 gohan new --title="Hello, World!" hello-world
@@ -103,7 +94,7 @@ description: はじめての gohan ブログ記事
 **gohan** でブログを始めました！
 ```
 
-### ステップ 4: テーマテンプレートを作成する
+### ステップ 3: テーマテンプレートを作成する
 
 ```bash
 mkdir -p themes/default/templates
@@ -140,7 +131,7 @@ mkdir -p themes/default/templates
 
 テンプレートの詳細は [テンプレートガイド](templates.ja.md) を参照してください。
 
-### ステップ 5: アセットを追加する（任意）
+### ステップ 4: アセットを追加する（任意）
 
 ```bash
 mkdir -p assets
@@ -150,7 +141,7 @@ a { color: #0066cc; }
 EOF
 ```
 
-### ステップ 6: サイトをビルドする
+### ステップ 5: サイトをビルドする
 
 ```bash
 gohan build
@@ -170,7 +161,7 @@ public/
     └── style.css
 ```
 
-### ステップ 7: 開発サーバーで確認する
+### ステップ 6: 開発サーバーで確認する
 
 ```bash
 gohan serve

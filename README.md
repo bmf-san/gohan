@@ -23,12 +23,18 @@ This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77
 ## Features
 
 - **Incremental builds** — Regenerate only changed files, minimising build time
+- **Project scaffolding** — `gohan init` bootstraps `config.yaml`, content folders, and archetype templates
+- **Content linter** — `gohan check` validates duplicate slugs, missing front matter, and orphan translation keys
+- **Archetype templates** — `gohan new --archetype=<name>` renders custom front-matter skeletons from `archetypes/<name>.md`
 - **Markdown + Front Matter** — GitHub Flavored Markdown with YAML metadata
+- **TOC / WordCount / ReadingTime** — Auto-derived per article and exposed to templates
+- **Scheduled posts** — Future-dated articles are skipped by default; opt in with `gohan build --future`
+- **Build observability** — `--stats` prints per-phase timing; `--explain` shows what triggered a rebuild
 - **Syntax highlighting** — Code blocks styled with [chroma](https://github.com/alecthomas/chroma)
 - **Mermaid diagrams** — Fenced `mermaid` blocks render as interactive diagrams
 - **Taxonomy** — Tag and category pages generated automatically
 - **Atom feed & sitemap** — `atom.xml` and `sitemap.xml` generated automatically
-- **Live-reload dev server** — `gohan serve` watches files and reloads the browser
+- **Live-reload dev server** — `gohan serve` watches files and reloads the browser (CSS-only changes hot-swap stylesheets without a full reload)
 - **Customisable themes** — Full control via Go `html/template`
 - **Plugin system** — Built-in plugins enabled per-project via `config.yaml` (no Go code required)
 - **i18n** — Multi-locale content with per-article translation links and `hreflang` support
@@ -60,24 +66,14 @@ Pre-built binaries are available on [GitHub Releases](https://github.com/bmf-san
 ## Quick Start
 
 ```bash
-# 1. Create a project directory
-mkdir myblog && cd myblog
+# 1. Scaffold a new project (creates config.yaml, content/, archetypes/, README.md)
+gohan init myblog && cd myblog
 
-# 2. Add config.yaml (see https://bmf-san.github.io/gohan/guide/configuration/ for all options)
-cat > config.yaml << 'EOF'
-site:
-  title: My Blog
-  base_url: https://example.com
-  language: en
-build:
-  content_dir: content
-  output_dir: public
-theme:
-  name: default
-EOF
-
-# 3. Create your first article
+# 2. Create your first article (uses archetypes/post.md)
 gohan new --title="Hello, World!" hello-world
+
+# 3. Validate the content (optional but recommended in CI)
+gohan check
 
 # 4. Build the site
 gohan build
@@ -85,6 +81,8 @@ gohan build
 # 5. Preview locally with live reload
 gohan serve   # open http://127.0.0.1:1313
 ```
+
+See [Configuration](https://bmf-san.github.io/gohan/guide/configuration/) for all `config.yaml` options.
 
 ---
 
