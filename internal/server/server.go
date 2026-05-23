@@ -136,7 +136,20 @@ func (b *sseBroadcaster) broadcast(msg string) {
 
 const sseScript = `<script>(function(){` +
 	`var e=new EventSource("/__gohan/reload");` +
-	`e.onmessage=function(){location.reload();};` +
+	`e.onmessage=function(ev){` +
+	`if(ev.data==="css"){` +
+	`var links=document.querySelectorAll('link[rel="stylesheet"]');` +
+	`for(var i=0;i<links.length;i++){` +
+	`var l=links[i];var u=new URL(l.href,location.href);` +
+	`u.searchParams.set("_gohan",Date.now().toString());` +
+	`var n=l.cloneNode();n.href=u.toString();` +
+	`n.onload=function(){setTimeout(function(){if(l.parentNode)l.parentNode.removeChild(l);},50);};` +
+	`l.parentNode.insertBefore(n,l.nextSibling);` +
+	`}` +
+	`return;` +
+	`}` +
+	`location.reload();` +
+	`};` +
 	`})()</script>`
 
 type injectingResponseWriter struct {
@@ -346,6 +359,11 @@ const debounceDelay = 100 * time.Millisecond
 
 func (s *DevServer) watchLoop(b *sseBroadcaster) {
 	var pending string
+	// allCSS tracks whether every change in the current debounce window is a
+	// CSS file. When true we can hot-swap stylesheets in the browser without a
+	// full page reload.
+	allCSS := true
+	hasEvent := false
 	timer := time.NewTimer(0)
 	<-timer.C // drain the initial tick so it doesn't fire immediately
 	for {
@@ -355,6 +373,10 @@ func (s *DevServer) watchLoop(b *sseBroadcaster) {
 				return
 			}
 			pending = path
+			if !isCSSPath(path) {
+				allCSS = false
+			}
+			hasEvent = true
 			if !timer.Stop() {
 				select {
 				case <-timer.C:
@@ -363,14 +385,27 @@ func (s *DevServer) watchLoop(b *sseBroadcaster) {
 			}
 			timer.Reset(debounceDelay)
 		case <-timer.C:
-			if pending == "" {
+			if !hasEvent {
 				continue
 			}
 			if s.RebuildFunc != nil {
 				_ = s.RebuildFunc() // best-effort; errors go to stderr via rebuild
 			}
-			b.broadcast(pending)
+			msg := pending
+			if allCSS {
+				msg = "css"
+			}
+			b.broadcast(msg)
 			pending = ""
+			allCSS = true
+			hasEvent = false
 		}
 	}
+}
+
+// isCSSPath reports whether path refers to a CSS file. Used by the watch loop
+// to decide whether a change can be hot-swapped (true) or requires a full page
+// reload (false).
+func isCSSPath(path string) bool {
+	return strings.HasSuffix(strings.ToLower(path), ".css")
 }

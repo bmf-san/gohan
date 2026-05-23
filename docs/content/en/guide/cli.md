@@ -133,6 +133,7 @@ Starts a local HTTP development server with live reload.
 - Default address: `http://127.0.0.1:1313`
 - Watches `content/`, `themes/`, and `assets/` for changes
 - Automatically rebuilds and reloads the browser on file changes
+- **CSS-only hot swap**: when every changed file in a debounce window is a `.css` file, stylesheets are reloaded in place via a cache-busting query parameter instead of triggering a full page reload, preserving scroll position and form state.
 
 ---
 
