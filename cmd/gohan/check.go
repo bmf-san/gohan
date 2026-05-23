@@ -159,7 +159,7 @@ func lintArticles(articles []*model.Article, contentDir string) []checkIssue {
 
 func writeCheckReport(w io.Writer, issues []checkIssue) {
 	if len(issues) == 0 {
-		fmt.Fprintln(w, "check: no issues found")
+		_, _ = fmt.Fprintln(w, "check: no issues found")
 		return
 	}
 	// Stable order: by file, then kind.
@@ -170,7 +170,7 @@ func writeCheckReport(w io.Writer, issues []checkIssue) {
 		return issues[i].Kind < issues[j].Kind
 	})
 	for _, it := range issues {
-		fmt.Fprintf(w, "%s: [%s] %s\n", it.File, it.Kind, it.Message)
+		_, _ = fmt.Fprintf(w, "%s: [%s] %s\n", it.File, it.Kind, it.Message)
 	}
-	fmt.Fprintf(w, "\ncheck: %d issue(s)\n", len(issues))
+	_, _ = fmt.Fprintf(w, "\ncheck: %d issue(s)\n", len(issues))
 }
