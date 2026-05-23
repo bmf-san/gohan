@@ -14,6 +14,8 @@ translation_key: "cli"
 | `gohan build` | Build the site (incremental by default) |
 | `gohan build --full` | Force a full rebuild |
 | `gohan build --dry-run` | Simulate a build without writing files |
+| `gohan build --draft` | Include draft articles (`draft: true`) in the build |
+| `gohan build --future` | Include articles whose `date` is in the future |
 | `gohan new [--type=post] [--title=<t>] <slug>` | Create a new post skeleton |
 | `gohan new --type=page [--title=<t>] <slug>` | Create a new page skeleton |
 | `gohan serve` | Start the live-reload development server |
@@ -33,6 +35,8 @@ By default, only files that have changed since the last build are regenerated (i
 |---|---|
 | `--full` | Skip diff detection and regenerate all pages |
 | `--dry-run` | Print what would be generated without writing any files |
+| `--draft` | Include articles with `draft: true` in their Front Matter. By default drafts are excluded. |
+| `--future` | Include articles whose `date` is later than the current time. By default future-dated articles are excluded, allowing them to be "scheduled" by setting a future `date`. |
 
 ---
 

@@ -27,6 +27,7 @@ func runBuild(args []string) error {
 	dryRun := fs.Bool("dry-run", false, "simulate build without writing files")
 	logFmt := fs.String("log-format", "text", "log format: text or json")
 	draft := fs.Bool("draft", false, "include draft articles in the build")
+	future := fs.Bool("future", false, "include articles with a future date in the build")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -116,6 +117,18 @@ func runBuild(args []string) error {
 		filtered := articles[:0]
 		for _, a := range articles {
 			if !a.FrontMatter.Draft {
+				filtered = append(filtered, a)
+			}
+		}
+		articles = filtered
+	}
+
+	// Filter scheduled (future-dated) articles unless --future flag is set.
+	if !*future {
+		now := time.Now()
+		filtered := articles[:0]
+		for _, a := range articles {
+			if a.FrontMatter.Date.IsZero() || !a.FrontMatter.Date.After(now) {
 				filtered = append(filtered, a)
 			}
 		}
