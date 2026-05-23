@@ -34,6 +34,27 @@ type ProcessedArticle struct {
 	// PluginData holds per-article data injected by enabled plugins.
 	// Access in templates: {{index .PluginData "amazon_books"}}
 	PluginData map[string]interface{}
+	// WordCount is the number of words in the article body. For CJK content
+	// each character is counted as one word.
+	WordCount int
+	// ReadingTime is the estimated reading time in minutes, with a minimum of 1.
+	ReadingTime int
+	// TOC is the hierarchical table of contents extracted from the article's
+	// Markdown headings. Empty when the article has no headings.
+	TOC []TOCEntry
+}
+
+// TOCEntry represents a single Markdown heading in the table of contents.
+// Entries are nested via Children to reflect heading levels.
+type TOCEntry struct {
+	// Level is the Markdown heading level (1-6).
+	Level int
+	// ID is the auto-generated heading anchor (matches the rendered HTML id attribute).
+	ID string
+	// Text is the heading's plain-text content.
+	Text string
+	// Children holds nested headings (one level deeper) that appear under this entry.
+	Children []TOCEntry
 }
 
 // LocaleRef holds a locale code and the canonical URL for a translated variant
