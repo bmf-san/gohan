@@ -18,6 +18,7 @@ translation_key: "cli"
 | `gohan build --future` | Include articles whose `date` is in the future |
 | `gohan build --stats` | Print per-phase timing and counts after the build |
 | `gohan build --explain` | Print which files triggered a rebuild and why |
+| `gohan init [--force] [<dir>]` | Scaffold a new gohan project (config + content + archetypes) |
 | `gohan new [--type=post] [--title=<t>] <slug>` | Create a new post skeleton |
 | `gohan new --type=page [--title=<t>] <slug>` | Create a new page skeleton |
 | `gohan serve` | Start the live-reload development server |
@@ -41,6 +42,28 @@ By default, only files that have changed since the last build are regenerated (i
 | `--future` | Include articles whose `date` is later than the current time. By default future-dated articles are excluded, allowing them to be "scheduled" by setting a future `date`. |
 | `--stats` | Print a per-phase timing report (parse / diff / process / plugins / render / feeds / manifest) and total wall-clock time. |
 | `--explain` | Print which content files triggered the rebuild. For a full rebuild it also prints the reason (e.g. `--full` flag, config hash change, missing manifest). |
+
+---
+
+---
+
+## `gohan init`
+
+Scaffolds a new gohan project under the given directory (or the current directory if omitted).
+
+**Usage**
+
+```sh
+gohan init [--force] [<dir>]
+```
+
+Generates a minimal `config.yaml`, the standard `content/` and `archetypes/` folders, and a starter `README.md`. The command refuses to write into a non-empty directory unless `--force` is given. Existing files are never overwritten — `--force` only allows writing alongside them.
+
+**Flags**
+
+| Flag | Description |
+|---|---|
+| `--force` | Allow scaffolding into a non-empty directory. Existing files are preserved. |
 
 ---
 
