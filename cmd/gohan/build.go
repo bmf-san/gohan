@@ -28,12 +28,15 @@ func runBuild(args []string) error {
 	logFmt := fs.String("log-format", "text", "log format: text or json")
 	draft := fs.Bool("draft", false, "include draft articles in the build")
 	future := fs.Bool("future", false, "include articles with a future date in the build")
+	stats := fs.Bool("stats", false, "print per-phase timing and file counts after the build")
+	explain := fs.Bool("explain", false, "print which files triggered a rebuild and why")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	_ = logFmt // reserved for structured logging
 
 	start := time.Now()
+	phases := newPhaseTimer()
 
 	// Determine project root from config file location.
 	cfgAbs, err := filepath.Abs(*configPath)
@@ -107,8 +110,12 @@ func runBuild(args []string) error {
 	if cfg.Build.StaticDir != "" {
 		cfg.Build.StaticDir = filepath.Join(rootDir, cfg.Build.StaticDir)
 	}
-	articles, err := p.ParseAll(contentDir)
-	if err != nil {
+	var articles []*model.Article
+	if err := phases.Phase("parse", func() error {
+		var perr error
+		articles, perr = p.ParseAll(contentDir)
+		return perr
+	}); err != nil {
 		return fmt.Errorf("parse content: %w", err)
 	}
 
@@ -139,16 +146,23 @@ func runBuild(args []string) error {
 	var changeSet *model.ChangeSet
 	if !forceFullBuild {
 		engine := diff.NewGitDiffEngine(contentDir)
-		changeSet, err = engine.Detect(manifest)
-		if err != nil {
+		if err := phases.Phase("diff", func() error {
+			var derr error
+			changeSet, derr = engine.Detect(manifest)
+			return derr
+		}); err != nil {
 			return fmt.Errorf("detect changes: %w", err)
 		}
 	}
 
 	// Process articles.
 	proc := processor.NewSiteProcessor()
-	processed, err := proc.Process(articles, *cfg)
-	if err != nil {
+	var processed []*model.ProcessedArticle
+	if err := phases.Phase("process", func() error {
+		var perr error
+		processed, perr = proc.Process(articles, *cfg)
+		return perr
+	}); err != nil {
 		return fmt.Errorf("process articles: %w", err)
 	}
 
@@ -201,19 +215,28 @@ func runBuild(args []string) error {
 		Categories: taxo.Categories,
 	}
 
-	// Run plugins.
-	if err := plugin.DefaultRegistry().Enrich(site); err != nil {
-		return fmt.Errorf("plugin enrichment: %w", err)
-	}
-
-	// Run site-level plugins (generate virtual pages).
-	if err := plugin.DefaultRegistry().EnrichVirtual(site); err != nil {
-		return fmt.Errorf("plugin virtual pages: %w", err)
+	// Run plugins (article enrichment + virtual page generation).
+	if err := phases.Phase("plugins", func() error {
+		if err := plugin.DefaultRegistry().Enrich(site); err != nil {
+			return fmt.Errorf("plugin enrichment: %w", err)
+		}
+		if err := plugin.DefaultRegistry().EnrichVirtual(site); err != nil {
+			return fmt.Errorf("plugin virtual pages: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	if *dryRun {
 		elapsed := time.Since(start)
 		fmt.Printf("dry-run: %d articles, %s\n", len(processed), elapsed.Round(time.Millisecond))
+		if *explain {
+			writeExplain(os.Stdout, forceFullBuild, explainFullReason(*full, configHashErr, manifest == nil), changeSet)
+		}
+		if *stats {
+			phases.writeStats(os.Stdout, elapsed)
+		}
 		return nil
 	}
 
@@ -225,35 +248,63 @@ func runBuild(args []string) error {
 		return fmt.Errorf("load templates: %w", loadErr)
 	}
 	gen := generator.NewHTMLGenerator(outDir, tmpl, *cfg)
-	if err := gen.Generate(site, changeSet); err != nil {
+	if err := phases.Phase("render", func() error {
+		return gen.Generate(site, changeSet)
+	}); err != nil {
 		return fmt.Errorf("generate HTML: %w", err)
 	}
 
 	// Sitemap + feeds.
-	if err := generator.GenerateSitemap(outDir, cfg.Site.BaseURL, processed, site.VirtualPages, generator.TaxonomyURLs(site, *cfg), *cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "warn: sitemap: %v\n", err)
-	}
-	if err := generator.GenerateFeeds(outDir, cfg.Site.BaseURL, cfg.Site.Title, processed, *cfg); err != nil {
-		fmt.Fprintf(os.Stderr, "warn: feeds: %v\n", err)
-	}
+	_ = phases.Phase("feeds", func() error {
+		if err := generator.GenerateSitemap(outDir, cfg.Site.BaseURL, processed, site.VirtualPages, generator.TaxonomyURLs(site, *cfg), *cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "warn: sitemap: %v\n", err)
+		}
+		if err := generator.GenerateFeeds(outDir, cfg.Site.BaseURL, cfg.Site.Title, processed, *cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "warn: feeds: %v\n", err)
+		}
+		return nil
+	})
 
 	// Update manifest.
-	newManifest := diff.NewManifest(configHash)
-	hashEngine := diff.NewGitDiffEngine(contentDir)
-	for _, a := range articles {
-		rel, relErr := filepath.Rel(contentDir, a.FilePath)
-		if relErr != nil {
-			continue
+	_ = phases.Phase("manifest", func() error {
+		newManifest := diff.NewManifest(configHash)
+		hashEngine := diff.NewGitDiffEngine(contentDir)
+		for _, a := range articles {
+			rel, relErr := filepath.Rel(contentDir, a.FilePath)
+			if relErr != nil {
+				continue
+			}
+			if h, herr := hashEngine.Hash(a.FilePath); herr == nil {
+				newManifest.FileHashes[rel] = h
+			}
 		}
-		if h, herr := hashEngine.Hash(a.FilePath); herr == nil {
-			newManifest.FileHashes[rel] = h
+		if err := diff.WriteManifest(cacheDir, newManifest); err != nil {
+			fmt.Fprintf(os.Stderr, "warn: write manifest: %v\n", err)
 		}
-	}
-	if err := diff.WriteManifest(cacheDir, newManifest); err != nil {
-		fmt.Fprintf(os.Stderr, "warn: write manifest: %v\n", err)
-	}
+		return nil
+	})
 
 	elapsed := time.Since(start)
 	fmt.Printf("build: %d articles, 0 errors, %s\n", len(processed), elapsed.Round(time.Millisecond))
+	if *explain {
+		writeExplain(os.Stdout, forceFullBuild, explainFullReason(*full, configHashErr, manifest == nil), changeSet)
+	}
+	if *stats {
+		phases.writeStats(os.Stdout, elapsed)
+	}
 	return nil
+}
+
+// explainFullReason returns a human-readable reason why a full build was
+// performed. It is used by writeExplain when forceFullBuild is true.
+func explainFullReason(fullFlag bool, configHashErr error, manifestMissing bool) string {
+	switch {
+	case fullFlag:
+		return "--full flag"
+	case configHashErr != nil:
+		return fmt.Sprintf("config hash unavailable: %v", configHashErr)
+	case manifestMissing:
+		return "no build manifest (first build or config changed)"
+	}
+	return ""
 }

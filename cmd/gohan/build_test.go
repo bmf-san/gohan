@@ -180,3 +180,41 @@ func TestRunBuild_ScheduledArticlesExcludedByDefault(t *testing.T) {
 		t.Fatalf("build with future article: %v", err)
 	}
 }
+
+func TestRunBuild_StatsFlagAccepted(t *testing.T) {
+dir := t.TempDir()
+cfg := []byte("site:\n  title: Test\n  base_url: http://localhost\n")
+if err := os.WriteFile(filepath.Join(dir, "config.yaml"), cfg, 0644); err != nil {
+t.Fatal(err)
+}
+if err := os.MkdirAll(filepath.Join(dir, "content"), 0755); err != nil {
+t.Fatal(err)
+}
+err := runBuild([]string{
+"--config=" + filepath.Join(dir, "config.yaml"),
+"--stats",
+"--dry-run",
+})
+if err != nil {
+t.Fatalf("--stats --dry-run: %v", err)
+}
+}
+
+func TestRunBuild_ExplainFlagAccepted(t *testing.T) {
+dir := t.TempDir()
+cfg := []byte("site:\n  title: Test\n  base_url: http://localhost\n")
+if err := os.WriteFile(filepath.Join(dir, "config.yaml"), cfg, 0644); err != nil {
+t.Fatal(err)
+}
+if err := os.MkdirAll(filepath.Join(dir, "content"), 0755); err != nil {
+t.Fatal(err)
+}
+err := runBuild([]string{
+"--config=" + filepath.Join(dir, "config.yaml"),
+"--explain",
+"--dry-run",
+})
+if err != nil {
+t.Fatalf("--explain --dry-run: %v", err)
+}
+}
