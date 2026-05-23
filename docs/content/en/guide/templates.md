@@ -88,7 +88,7 @@ type SiteConfig struct {
 type ThemeConfig struct {
     Name   string
     Dir    string
-    Params map[string]string // .Config.Theme.Params
+    Params map[string]any // .Config.Theme.Params
 }
 ```
 

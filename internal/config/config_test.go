@@ -175,3 +175,93 @@ theme:
 		t.Errorf("theme.dir: got %q, want %q", cfg.Theme.Dir, filepath.FromSlash("themes/mytheme"))
 	}
 }
+
+// TestLoad_ThemeParamsScalarValues verifies that theme.params accepts the
+// historical map[string]string style (plain scalar values) without breakage.
+func TestLoad_ThemeParamsScalarValues(t *testing.T) {
+	dir := t.TempDir()
+	writeConfig(t, dir, `
+site:
+  title: "My Blog"
+  base_url: "https://example.com"
+theme:
+  name: "default"
+  params:
+    author: "Alice"
+    footer_text: "© 2026 Alice"
+`)
+
+	cfg, err := config.New(dir).Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got, want := cfg.Theme.Params["author"], "Alice"; got != want {
+		t.Errorf("params.author: got %v, want %q", got, want)
+	}
+	if got, want := cfg.Theme.Params["footer_text"], "© 2026 Alice"; got != want {
+		t.Errorf("params.footer_text: got %v, want %q", got, want)
+	}
+}
+
+// TestLoad_ThemeParamsNestedStructures verifies that theme.params accepts
+// nested maps and sequences (e.g. sponsor lists, navigation menus), letting
+// themes declare structured config without help from gohan core.
+func TestLoad_ThemeParamsNestedStructures(t *testing.T) {
+	dir := t.TempDir()
+	writeConfig(t, dir, `
+site:
+  title: "My Blog"
+  base_url: "https://example.com"
+theme:
+  name: "default"
+  params:
+    author: "Alice"
+    sponsors:
+      - name: "Example Co."
+        url: "https://example.com"
+        active: true
+      - name: "Other Inc."
+        url: "https://other.example"
+    nav:
+      primary:
+        - label: "Home"
+          href: "/"
+        - label: "Blog"
+          href: "/blog/"
+`)
+
+	cfg, err := config.New(dir).Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sponsors, ok := cfg.Theme.Params["sponsors"].([]any)
+	if !ok {
+		t.Fatalf("params.sponsors: got %T, want []any", cfg.Theme.Params["sponsors"])
+	}
+	if len(sponsors) != 2 {
+		t.Fatalf("params.sponsors length: got %d, want 2", len(sponsors))
+	}
+	first, ok := sponsors[0].(map[string]any)
+	if !ok {
+		t.Fatalf("params.sponsors[0]: got %T, want map[string]any", sponsors[0])
+	}
+	if got, want := first["name"], "Example Co."; got != want {
+		t.Errorf("params.sponsors[0].name: got %v, want %q", got, want)
+	}
+	if got, want := first["active"], true; got != want {
+		t.Errorf("params.sponsors[0].active: got %v, want %v", got, want)
+	}
+
+	nav, ok := cfg.Theme.Params["nav"].(map[string]any)
+	if !ok {
+		t.Fatalf("params.nav: got %T, want map[string]any", cfg.Theme.Params["nav"])
+	}
+	primary, ok := nav["primary"].([]any)
+	if !ok {
+		t.Fatalf("params.nav.primary: got %T, want []any", nav["primary"])
+	}
+	if len(primary) != 2 {
+		t.Fatalf("params.nav.primary length: got %d, want 2", len(primary))
+	}
+}

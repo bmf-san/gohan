@@ -666,9 +666,9 @@ type BuildConfig struct {
 }
 
 type ThemeConfig struct {
-    Name   string            `yaml:"name"`
-    Dir    string            `yaml:"dir"`
-    Params map[string]string `yaml:"params"`
+    Name   string         `yaml:"name"`
+    Dir    string         `yaml:"dir"`
+    Params map[string]any `yaml:"params"`
 }
 
 type SyntaxHighlightConfig struct {

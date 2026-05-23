@@ -113,15 +113,35 @@ Active theme and custom parameters.
 |---|---|---|---|
 | `name` | string | `"default"` | Theme name. Used to resolve `dir` when `dir` is not set |
 | `dir` | string | `"themes/<name>"` | Theme directory path (relative to project root) |
-| `params` | map[string]string | `{}` | Arbitrary parameters accessible in templates as `.Config.Theme.Params.<key>` |
+| `params` | map[string]any | `{}` | Arbitrary parameters accessible in templates as `.Config.Theme.Params.<key>`. Values can be scalars, nested maps, or sequences. |
 
 ### Accessing params in templates
+
+Scalar values render the same as before:
 
 ```html
 <style>
   :root { --primary: {{.Config.Theme.Params.primary_color}}; }
 </style>
 <footer>{{.Config.Theme.Params.footer_text}}</footer>
+```
+
+Nested structures (maps and sequences) are supported too. Themes can declare
+structured config such as sponsor lists or per-locale label tables:
+
+```yaml
+theme:
+  params:
+    sponsors:
+      - name: "Example Co."
+        url: "https://example.com"
+        image: "/assets/sponsors/example.png"
+```
+
+```html
+{{range index .Config.Theme.Params "sponsors"}}
+  <a href="{{.url}}" rel="sponsored noopener noreferrer">{{.name}}</a>
+{{end}}
 ```
 
 ### Theme directory layout
