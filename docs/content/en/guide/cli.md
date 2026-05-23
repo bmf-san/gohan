@@ -22,6 +22,7 @@ translation_key: "cli"
 | `gohan new [--type=post] [--title=<t>] <slug>` | Create a new post skeleton |
 | `gohan new --type=<section> --archetype=<name> <slug>` | Create content for a custom section using an archetype template |
 | `gohan new --type=page [--title=<t>] <slug>` | Create a new page skeleton |
+| `gohan check` | Validate content for duplicate slugs, missing front matter, and orphan translation keys |
 | `gohan serve` | Start the live-reload development server |
 | `gohan version` | Print version information |
 
@@ -103,6 +104,25 @@ When `archetypes/<name>.md` exists in the project root, `gohan new` renders it t
 If no archetype file exists, built-in templates are used for `post` and `page`. Any other `--type` value requires a matching archetype file.
 
 If `--title` is omitted, gohan derives a title from the slug (e.g. `my-post` → `My Post`).
+
+---
+
+## `gohan check`
+
+Validates the content directory without performing a build. Reports:
+
+- **`missing-title`** — front matter has no `title`
+- **`missing-date`** — front matter has no `date`
+- **`duplicate-slug`** — two articles in the same directory resolve to the same slug
+- **`orphan-translation-key`** — a `translation_key` is referenced by only one article (no actual translation pair)
+
+**Flags**
+
+| Flag | Description |
+|---|---|
+| `--config` | Path to the config file (defaults to `config.yaml`) |
+
+Exits with code 1 if any issues are found. Intended for use in CI before running `gohan build`.
 
 ---
 
