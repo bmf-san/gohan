@@ -1,0 +1,42 @@
+name: Benchmark
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/benchmark.yml'
+  workflow_dispatch:
+
+jobs:
+  bench:
+    name: Go Benchmarks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      # Run benchmarks without running unit tests (-run=^$). Use a short
+      # benchtime so PRs get quick signal without dominating CI minutes.
+      - name: Run benchmarks
+        run: |
+          go test -run=^$ -bench=. -benchmem -benchtime=1x -timeout 5m ./... | tee bench.txt
+
+      - name: Upload benchmark output
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: bench.txt
+          retention-days: 30
