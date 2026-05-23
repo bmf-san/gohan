@@ -3,6 +3,7 @@ package generator
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -171,7 +172,12 @@ func writeAtomWithChannelURL(outDir, itemBaseURL, channelURL, title string, arti
 			break
 		}
 	}
-	author := cfg.Theme.Params["author"]
+	// Author may be a string (typical), int, or other scalar; coerce via fmt
+	// since Theme.Params now accepts arbitrary YAML-typed values.
+	var author string
+	if v, ok := cfg.Theme.Params["author"]; ok && v != nil {
+		author = fmt.Sprint(v)
+	}
 	baseAtomURL := channelURL + "atom.xml"
 	feed := atomFeed{
 		Xmlns: "http://www.w3.org/2005/Atom",

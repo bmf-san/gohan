@@ -113,15 +113,35 @@ build:
 |---|---|---|---|
 | `name` | string | `"default"` | テーマ名。`dir` が未設定の場合 `themes/<name>` が使われる |
 | `dir` | string | `"themes/<name>"` | テーマディレクトリのパス（プロジェクトルートからの相対パス） |
-| `params` | map[string]string | `{}` | テンプレートから `.Config.Theme.Params.<key>` でアクセスできる任意のパラメーター |
+| `params` | map[string]any | `{}` | テンプレートから `.Config.Theme.Params.<key>` でアクセスできる任意のパラメーター。スカラーだけでなくマップ・配列もそのまま渡せる。 |
 
 ### テンプレートからのアクセス
+
+スカラー値は従来どおり扱えます:
 
 ```html
 <style>
   :root { --primary: {{.Config.Theme.Params.primary_color}}; }
 </style>
 <footer>{{.Config.Theme.Params.footer_text}}</footer>
+```
+
+ネスト構造（マップ・配列）にも対応しています。スポンサー一覧やナビゲーション
+メニューなどの構造化された設定をテーマ側で宣言できます:
+
+```yaml
+theme:
+  params:
+    sponsors:
+      - name: "Example Co."
+        url: "https://example.com"
+        image: "/assets/sponsors/example.png"
+```
+
+```html
+{{range index .Config.Theme.Params "sponsors"}}
+  <a href="{{.url}}" rel="sponsored noopener noreferrer">{{.name}}</a>
+{{end}}
 ```
 
 ### テーマディレクトリ構成

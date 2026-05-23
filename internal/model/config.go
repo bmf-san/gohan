@@ -38,9 +38,19 @@ type BuildConfig struct {
 
 // ThemeConfig holds theme name, directory, and custom parameters.
 type ThemeConfig struct {
-	Name   string            `yaml:"name"`
-	Dir    string            `yaml:"dir"`
-	Params map[string]string `yaml:"params"`
+	Name string `yaml:"name"`
+	Dir  string `yaml:"dir"`
+	// Params is an arbitrary, theme-defined parameter bag exposed to templates
+	// as `.Config.Theme.Params`. Values may be scalars (string, int, bool),
+	// nested maps, or sequences — anything representable in YAML. This lets
+	// themes declare structured config such as sponsor lists, navigation
+	// menus, or per-locale label tables without requiring gohan to know
+	// their shape.
+	//
+	// Backward compatibility: configs that previously declared only string
+	// values continue to work unchanged; in templates, `{{index .Params "k"}}`
+	// and `{{.Params.k}}` render the same as before.
+	Params map[string]any `yaml:"params"`
 }
 
 // SyntaxHighlightConfig holds settings for code-block syntax highlighting.
