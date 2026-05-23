@@ -80,7 +80,7 @@ func runInit(args []string) error {
 		created = append(created, rel)
 	}
 
-	fmt.Printf("initialised gohan project at %s\n", abs)
+	fmt.Printf("initialized gohan project at %s\n", abs)
 	for _, rel := range created {
 		fmt.Printf("  + %s\n", rel)
 	}

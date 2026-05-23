@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.3.0](https://github.com/bmf-san/gohan/compare/v1.2.1...v1.3.0) (2026-05-23)
+
+
+### Features
+
+* **article:** expose TOC, WordCount, and ReadingTime on ProcessedArticle ([#154](https://github.com/bmf-san/gohan/issues/154)) ([cee94ed](https://github.com/bmf-san/gohan/commit/cee94ed3fb6ee2738cf6ca3bf79e16309e594609))
+* **build:** add --stats and --explain build observability flags ([#157](https://github.com/bmf-san/gohan/issues/157)) ([a63ef29](https://github.com/bmf-san/gohan/commit/a63ef290a92fb0f08c9499d7cc4ebd4f83df3126))
+* **build:** support scheduled posts via --future flag ([#156](https://github.com/bmf-san/gohan/issues/156)) ([1dd9e1c](https://github.com/bmf-san/gohan/commit/1dd9e1cbb3cfef90743c934038a0069a3a4bd567))
+* **cli:** add 'gohan check' content linter ([#160](https://github.com/bmf-san/gohan/issues/160)) ([754b2de](https://github.com/bmf-san/gohan/commit/754b2de799e216c1ace7642524817cbf237d9150))
+* **cli:** add 'gohan init' to scaffold new projects ([#158](https://github.com/bmf-san/gohan/issues/158)) ([4066df1](https://github.com/bmf-san/gohan/commit/4066df187d13abf01b3cb4a2984114335dfdea4e))
+* **new:** support --archetype templates and custom content sections ([#159](https://github.com/bmf-san/gohan/issues/159)) ([935ca39](https://github.com/bmf-san/gohan/commit/935ca399c37f2b13185b72c7d1e1241e1109996b))
+* **serve:** hot-swap stylesheets on CSS-only changes ([#163](https://github.com/bmf-san/gohan/issues/163)) ([7bd8396](https://github.com/bmf-san/gohan/commit/7bd8396a6c7ce6fcb4b13dab092daa4752d9a386))
+
+
+### Documentation
+
+* refresh README and getting-started for new CLI features ([#164](https://github.com/bmf-san/gohan/issues/164)) ([2ae6eca](https://github.com/bmf-san/gohan/commit/2ae6ecae09bad15cb639445eca5ba938994412ac))
+
+
+### Tests
+
+* **processor:** add golden HTML snapshot tests ([#162](https://github.com/bmf-san/gohan/issues/162)) ([1f21578](https://github.com/bmf-san/gohan/commit/1f21578cbbcacf78c556076a064c459d76dfb35d))
+
+
+### Continuous Integration
+
+* add benchmark workflow and parser ParseAll benchmark ([#161](https://github.com/bmf-san/gohan/issues/161)) ([17eef6e](https://github.com/bmf-san/gohan/commit/17eef6e1b1405b359207b4e63251fd94e8a6f22f))
+
 ## [1.2.1](https://github.com/bmf-san/gohan/compare/v1.2.0...v1.2.1) (2026-05-22)
 
 
