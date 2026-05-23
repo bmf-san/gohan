@@ -37,6 +37,7 @@ func (p *SiteProcessor) Process(articles []*model.Article, cfg model.Config) ([]
 		if err != nil {
 			return nil, fmt.Errorf("processor: render %s: %w", a.FilePath, err)
 		}
+		words := countWords(a.RawContent)
 		processed := &model.ProcessedArticle{
 			Article:     *a,
 			HTMLContent: html,
@@ -45,6 +46,9 @@ func (p *SiteProcessor) Process(articles []*model.Article, cfg model.Config) ([]
 			ContentPath: computeContentPath(a, cfg),
 			Locale:      detectLocale(a, cfg),
 			URL:         computeArticleURL(a, cfg),
+			WordCount:   words,
+			ReadingTime: readingTimeMinutes(words),
+			TOC:         parser.ExtractTOC([]byte(a.RawContent)),
 		}
 		result = append(result, processed)
 	}
