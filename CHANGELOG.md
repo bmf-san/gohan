@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0](https://github.com/bmf-san/gohan/compare/v1.3.0...v1.4.0) (2026-05-23)
+
+
+### Features
+
+* **config:** allow nested structures in theme.params ([#166](https://github.com/bmf-san/gohan/issues/166)) ([bc04605](https://github.com/bmf-san/gohan/commit/bc04605660b6a4887766640326992c127e79292c))
+
+
+### Bug Fixes
+
+* **ci:** resolve lint errors and Windows golden test failures ([#165](https://github.com/bmf-san/gohan/issues/165)) ([cda3bc0](https://github.com/bmf-san/gohan/commit/cda3bc05c8466b8114e2b8c48d0678a41eea23cd))
+
 ## [1.3.0](https://github.com/bmf-san/gohan/compare/v1.2.1...v1.3.0) (2026-05-23)
 
 
