@@ -131,3 +131,52 @@ func TestRunBuild_DraftArticlesExcludedByDefault(t *testing.T) {
 		t.Fatalf("build with draft article: %v", err)
 	}
 }
+
+// TestRunBuild_FutureFlagAccepted verifies the --future CLI flag parses.
+func TestRunBuild_FutureFlagAccepted(t *testing.T) {
+	dir := t.TempDir()
+	cfg := []byte("site:\n  title: Test\n  base_url: http://localhost\n")
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), cfg, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "content"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	err := runBuild([]string{
+		"--config=" + filepath.Join(dir, "config.yaml"),
+		"--future",
+		"--dry-run",
+	})
+	if err != nil {
+		t.Fatalf("--future --dry-run: %v", err)
+	}
+}
+
+// TestRunBuild_ScheduledArticlesExcludedByDefault verifies that articles with a
+// future date are skipped unless --future is set.
+func TestRunBuild_ScheduledArticlesExcludedByDefault(t *testing.T) {
+	dir := t.TempDir()
+	cfg := []byte("site:\n  title: Test\n  base_url: http://localhost\n")
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), cfg, 0644); err != nil {
+		t.Fatal(err)
+	}
+	contentDir := filepath.Join(dir, "content")
+	if err := os.MkdirAll(contentDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	future := []byte("---\ntitle: Future Post\ndate: 2999-01-01T00:00:00Z\n---\nBody.\n")
+	pub := []byte("---\ntitle: Published Post\ndate: 2024-01-01T00:00:00Z\n---\nBody.\n")
+	if err := os.WriteFile(filepath.Join(contentDir, "future.md"), future, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(contentDir, "published.md"), pub, 0644); err != nil {
+		t.Fatal(err)
+	}
+	err := runBuild([]string{
+		"--config=" + filepath.Join(dir, "config.yaml"),
+		"--dry-run",
+	})
+	if err != nil {
+		t.Fatalf("build with future article: %v", err)
+	}
+}

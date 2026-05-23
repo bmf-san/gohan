@@ -14,6 +14,8 @@ translation_key: "cli"
 | `gohan build` | サイトをビルド（デフォルトで差分ビルド） |
 | `gohan build --full` | フルビルドを強制実行 |
 | `gohan build --dry-run` | ファイルを書き出さずにビルドをシミュレート |
+| `gohan build --draft` | `draft: true` の記事をビルドに含める |
+| `gohan build --future` | `date` が未来の記事をビルドに含める |
 | `gohan new [--type=post] [--title=<t>] <slug>` | 新規記事スケルトンを作成 |
 | `gohan new --type=page [--title=<t>] <slug>` | 新規ページスケルトンを作成 |
 | `gohan serve` | ライブリロード付き開発サーバーを起動 |
@@ -33,6 +35,8 @@ translation_key: "cli"
 |---|---|
 | `--full` | 差分検出をスキップしてすべてのページを再生成 |
 | `--dry-run` | ファイルを書き出さずに生成対象を表示 |
+| `--draft` | Front Matter に `draft: true` を持つ記事をビルドに含める。デフォルトではドラフトは除外される。 |
+| `--future` | `date` が現在時刻よりも未来の記事をビルドに含める。デフォルトでは未来日付の記事は除外されるため、`date` を未来に設定すれば記事を「予約公開」できる。 |
 
 ---
 
