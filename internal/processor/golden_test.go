@@ -55,9 +55,12 @@ func TestProcess_GoldenHTML(t *testing.T) {
 				t.Fatalf("read %s: %v", mdPath, err)
 			}
 
+			// Normalize line endings so the test is stable on Windows.
+			rawStr := strings.ReplaceAll(string(raw), "\r\n", "\n")
+
 			// Strip a leading YAML front matter block if present so the test
 			// only exercises the body→HTML conversion.
-			body := stripFrontMatter(string(raw))
+			body := stripFrontMatter(rawStr)
 
 			articles := []*model.Article{{
 				FilePath:   mdPath,
@@ -79,11 +82,14 @@ func TestProcess_GoldenHTML(t *testing.T) {
 				return
 			}
 
-			want, err := os.ReadFile(htmlPath)
+			wantRaw, err := os.ReadFile(htmlPath)
 			if err != nil {
 				t.Fatalf("read %s: %v (run with -update to create)", htmlPath, err)
 			}
-			if got != string(want) {
+			// Normalize line endings so the test is stable on Windows where
+			// git may check files out with CRLF.
+			want := strings.ReplaceAll(string(wantRaw), "\r\n", "\n")
+			if got != want {
 				t.Errorf("golden mismatch for %s\n--- got ---\n%s\n--- want ---\n%s",
 					name, got, want)
 			}

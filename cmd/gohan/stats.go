@@ -35,11 +35,11 @@ func (p *phaseTimer) Phase(name string, fn func() error) error {
 // writeStats writes a human-readable phase-timing report to w. Phases are
 // printed in the order they were first observed, followed by the total.
 func (p *phaseTimer) writeStats(w io.Writer, total time.Duration) {
-	fmt.Fprintln(w, "stats:")
+	_, _ = fmt.Fprintln(w, "stats:")
 	for _, name := range p.order {
-		fmt.Fprintf(w, "  %-12s %v\n", name+":", p.duration[name].Round(time.Microsecond))
+		_, _ = fmt.Fprintf(w, "  %-12s %v\n", name+":", p.duration[name].Round(time.Microsecond))
 	}
-	fmt.Fprintf(w, "  %-12s %v\n", "total:", total.Round(time.Millisecond))
+	_, _ = fmt.Fprintf(w, "  %-12s %v\n", "total:", total.Round(time.Millisecond))
 }
 
 // writeExplain reports the reason for the current build's scope of work to w.
@@ -47,20 +47,20 @@ func (p *phaseTimer) writeStats(w io.Writer, total time.Duration) {
 // manifest, or config hash change). `changeSet` lists incremental changes
 // when a partial rebuild was performed.
 func writeExplain(w io.Writer, forceFull bool, fullReason string, changeSet *model.ChangeSet) {
-	fmt.Fprintln(w, "explain:")
+	_, _ = fmt.Fprintln(w, "explain:")
 	if forceFull {
 		if fullReason == "" {
 			fullReason = "full build forced"
 		}
-		fmt.Fprintf(w, "  full build: %s\n", fullReason)
+		_, _ = fmt.Fprintf(w, "  full build: %s\n", fullReason)
 		return
 	}
 	if changeSet == nil {
-		fmt.Fprintln(w, "  no change set available")
+		_, _ = fmt.Fprintln(w, "  no change set available")
 		return
 	}
 	if len(changeSet.AddedFiles) == 0 && len(changeSet.ModifiedFiles) == 0 && len(changeSet.DeletedFiles) == 0 {
-		fmt.Fprintln(w, "  no content changes detected")
+		_, _ = fmt.Fprintln(w, "  no content changes detected")
 		return
 	}
 	printList(w, "added", changeSet.AddedFiles)
@@ -74,8 +74,8 @@ func printList(w io.Writer, label string, files []string) {
 	}
 	sorted := append([]string(nil), files...)
 	sort.Strings(sorted)
-	fmt.Fprintf(w, "  %s (%d):\n", label, len(sorted))
+	_, _ = fmt.Fprintf(w, "  %s (%d):\n", label, len(sorted))
 	for _, f := range sorted {
-		fmt.Fprintf(w, "    %s\n", f)
+		_, _ = fmt.Fprintf(w, "    %s\n", f)
 	}
 }
