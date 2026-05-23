@@ -25,6 +25,11 @@ func main() {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
 		}
+	case "check":
+		if err := runCheck(args); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
 	case "init":
 		if err := runInit(args); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -54,6 +59,7 @@ func printUsage() {
 
 Commands:
   build    Build the site
+  check    Validate content (duplicate slugs, missing front matter, etc.)
   init     Scaffold a new gohan project in a directory
   new      Create a new article or page
   serve    Start the development server
