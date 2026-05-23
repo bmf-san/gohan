@@ -110,3 +110,4 @@ func TestRunNew_SlugToTitle(t *testing.T) {
 		}
 	}
 }
+

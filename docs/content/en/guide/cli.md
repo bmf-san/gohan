@@ -20,6 +20,7 @@ translation_key: "cli"
 | `gohan build --explain` | Print which files triggered a rebuild and why |
 | `gohan init [--force] [<dir>]` | Scaffold a new gohan project (config + content + archetypes) |
 | `gohan new [--type=post] [--title=<t>] <slug>` | Create a new post skeleton |
+| `gohan new --type=<section> --archetype=<name> <slug>` | Create content for a custom section using an archetype template |
 | `gohan new --type=page [--title=<t>] <slug>` | Create a new page skeleton |
 | `gohan serve` | Start the live-reload development server |
 | `gohan version` | Print version information |
@@ -75,7 +76,8 @@ Creates a new content skeleton with pre-filled Front Matter.
 
 | Flag | Description |
 |---|---|
-| `--type` | Content type: `post` (default) or `page` |
+| `--type` | Content section: `post` (default → `content/posts/`), `page` (→ `content/pages/`), or any other name (→ `content/<name>/`). |
+| `--archetype` | Archetype template name under `archetypes/`. Defaults to the value of `--type`. |
 | `--title` | Article title (defaults to slug converted to title case) |
 
 **Usage**
@@ -84,6 +86,21 @@ Creates a new content skeleton with pre-filled Front Matter.
 |---|---|
 | `gohan new [--type=post] [--title=<t>] <slug>` | Create `content/posts/<slug>.md` |
 | `gohan new --type=page [--title=<t>] <slug>` | Create `content/pages/<slug>.md` |
+| `gohan new --type=tutorial intro` | Create `content/tutorial/intro.md` using `archetypes/tutorial.md` if present |
+| `gohan new --archetype=news <slug>` | Create `content/posts/<slug>.md` using `archetypes/news.md` |
+
+### Archetypes
+
+When `archetypes/<name>.md` exists in the project root, `gohan new` renders it through Go's `text/template` package with the following variables:
+
+| Variable | Description |
+|---|---|
+| `{{ .Title }}` | Resolved title (from `--title` or slug) |
+| `{{ .Date }}` | Today's date in `YYYY-MM-DD` |
+| `{{ .Slug }}` | The slug argument |
+| `{{ .Type }}` | The `--type` value |
+
+If no archetype file exists, built-in templates are used for `post` and `page`. Any other `--type` value requires a matching archetype file.
 
 If `--title` is omitted, gohan derives a title from the slug (e.g. `my-post` → `My Post`).
 
