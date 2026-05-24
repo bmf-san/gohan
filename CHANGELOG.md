@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.1](https://github.com/bmf-san/gohan/compare/v1.4.0...v1.4.1) (2026-05-24)
+
+
+### Build System
+
+* **deps:** bump actions/checkout from 4 to 6 ([#168](https://github.com/bmf-san/gohan/issues/168)) ([ad35d03](https://github.com/bmf-san/gohan/commit/ad35d03fadbbefc15328e4b47820b7e900cfc5ba))
+* **deps:** bump actions/configure-pages from 5 to 6 ([#173](https://github.com/bmf-san/gohan/issues/173)) ([e8d53e4](https://github.com/bmf-san/gohan/commit/e8d53e4faba1c5480b2521463410be62eabb0a2e))
+* **deps:** bump actions/setup-node from 4 to 6 ([#171](https://github.com/bmf-san/gohan/issues/171)) ([b8e52b7](https://github.com/bmf-san/gohan/commit/b8e52b746905bc4a7737980e1bdb46b298003127))
+* **deps:** bump actions/upload-artifact from 4 to 7 ([#169](https://github.com/bmf-san/gohan/issues/169)) ([4b5d4e1](https://github.com/bmf-san/gohan/commit/4b5d4e12674c7b1e6d4df1110a79c135a844fa7f))
+* **deps:** bump actions/upload-pages-artifact from 3 to 5 ([#170](https://github.com/bmf-san/gohan/issues/170)) ([91ad392](https://github.com/bmf-san/gohan/commit/91ad3922c579cc34a5a21a40c6cf68a2ffa33f2c))
+* **deps:** bump golang.org/x/image from 0.40.0 to 0.41.0 ([#172](https://github.com/bmf-san/gohan/issues/172)) ([ec3adec](https://github.com/bmf-san/gohan/commit/ec3adec3b62ed59bce0bf740b62753ded612464c))
+
 ## [1.4.0](https://github.com/bmf-san/gohan/compare/v1.3.0...v1.4.0) (2026-05-23)
 
 
