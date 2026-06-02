@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.2](https://github.com/bmf-san/gohan/compare/v1.4.1...v1.4.2) (2026-06-02)
+
+
+### Build System
+
+* **deps:** bump actions/deploy-pages from 4 to 5 ([#175](https://github.com/bmf-san/gohan/issues/175)) ([df881a1](https://github.com/bmf-san/gohan/commit/df881a1cdaad7b2ffc29e8df82fc497eb75f1279))
+* **deps:** bump actions/setup-go from 5 to 6 ([#176](https://github.com/bmf-san/gohan/issues/176)) ([b936319](https://github.com/bmf-san/gohan/commit/b936319420b9b95321d012d3258b235fabeb5c4d))
+* **deps:** bump github.com/alecthomas/chroma/v2 from 2.24.1 to 2.26.1 ([#177](https://github.com/bmf-san/gohan/issues/177)) ([01dbb92](https://github.com/bmf-san/gohan/commit/01dbb92168e74eb17d72d06c0eb0aa2f8de984da))
+
 ## [1.4.1](https://github.com/bmf-san/gohan/compare/v1.4.0...v1.4.1) (2026-05-24)
 
 
