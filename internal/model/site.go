@@ -26,6 +26,12 @@ type Site struct {
 	// current virtual page being rendered.  Nil for all non-virtual pages.
 	// Access in templates: {{.VirtualPageData}}
 	VirtualPageData map[string]interface{}
+	// SiteData holds global, cross-page data injected by SitePlugins, keyed by
+	// plugin name. Unlike VirtualPageData (scoped to a single virtual page),
+	// SiteData is propagated to every page so any template can read it.
+	// Populated by plugin.Registry.EnrichVirtual from plugins implementing
+	// SiteDataProvider. Access in templates: {{index .SiteData "<plugin>"}}.
+	SiteData map[string]interface{}
 }
 
 // Pagination holds computed paging metadata for listing pages.

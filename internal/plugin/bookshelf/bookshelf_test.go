@@ -439,3 +439,148 @@ func TestBookshelf_NonAsinURL(t *testing.T) {
 		t.Errorf("ArticleURL = %q, expected to contain article slug", bk.ArticleURL)
 	}
 }
+
+// recentBooks is a test helper that extracts the per-locale recent book slice
+// from the value returned by Bookshelf.SiteData.
+func recentBooks(t *testing.T, data interface{}, locale string) []bookshelf.BookEntry {
+	t.Helper()
+	m, ok := data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("SiteData type = %T, want map[string]interface{}", data)
+	}
+	recent, ok := m["recent"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("SiteData[\"recent\"] type = %T, want map[string]interface{}", m["recent"])
+	}
+	if recent[locale] == nil {
+		return nil
+	}
+	books, ok := recent[locale].([]bookshelf.BookEntry)
+	if !ok {
+		t.Fatalf("recent[%q] type = %T, want []bookshelf.BookEntry", locale, recent[locale])
+	}
+	return books
+}
+
+func TestBookshelf_SiteData_NoBooks(t *testing.T) {
+	b := bookshelf.New()
+	site := &model.Site{
+		Config: model.Config{
+			Site: model.SiteConfig{Language: "en"},
+			I18n: model.I18nConfig{DefaultLocale: "en"},
+		},
+		Articles: []*model.ProcessedArticle{
+			{Article: model.Article{FrontMatter: model.FrontMatter{Title: "No books"}}},
+		},
+	}
+	data, err := b.SiteData(site, cfg(true, "test-22"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if data != nil {
+		t.Errorf("SiteData = %v, want nil when no article declares books", data)
+	}
+}
+
+func TestBookshelf_SiteData_RecentSortedAndCapped(t *testing.T) {
+	b := bookshelf.New()
+	var articles []*model.ProcessedArticle
+	// 7 books, increasing dates so the newest has the highest index.
+	for i := 1; i <= 7; i++ {
+		articles = append(articles, &model.ProcessedArticle{
+			Article: model.Article{FrontMatter: model.FrontMatter{
+				Title: "Book",
+				Slug:  "book",
+				Date:  time.Date(2024, 1, i, 0, 0, 0, 0, time.UTC),
+				Extra: map[string]interface{}{
+					"books": []interface{}{
+						map[string]interface{}{"asin": string(rune('A' + i - 1))},
+					},
+				},
+			}},
+			Locale: "en",
+		})
+	}
+	site := &model.Site{
+		Config: model.Config{
+			Site: model.SiteConfig{Language: "en"},
+			I18n: model.I18nConfig{DefaultLocale: "en"},
+		},
+		Articles: articles,
+	}
+
+	// Default limit (5).
+	data, err := b.SiteData(site, cfg(true, "test-22"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	books := recentBooks(t, data, "en")
+	if len(books) != 5 {
+		t.Fatalf("expected default cap of 5, got %d", len(books))
+	}
+	// Newest first: G (i=7) then F, E, D, C.
+	if books[0].ASIN != "G" {
+		t.Errorf("books[0].ASIN = %q, want G (newest)", books[0].ASIN)
+	}
+	if books[4].ASIN != "C" {
+		t.Errorf("books[4].ASIN = %q, want C", books[4].ASIN)
+	}
+
+	// Custom limit honored.
+	cfgLimited := map[string]interface{}{"enabled": true, "tag": "test-22", "recent_limit": 2}
+	data2, err := b.SiteData(site, cfgLimited)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	books2 := recentBooks(t, data2, "en")
+	if len(books2) != 2 {
+		t.Fatalf("expected cap of 2, got %d", len(books2))
+	}
+	if books2[0].ASIN != "G" || books2[1].ASIN != "F" {
+		t.Errorf("recent_limit=2 returned %q,%q; want G,F", books2[0].ASIN, books2[1].ASIN)
+	}
+}
+
+func TestBookshelf_SiteData_PerLocale(t *testing.T) {
+	b := bookshelf.New()
+	date := time.Date(2024, 5, 4, 0, 0, 0, 0, time.UTC)
+	site := &model.Site{
+		Config: model.Config{
+			Site: model.SiteConfig{Language: "en"},
+			I18n: model.I18nConfig{DefaultLocale: "en", Locales: []string{"en", "ja"}},
+		},
+		Articles: []*model.ProcessedArticle{
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Title: "Book EN", Slug: "book-en", Date: date,
+					Extra: map[string]interface{}{
+						"books": []interface{}{map[string]interface{}{"asin": "AAA"}},
+					},
+				}},
+				Locale: "en", URL: "/posts/book-en/",
+			},
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Title: "本 JA", Slug: "book-ja", Date: date,
+					Extra: map[string]interface{}{
+						"books": []interface{}{map[string]interface{}{"asin": "BBB"}},
+					},
+				}},
+				Locale: "ja", URL: "/ja/posts/book-ja/",
+			},
+		},
+	}
+
+	data, err := b.SiteData(site, cfg(true, "test-22"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	en := recentBooks(t, data, "en")
+	ja := recentBooks(t, data, "ja")
+	if len(en) != 1 || en[0].ASIN != "AAA" {
+		t.Errorf("en recent = %+v, want single AAA", en)
+	}
+	if len(ja) != 1 || ja[0].ASIN != "BBB" {
+		t.Errorf("ja recent = %+v, want single BBB", ja)
+	}
+}
