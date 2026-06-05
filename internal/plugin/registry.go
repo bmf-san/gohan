@@ -67,6 +67,20 @@ func (r *Registry) EnrichVirtual(site *model.Site) error {
 			return fmt.Errorf("site plugin %s: %w", sp.Name(), err)
 		}
 		site.VirtualPages = append(site.VirtualPages, pages...)
+
+		// Optionally collect global, cross-page data from the plugin.
+		if sdp, ok := sp.(SiteDataProvider); ok {
+			data, err := sdp.SiteData(site, cfg)
+			if err != nil {
+				return fmt.Errorf("site plugin %s site data: %w", sp.Name(), err)
+			}
+			if data != nil {
+				if site.SiteData == nil {
+					site.SiteData = make(map[string]interface{})
+				}
+				site.SiteData[sp.Name()] = data
+			}
+		}
 	}
 	return nil
 }

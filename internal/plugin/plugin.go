@@ -56,3 +56,16 @@ type SitePlugin interface {
 	// to be rendered by the HTML generator.
 	VirtualPages(site *model.Site, cfg map[string]interface{}) ([]*model.VirtualPage, error)
 }
+
+// SiteDataProvider is an optional interface a SitePlugin may implement to
+// contribute global data that is propagated to every rendered page (not just
+// its own VirtualPages).
+//
+// The returned value is stored at Site.SiteData[<plugin name>] and is
+// accessible in any template via {{index .SiteData "<plugin name>"}}.
+// Return a nil value to contribute nothing.
+type SiteDataProvider interface {
+	// SiteData inspects the full site and returns global data to expose on
+	// every page. cfg is the map under plugins.<name> in config.yaml.
+	SiteData(site *model.Site, cfg map[string]interface{}) (interface{}, error)
+}

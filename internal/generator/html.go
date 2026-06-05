@@ -868,6 +868,7 @@ func siteFor(base *model.Site, articles []*model.ProcessedArticle) *model.Site {
 		Tags:         base.Tags,
 		Categories:   base.Categories,
 		ArchiveYears: base.ArchiveYears,
+		SiteData:     base.SiteData,
 	}
 }
 
@@ -921,6 +922,7 @@ func localeTaxonomyBase(base *model.Site, articles []*model.ProcessedArticle) *m
 		Tags:         tags,
 		Categories:   cats,
 		ArchiveYears: archiveYears(articles),
+		SiteData:     base.SiteData,
 	}
 }
 
