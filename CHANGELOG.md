@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/bmf-san/gohan/compare/v1.4.2...v1.5.0) (2026-06-05)
+
+
+### Features
+
+* **bookshelf:** expose recently-read books on every page via SiteData ([#179](https://github.com/bmf-san/gohan/issues/179)) ([acc65d0](https://github.com/bmf-san/gohan/commit/acc65d093867ffc1b346a9c3753497a4c91756b1))
+
 ## [1.4.2](https://github.com/bmf-san/gohan/compare/v1.4.1...v1.4.2) (2026-06-02)
 
 
