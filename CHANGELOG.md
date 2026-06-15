@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1](https://github.com/bmf-san/gohan/compare/v1.5.0...v1.5.1) (2026-06-15)
+
+
+### Build System
+
+* **deps:** bump codecov/codecov-action from 6 to 7 ([#182](https://github.com/bmf-san/gohan/issues/182)) ([3eee9b0](https://github.com/bmf-san/gohan/commit/3eee9b057fe836a15859363fa360893e5fab683e))
+* **deps:** bump golang.org/x/image from 0.41.0 to 0.42.0 ([#181](https://github.com/bmf-san/gohan/issues/181)) ([627737f](https://github.com/bmf-san/gohan/commit/627737f7c8898dc219bf1d60a8a4e71114c7f513))
+
 ## [1.5.0](https://github.com/bmf-san/gohan/compare/v1.4.2...v1.5.0) (2026-06-05)
 
 
