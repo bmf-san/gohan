@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/bmf-san/gohan/compare/v1.5.1...v1.5.2) (2026-06-16)
+
+
+### Continuous Integration
+
+* add Dependabot auto-merge workflow ([#184](https://github.com/bmf-san/gohan/issues/184)) ([972a58d](https://github.com/bmf-san/gohan/commit/972a58d9f3652c921663a0c6c1c34e954b6da7cc))
+
 ## [1.5.1](https://github.com/bmf-san/gohan/compare/v1.5.0...v1.5.1) (2026-06-15)
 
 
