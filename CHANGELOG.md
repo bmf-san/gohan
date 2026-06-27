@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.6.0](https://github.com/bmf-san/gohan/compare/v1.5.2...v1.6.0) (2026-06-27)
+
+
+### Features
+
+* generate search-index.json for client-side search ([#190](https://github.com/bmf-san/gohan/issues/190)) ([3a7a143](https://github.com/bmf-san/gohan/commit/3a7a143f5f02dd7defd9e8262fe6b873d573e4e7))
+
+
+### Build System
+
+* **deps:** bump actions/checkout from 6 to 7 ([#186](https://github.com/bmf-san/gohan/issues/186)) ([d8e10b7](https://github.com/bmf-san/gohan/commit/d8e10b7627bdfffd15e200c522c805805457ee18))
+* **deps:** bump dependabot/fetch-metadata from 2 to 3 ([#187](https://github.com/bmf-san/gohan/issues/187)) ([167b523](https://github.com/bmf-san/gohan/commit/167b523deff45fdb97d094d1ad6866546bb23099))
+* **deps:** bump github.com/alecthomas/chroma/v2 from 2.26.1 to 2.27.0 ([#189](https://github.com/bmf-san/gohan/issues/189)) ([3f2a4ef](https://github.com/bmf-san/gohan/commit/3f2a4efc40025d2dbeb0163b4fed151e6e0109c9))
+* **deps:** bump golang.org/x/image from 0.42.0 to 0.43.0 ([#188](https://github.com/bmf-san/gohan/issues/188)) ([941e6f3](https://github.com/bmf-san/gohan/commit/941e6f33bcd1c6550f1731cb8b61b25f6266edba))
+
 ## [1.5.2](https://github.com/bmf-san/gohan/compare/v1.5.1...v1.5.2) (2026-06-16)
 
 
