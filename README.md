@@ -34,6 +34,7 @@ This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77
 - **Mermaid diagrams** — Fenced `mermaid` blocks render as interactive diagrams
 - **Taxonomy** — Tag and category pages generated automatically
 - **Atom feed & sitemap** — `atom.xml` and `sitemap.xml` generated automatically
+- **Search index** — `search-index.json` generated automatically (per locale) for client-side search
 - **Live-reload dev server** — `gohan serve` watches files and reloads the browser (CSS-only changes hot-swap stylesheets without a full reload)
 - **Customisable themes** — Full control via Go `html/template`
 - **Plugin system** — Built-in plugins enabled per-project via `config.yaml` (no Go code required)
