@@ -262,6 +262,9 @@ func runBuild(args []string) error {
 		if err := generator.GenerateFeeds(outDir, cfg.Site.BaseURL, cfg.Site.Title, processed, *cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "warn: feeds: %v\n", err)
 		}
+		if err := generator.GenerateSearchIndex(outDir, cfg.Site.BaseURL, processed, *cfg); err != nil {
+			fmt.Fprintf(os.Stderr, "warn: search index: %v\n", err)
+		}
 		return nil
 	})
 

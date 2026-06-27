@@ -1,4 +1,5 @@
-// Package generator writes rendered HTML, assets, sitemap, and Atom feed.
+// Package generator writes rendered HTML, assets, sitemap, Atom feed, and
+// search index.
 package generator
 
 import (

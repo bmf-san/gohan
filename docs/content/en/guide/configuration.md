@@ -75,7 +75,7 @@ Site-wide metadata.
 | `github_repo` | string | `""` | GitHub repository base URL (e.g. `https://github.com/owner/repo`). When set, templates can render an "Edit this page" link using `.ContentPath` |
 | `github_branch` | string | `"main"` | Branch used to build the edit URL |
 
-> `base_url` is used to generate absolute URLs in `sitemap.xml` and `atom.xml`. Do not include a trailing slash.
+> `base_url` is used to generate absolute URLs in `sitemap.xml`, `atom.xml`, and `search-index.json`. Do not include a trailing slash.
 
 ---
 
