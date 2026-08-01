@@ -7,7 +7,7 @@ require gopkg.in/yaml.v3 v3.0.1
 require (
 	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/yuin/goldmark v1.8.4
+	github.com/yuin/goldmark v1.8.5
 	golang.org/x/image v0.44.0
 )
 
