@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.7.0](https://github.com/bmf-san/gohan/compare/v1.6.0...v1.7.0) (2026-09-21)
+
+
+### Features
+
+* move OGP image generation into an asset plugin ([#203](https://github.com/bmf-san/gohan/issues/203)) ([82f96ef](https://github.com/bmf-san/gohan/commit/82f96ef12590fd89c60c415465f9d3885383bafd))
+
+
+### Bug Fixes
+
+* **deps:** bump Go toolchain to 1.26.6 to patch stdlib vulnerabilities ([#201](https://github.com/bmf-san/gohan/issues/201)) ([66aee9f](https://github.com/bmf-san/gohan/commit/66aee9fe1b906dcb71ebe173b261de04d416a514))
+
+
+### Build System
+
+* **deps:** bump actions/labeler from 6 to 7 ([#196](https://github.com/bmf-san/gohan/issues/196)) ([6a8151d](https://github.com/bmf-san/gohan/commit/6a8151de4a1e14ccdb398bbe7c7c30fe19107d49))
+* **deps:** bump actions/setup-go from 6 to 7 ([#195](https://github.com/bmf-san/gohan/issues/195)) ([9ac5a60](https://github.com/bmf-san/gohan/commit/9ac5a60421090288c6ea2aac22a18215397aec2d))
+* **deps:** bump actions/setup-node from 6 to 7 ([#194](https://github.com/bmf-san/gohan/issues/194)) ([7ef6e0e](https://github.com/bmf-san/gohan/commit/7ef6e0ee40ef5e3e708a194551b071b8b0920dda))
+* **deps:** bump github.com/yuin/goldmark from 1.8.2 to 1.8.4 ([#193](https://github.com/bmf-san/gohan/issues/193)) ([628649f](https://github.com/bmf-san/gohan/commit/628649ff2db237abab79a1f147e6ca04d1d1ff34))
+* **deps:** bump github.com/yuin/goldmark from 1.8.4 to 1.8.5 ([#197](https://github.com/bmf-san/gohan/issues/197)) ([4d50df5](https://github.com/bmf-san/gohan/commit/4d50df5ab6b0f0cdce232b93882bd9b1da6a44b3))
+* **deps:** bump github.com/yuin/goldmark from 1.8.5 to 1.8.6 ([#199](https://github.com/bmf-san/gohan/issues/199)) ([a3b6bc1](https://github.com/bmf-san/gohan/commit/a3b6bc16688b653f57decfccb496673bd9c28945))
+* **deps:** bump golang.org/x/image from 0.43.0 to 0.44.0 ([#192](https://github.com/bmf-san/gohan/issues/192)) ([371a489](https://github.com/bmf-san/gohan/commit/371a489d7dde1bb72b612498915127056245bb5a))
+* **deps:** bump golang.org/x/image from 0.44.0 to 0.45.0 ([#198](https://github.com/bmf-san/gohan/issues/198)) ([c4a5e88](https://github.com/bmf-san/gohan/commit/c4a5e8836630d3f08c013096793d137231a791aa))
+* **deps:** bump golang.org/x/image from 0.45.0 to 0.46.0 ([#200](https://github.com/bmf-san/gohan/issues/200)) ([8198c34](https://github.com/bmf-san/gohan/commit/8198c3463925a490bfdbe5f67f236a6fa7535dd1))
+
 ## [1.6.0](https://github.com/bmf-san/gohan/compare/v1.5.2...v1.6.0) (2026-06-27)
 
 
