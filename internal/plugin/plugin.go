@@ -69,3 +69,23 @@ type SiteDataProvider interface {
 	// every page. cfg is the map under plugins.<name> in config.yaml.
 	SiteData(site *model.Site, cfg map[string]interface{}) (interface{}, error)
 }
+
+// AssetPlugin is the interface for plugins that generate build-time binary
+// artifacts (e.g. OGP images) written directly into the output directory.
+//
+// Unlike Plugin (template data) and SitePlugin (VirtualPages/HTML), AssetPlugins
+// produce files that are referenced by templates via a conventional URL but are
+// otherwise opaque to gohan core. They run after the site has been processed.
+type AssetPlugin interface {
+	// Name returns the unique identifier of the plugin.
+	// This key is used in config.yaml under plugins.<name>.
+	Name() string
+
+	// Enabled reports whether the plugin is active for the given config section.
+	Enabled(cfg map[string]interface{}) bool
+
+	// GenerateAssets writes artifacts for site into outDir. changeSet is nil for
+	// full builds, or the set of changed files for incremental builds (so the
+	// plugin can skip unchanged outputs). cfg is the plugins.<name> config map.
+	GenerateAssets(site *model.Site, outDir string, changeSet *model.ChangeSet, cfg map[string]interface{}) error
+}

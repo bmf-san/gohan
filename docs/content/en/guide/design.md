@@ -462,7 +462,7 @@ type DiffEngine interface {
 #### Output Generator
 ```go
 type OutputGenerator interface {
-    // Generate writes all HTML pages, copies static assets, and generates OGP images.
+    // Generate writes all HTML pages and copies static assets.
     // When changeSet is nil, all pages are written.
     Generate(site *Site, changeSet *ChangeSet) error
 }
@@ -641,7 +641,6 @@ type Config struct {
     Build           BuildConfig            `yaml:"build"`
     Theme           ThemeConfig            `yaml:"theme"`
     SyntaxHighlight SyntaxHighlightConfig  `yaml:"syntax_highlight"`
-    OGP             OGPConfig              `yaml:"ogp"`
     Plugins         map[string]interface{} `yaml:"plugins"`
     I18n            I18nConfig             `yaml:"i18n"`
 }
@@ -674,13 +673,6 @@ type ThemeConfig struct {
 type SyntaxHighlightConfig struct {
     Theme       string `yaml:"theme"`
     LineNumbers bool   `yaml:"line_numbers"`
-}
-
-type OGPConfig struct {
-    Enabled  bool   `yaml:"enabled"`
-    LogoFile string `yaml:"logo_file"`
-    Width    int    `yaml:"width"`
-    Height   int    `yaml:"height"`
 }
 ```
 

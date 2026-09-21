@@ -37,10 +37,10 @@ type writeJob struct {
 	data *model.Site
 }
 
-// Generate writes all HTML pages and copies static assets.
-// Generate writes all HTML pages for site into g.outDir.
-// changeSet is forwarded to the OGP image generator only; HTML pages are always
-// fully regenerated regardless of changeSet.
+// Generate writes all HTML pages for site into g.outDir and copies static
+// assets. changeSet is currently unused (HTML pages are always fully
+// regenerated); build-time binary assets such as OGP images are produced
+// separately by asset plugins after HTML generation.
 func (g *HTMLGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) error {
 	parallelism := g.cfg.Build.Parallelism
 	if parallelism <= 0 {
@@ -89,13 +89,6 @@ func (g *HTMLGenerator) Generate(site *model.Site, changeSet *model.ChangeSet) e
 			if !os.IsNotExist(err) {
 				return fmt.Errorf("copy static: %w", err)
 			}
-		}
-	}
-
-	if g.cfg.OGP.Enabled {
-		ogpGen := NewOGPGenerator(g.outDir, g.cfg.Build.ContentDir, g.cfg.OGP)
-		if err := ogpGen.Generate(site, changeSet); err != nil {
-			return fmt.Errorf("ogp generation: %w", err)
 		}
 	}
 

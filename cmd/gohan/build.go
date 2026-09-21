@@ -254,6 +254,13 @@ func runBuild(args []string) error {
 		return fmt.Errorf("generate HTML: %w", err)
 	}
 
+	// Build-time assets (OGP images, …) via asset plugins.
+	if err := phases.Phase("assets", func() error {
+		return plugin.DefaultRegistry().GenerateAssets(site, outDir, changeSet)
+	}); err != nil {
+		return fmt.Errorf("generate assets: %w", err)
+	}
+
 	// Sitemap + feeds.
 	_ = phases.Phase("feeds", func() error {
 		if err := generator.GenerateSitemap(outDir, cfg.Site.BaseURL, processed, site.VirtualPages, generator.TaxonomyURLs(site, *cfg), *cfg); err != nil {

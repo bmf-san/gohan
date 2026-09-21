@@ -9,7 +9,7 @@ translation_key: "ogp"
 
 ## Overview
 
-gohan generates OGP (Open Graph Protocol) thumbnail images at build time using pure Go. Each article gets a unique `og:image` derived from its title, eliminating the need for manual image creation.
+gohan generates OGP (Open Graph Protocol) thumbnail images at build time using pure Go, via the built-in `ogp` **asset plugin**. Each article gets a unique `og:image` — a deterministic gradient-and-shape design derived from its slug — eliminating the need for manual image creation.
 
 ## Output
 
@@ -33,60 +33,43 @@ Listing pages (index, tag, category) fall back to a user-supplied default image:
 
 ## Configuration
 
-Add an `ogp` block to `config.yaml`:
+OGP generation is a built-in **asset plugin**. Enable it under `plugins.ogp` in `config.yaml`:
 
 ```yaml
-ogp:
-  enabled: true
-  background_color: "#1e1e2e"
-  text_color: "#cdd6f4"
-  font_file: "assets/fonts/NotoSansJP-Bold.ttf"   # TTF/OTF, required for CJK
-  logo_file: "assets/images/logo.png"              # optional overlay
-  width: 1200
-  height: 630
+plugins:
+  ogp:
+    enabled: true
+    logo_file: "assets/images/logo.png"   # optional top-left logo overlay
+    width: 1200                            # optional; default 1200
+    height: 630                            # optional; default 630
 ```
 
-The font file must be bundled by the user. Any TTF/OTF font is supported.
+Each image is a deterministic design (a diagonal gradient with geometric decorations) seeded from the article slug, so **no font file is required** and the same article always yields the same image.
 
-## Data Model
-
-Add `OGPConfig` to `model.go`:
-
-```go
-// OGPConfig holds settings for build-time OGP image generation.
-type OGPConfig struct {
-    Enabled         bool   `yaml:"enabled"`
-    BackgroundColor string `yaml:"background_color"`
-    TextColor       string `yaml:"text_color"`
-    FontFile        string `yaml:"font_file"`
-    LogoFile        string `yaml:"logo_file"` // empty means no logo
-    Width           int    `yaml:"width"`
-    Height          int    `yaml:"height"`
-}
-```
-
-Add to `Config`:
-
-```go
-type Config struct {
-    // ... existing fields ...
-    OGP OGPConfig `yaml:"ogp"`
-}
-```
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `enabled` | bool | `false` | Generate OGP images during build |
+| `logo_file` | string | `""` | Optional PNG/JPEG logo drawn in the top-left corner |
+| `width` | int | `1200` | Image width in pixels |
+| `height` | int | `630` | Image height in pixels |
 
 ## Implementation
 
-**`internal/generator/ogp.go`** (new file)
-- Implement `OGPGenerator` satisfying `OutputGenerator`
-- Use stdlib `image`, `image/color`, `image/png`, `image/draw`
-- Use `golang.org/x/image/font` and `golang.org/x/image/font/opentype` for TrueType rendering
-- Use `golang.org/x/image/math/fixed` for fixed-point arithmetic
-- Rendering pipeline: fill background → draw logo (if configured) → draw word-wrapped title text centered vertically and horizontally
-- Skip generation if `ogp.enabled: false`
-- Skip per-article generation if the output `.png` already exists and the source article is unchanged (cache-aware via `ChangeSet`)
+OGP generation lives in the **`internal/plugin/ogp`** package and implements the `plugin.AssetPlugin` interface:
 
-**`internal/generator/generator.go`**
-- Invoke `OGPGenerator.Generate()` as part of the build pipeline when `cfg.OGP.Enabled` is true
+```go
+type AssetPlugin interface {
+    Name() string
+    Enabled(cfg map[string]interface{}) bool
+    GenerateAssets(site *model.Site, outDir string, changeSet *model.ChangeSet, cfg map[string]interface{}) error
+}
+```
+
+- Registered in `internal/plugin/registry.go` and invoked by the build pipeline as the `assets` phase (after HTML rendering).
+- Reads its configuration from the `plugins.ogp` map — there is no longer a top-level `ogp:` config section.
+- Uses stdlib `image`, `image/color`, `image/png`, `image/draw`, plus `golang.org/x/image/draw` for logo scaling.
+- Rendering pipeline: slug-seeded diagonal gradient background → geometric accent shapes → optional logo overlay (top-left).
+- Skips per-article generation when the output `.png` already exists and the source article is unchanged (incremental via `ChangeSet`).
 
 **Template usage (user-side)**:
 
@@ -107,8 +90,7 @@ type Config struct {
 | Package | Purpose |
 |---|---|
 | `image`, `image/png`, `image/draw` | stdlib — canvas creation and PNG encoding |
-| `golang.org/x/image/font` | Font face interface and text drawing |
-| `golang.org/x/image/font/opentype` | Load TTF/OTF font files |
-| `golang.org/x/image/math/fixed` | Fixed-point arithmetic for font rendering |
+| `image/jpeg` | stdlib — decode JPEG logo files |
+| `golang.org/x/image/draw` | High-quality scaling for the optional logo overlay |
 
-`golang.org/x/image` is already transitively pulled in by many Go projects and adds negligible build overhead.
+`golang.org/x/image` adds negligible build overhead.

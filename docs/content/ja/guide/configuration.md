@@ -46,18 +46,17 @@ syntax_highlight:
   theme: "github"
   line_numbers: false
 
-ogp:
-  enabled: false         # 省略可: ビルド時に OGP 画像を生成する
-  logo_file: ""          # 省略可: 生成画像に埋め込むロゴファイルのパス（プロジェクトルートからの相対）
-  width: 1200
-  height: 630
-
 i18n:
   locales: [en, ja]      # 省略可: ロケールコードのリスト。空 = シングル言語モード
   default_locale: en     # 省略可: ルート URL で配信するロケール（デフォルト: site.language）
 
 plugins:               # 省略可: プラグイン設定（キー = プラグイン名）
   amazon_books: {}
+  ogp:                   # 省略可: ビルド時の OGP 画像生成（アセットプラグイン）
+    enabled: false
+    logo_file: ""        # 省略可: ロゴファイルのパス（プロジェクトルートからの相対）
+    width: 1200
+    height: 630
 ```
 
 ---
@@ -226,9 +225,9 @@ template: "article.html"          # optional: 使用するテンプレートフ�
 
 ---
 
-## `ogp` セクション
+## `plugins.ogp` セクション
 
-ビルド時の OGP 画像生成を設定します。
+組み込みの `ogp` アセットプラグインによるビルド時の OGP 画像生成を、`plugins.ogp` で設定します。
 
 | フィールド | 型 | デフォルト | 説明 |
 |---|---|---|---|
@@ -261,6 +260,8 @@ template: "article.html"          # optional: 使用するテンプレートフ�
 ```yaml
 plugins:
   amazon_books: {}
+  ogp:
+    enabled: true
 ```
 
 詳細は [docs/features/plugin-system.ja.md](../features/plugin-system.ja.md) を参照してください。

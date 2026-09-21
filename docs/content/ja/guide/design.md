@@ -462,7 +462,7 @@ type DiffEngine interface {
 #### 出力ジェネレーター
 ```go
 type OutputGenerator interface {
-    // Generate は全HTMLページの書き出し、静的アセットのコピー、OGP画像生成を行う。
+    // Generate は全HTMLページの書き出しと静的アセットのコピーを行う。
     // changeSet が nil の場合は全ページを書き出す。
     Generate(site *Site, changeSet *ChangeSet) error
 }
@@ -640,7 +640,6 @@ type Config struct {
     Build           BuildConfig            `yaml:"build"`
     Theme           ThemeConfig            `yaml:"theme"`
     SyntaxHighlight SyntaxHighlightConfig  `yaml:"syntax_highlight"`
-    OGP             OGPConfig              `yaml:"ogp"`
     Plugins         map[string]interface{} `yaml:"plugins"`
     I18n            I18nConfig             `yaml:"i18n"`
 }
@@ -673,13 +672,6 @@ type ThemeConfig struct {
 type SyntaxHighlightConfig struct {
     Theme       string `yaml:"theme"`
     LineNumbers bool   `yaml:"line_numbers"`
-}
-
-type OGPConfig struct {
-    Enabled  bool   `yaml:"enabled"`
-    LogoFile string `yaml:"logo_file"`
-    Width    int    `yaml:"width"`
-    Height   int    `yaml:"height"`
 }
 ```
 

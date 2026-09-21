@@ -211,6 +211,59 @@ books:
 4. `.VirtualPageData` を読み取るテーマテンプレートを作成
 5. 本セクションにドキュメントを追記
 
+---
+
+## AssetPlugin — ビルド時のバイナリアセット
+
+`Plugin` がテンプレートデータを提供し、`SitePlugin` がHTMLページを生成するのに対し、**`AssetPlugin`** は出力ディレクトリに直接書き出す**ビルド時のバイナリ成果物**（OGP画像など）を生成する。テンプレートはこれらのファイルを規約に基づくURLで参照し、gohanコアはその中身を不透明なものとして扱う。
+
+```
+cmd/gohan/build.go
+  └── plugin.DefaultRegistry().GenerateAssets(site, outDir, changeSet)  ← "assets" ビルドフェーズ（レンダリング後）
+        └── 有効な各 AssetPlugin について:
+              AssetPlugin.GenerateAssets(site, outDir, changeSet, cfg) → outDir 配下にファイルを書き出す
+```
+
+### AssetPlugin インターフェース
+
+`internal/plugin/plugin.go` で定義：
+
+```go
+type AssetPlugin interface {
+    Name() string
+    Enabled(cfg map[string]interface{}) bool
+    GenerateAssets(site *model.Site, outDir string, changeSet *model.ChangeSet, cfg map[string]interface{}) error
+}
+```
+
+- **`Name()`** — `config.yaml` の `plugins.<name>` で使う一意のキー
+- **`Enabled()`** — プラグインを実行するかどうかを制御
+- **`GenerateAssets()`** — `outDir` に成果物を書き出す。`changeSet` はフルビルド時は `nil`、差分ビルド時は変更されたファイルの集合であり、変更のない出力をスキップできる
+
+### 組み込み AssetPlugin
+
+#### ogp
+
+各記事の OGP 画像を `<output>/ogp/{slug}.png` に生成する。スラッグをシードとした決定的なグラデーションデザインを用いる。詳細は [OGP](ogp.ja.md) を参照。
+
+**config.yaml:**
+```yaml
+plugins:
+  ogp:
+    enabled: true
+    logo_file: "assets/images/logo.png"   # オプション
+    width: 1200
+    height: 630
+```
+
+### 新しい AssetPlugin の追加方法
+
+1. `internal/plugin/<name>/<name>.go` を作成し `plugin.AssetPlugin` を実装
+2. コンパイル時インターフェースチェックを追加（構造的、または `var _ plugin.AssetPlugin = (*MyPlugin)(nil)`）
+3. `internal/plugin/registry.go` の `DefaultRegistry()` の `assetPlugins` に登録
+4. 生成されたファイルをテーマテンプレートから参照
+5. 本セクションにドキュメントを追記
+
 ## スコープ
 
 - `plugin` パッケージによる動的ロードは意図的にスコープ外 — OS制約が多く、静的サイトジェネレーターには不要な複雑性をもたらすため
