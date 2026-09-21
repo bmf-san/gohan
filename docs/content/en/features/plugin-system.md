@@ -223,6 +223,59 @@ When `url:` is provided instead of `asin:`, `ImageURL` is empty and `LinkURL` is
 4. Create a theme template that reads `.VirtualPageData`
 5. Document in this section
 
+---
+
+## AssetPlugin — Build-time binary assets
+
+While `Plugin` supplies template data and `SitePlugin` generates HTML pages, **`AssetPlugin`** generates **build-time binary artifacts** (such as OGP images) written directly into the output directory. Templates reference these files by a conventional URL; gohan core treats their contents as opaque.
+
+```
+cmd/gohan/build.go
+  └── plugin.DefaultRegistry().GenerateAssets(site, outDir, changeSet)  ← the "assets" build phase (after render)
+        └── for each enabled AssetPlugin:
+              AssetPlugin.GenerateAssets(site, outDir, changeSet, cfg) → writes files under outDir
+```
+
+### AssetPlugin Interface
+
+Defined in `internal/plugin/plugin.go`:
+
+```go
+type AssetPlugin interface {
+    Name() string
+    Enabled(cfg map[string]interface{}) bool
+    GenerateAssets(site *model.Site, outDir string, changeSet *model.ChangeSet, cfg map[string]interface{}) error
+}
+```
+
+- **`Name()`** — unique key used in `config.yaml` under `plugins.<name>`
+- **`Enabled()`** — controls whether the plugin runs
+- **`GenerateAssets()`** — writes artifacts into `outDir`. `changeSet` is `nil` for full builds, or the set of changed files for incremental builds so the plugin can skip unchanged outputs
+
+### Built-in AssetPlugins
+
+#### ogp
+
+Generates one Open Graph (OGP) image per article at `<output>/ogp/{slug}.png`, using a deterministic slug-seeded gradient design. See [OGP](ogp.md) for details.
+
+**config.yaml:**
+```yaml
+plugins:
+  ogp:
+    enabled: true
+    logo_file: "assets/images/logo.png"   # optional
+    width: 1200
+    height: 630
+```
+
+### Adding a New AssetPlugin
+
+1. Create `internal/plugin/<name>/<name>.go` implementing `plugin.AssetPlugin`
+2. Add a compile-time interface check (structural, or `var _ plugin.AssetPlugin = (*MyPlugin)(nil)`)
+3. Register in `internal/plugin/registry.go` → `DefaultRegistry()` under `assetPlugins`
+4. Reference the generated files from a theme template
+5. Document in this section
+
 ## Scope
 
 - Dynamic plugin loading (`plugin` package) is intentionally out of scope — it adds OS constraints and complexity that are unnecessary for a static site generator

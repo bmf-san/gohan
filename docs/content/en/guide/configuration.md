@@ -46,18 +46,17 @@ syntax_highlight:
   theme: "github"
   line_numbers: false
 
-ogp:
-  enabled: false         # optional: generate OGP images at build time
-  logo_file: ""          # optional: path to logo file (relative to project root)
-  width: 1200
-  height: 630
-
 i18n:
   locales: [en, ja]      # optional: ordered locale codes; empty = single-language mode
   default_locale: en     # optional: locale served at root URL (default: site.language)
 
 plugins:               # optional: plugin configuration (key = plugin name)
   amazon_books: {}
+  ogp:                   # optional: build-time OGP image generation (asset plugin)
+    enabled: false
+    logo_file: ""        # optional: path to logo file (relative to project root)
+    width: 1200
+    height: 630
 ```
 
 ---
@@ -226,9 +225,9 @@ When `slug` is omitted it is derived from `title`:
 
 ---
 
-## `ogp` section
+## `plugins.ogp` section
 
-Build-time OGP image generation.
+Build-time OGP image generation, provided by the built-in `ogp` asset plugin and configured under `plugins.ogp`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
@@ -261,6 +260,8 @@ Plugin configuration. Keys are plugin names; values are plugin-specific settings
 ```yaml
 plugins:
   amazon_books: {}
+  ogp:
+    enabled: true
 ```
 
 See [docs/features/plugin-system.md](../features/plugin-system.md) for the full plugin guide.

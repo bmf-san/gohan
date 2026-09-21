@@ -6,12 +6,14 @@ import (
 	"github.com/bmf-san/gohan/internal/model"
 	"github.com/bmf-san/gohan/internal/plugin/amazonbooks"
 	"github.com/bmf-san/gohan/internal/plugin/bookshelf"
+	"github.com/bmf-san/gohan/internal/plugin/ogp"
 )
 
 // Registry holds the set of built-in plugins.
 type Registry struct {
-	plugins     []Plugin
-	sitePlugins []SitePlugin
+	plugins      []Plugin
+	sitePlugins  []SitePlugin
+	assetPlugins []AssetPlugin
 }
 
 // DefaultRegistry returns a Registry pre-loaded with all built-in plugins.
@@ -22,6 +24,9 @@ func DefaultRegistry() *Registry {
 		},
 		sitePlugins: []SitePlugin{
 			bookshelf.New(),
+		},
+		assetPlugins: []AssetPlugin{
+			ogp.New(),
 		},
 	}
 }
@@ -80,6 +85,24 @@ func (r *Registry) EnrichVirtual(site *model.Site) error {
 				}
 				site.SiteData[sp.Name()] = data
 			}
+		}
+	}
+	return nil
+}
+
+// GenerateAssets runs all enabled AssetPlugins, writing build-time artifacts
+// (e.g. OGP images) into outDir. changeSet enables incremental skipping.
+// Call this after the site has been processed (typically after HTML generation).
+func (r *Registry) GenerateAssets(site *model.Site, outDir string, changeSet *model.ChangeSet) error {
+	pluginsCfg := site.Config.Plugins
+
+	for _, ap := range r.assetPlugins {
+		cfg := pluginCfg(pluginsCfg, ap.Name())
+		if !ap.Enabled(cfg) {
+			continue
+		}
+		if err := ap.GenerateAssets(site, outDir, changeSet, cfg); err != nil {
+			return fmt.Errorf("asset plugin %s: %w", ap.Name(), err)
 		}
 	}
 	return nil
