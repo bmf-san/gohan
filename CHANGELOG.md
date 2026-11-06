@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.8.0](https://github.com/bmf-san/gohan/compare/v1.7.0...v1.8.0) (2026-11-06)
+
+
+### Features
+
+* exclude pages marked noindex from sitemap.xml ([#205](https://github.com/bmf-san/gohan/issues/205)) ([ddeabb4](https://github.com/bmf-san/gohan/commit/ddeabb472299dfde901bffe645c027abf9924f22))
+
+
+### Bug Fixes
+
+* **deps:** bump Go toolchain to 1.26.10 to patch stdlib vulnerabilities ([#206](https://github.com/bmf-san/gohan/issues/206)) ([e7330b3](https://github.com/bmf-san/gohan/commit/e7330b36da301189efe0e7d2d85a94bcc6e7962c))
+
+
+### Build System
+
+* **deps:** bump golang.org/x/image from 0.46.0 to 0.47.0 ([#204](https://github.com/bmf-san/gohan/issues/204)) ([40d6c58](https://github.com/bmf-san/gohan/commit/40d6c58aa1354bffc21fad76d960b2406b339169))
+
 ## [1.7.0](https://github.com/bmf-san/gohan/compare/v1.6.0...v1.7.0) (2026-09-21)
 
 
