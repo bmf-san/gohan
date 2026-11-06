@@ -540,3 +540,124 @@ func TestTaxonomyURLs_I18n(t *testing.T) {
 		}
 	}
 }
+
+func writePage(t *testing.T, outDir, urlPath, head, body string) {
+	t.Helper()
+	dir := filepath.Join(outDir, filepath.FromSlash(strings.Trim(urlPath, "/")))
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	doc := "<!DOCTYPE html><html><head><title>t</title>" + head + "</head><body>" + body + "</body></html>"
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte(doc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGenerateSitemap_SkipsNoindexPages(t *testing.T) {
+	dir := t.TempDir()
+	writePage(t, dir, "/tags/thin/", `<meta name="robots" content="noindex,follow">`, "")
+	writePage(t, dir, "/tags/go/", `<meta name="description" content="noindex is mentioned here">`, "")
+	writePage(t, dir, "/categories/mentions/", "", "<p>this page talks about noindex</p>")
+	writePage(t, dir, "/bookshelf/", `<META NAME="ROBOTS" CONTENT="NONE">`, "")
+	writePage(t, dir, "/posts/hidden/", `<meta content="noindex" name="robots"/>`, "")
+	writePage(t, dir, "/posts/visible/", `<meta name="robots" content="index,follow">`, "")
+
+	date := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	articles := []*model.ProcessedArticle{
+		{Article: model.Article{FrontMatter: model.FrontMatter{Slug: "hidden", Date: date}}},
+		{Article: model.Article{FrontMatter: model.FrontMatter{Slug: "visible", Date: date}}},
+	}
+	vps := []*model.VirtualPage{{URL: "/bookshelf/"}}
+	extra := []string{"/tags/thin/", "/tags/go/", "/categories/mentions/", "/archives/2024/"}
+	if err := GenerateSitemap(dir, "https://example.com", articles, vps, extra, model.Config{}); err != nil {
+		t.Fatalf("GenerateSitemap: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
+	s := string(data)
+	for _, u := range []string{"/tags/thin/", "/bookshelf/", "/posts/hidden/"} {
+		if strings.Contains(s, "https://example.com"+u+"<") {
+			t.Errorf("noindex page %q must not be in the sitemap:\n%s", u, s)
+		}
+	}
+	// Pages without a robots noindex directive stay, including pages that
+	// have not been rendered (missing files are treated as indexable).
+	for _, u := range []string{"/tags/go/", "/categories/mentions/", "/archives/2024/", "/posts/visible/"} {
+		if !strings.Contains(s, "https://example.com"+u+"<") {
+			t.Errorf("expected %q in the sitemap:\n%s", u, s)
+		}
+	}
+}
+
+func TestGenerateSitemap_NoindexTranslationIsNotAnAlternate(t *testing.T) {
+	dir := t.TempDir()
+	writePage(t, dir, "/posts/hello/", "", "")
+	writePage(t, dir, "/ja/posts/hello/", `<meta name="googlebot" content="noindex">`, "")
+
+	cfg := model.Config{}
+	cfg.I18n.DefaultLocale = "en"
+	cfg.I18n.Locales = []string{"en", "ja"}
+	date := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	en := &model.ProcessedArticle{Article: model.Article{FrontMatter: model.FrontMatter{Slug: "hello", Date: date}}, Locale: "en", URL: "/posts/hello/"}
+	ja := &model.ProcessedArticle{Article: model.Article{FrontMatter: model.FrontMatter{Slug: "hello", Date: date}}, Locale: "ja", URL: "/ja/posts/hello/"}
+	en.Translations = []model.LocaleRef{{Locale: "ja", URL: "/ja/posts/hello/"}}
+	ja.Translations = []model.LocaleRef{{Locale: "en", URL: "/posts/hello/"}}
+	if err := GenerateSitemap(dir, "https://example.com", []*model.ProcessedArticle{en, ja}, nil, nil, cfg); err != nil {
+		t.Fatalf("GenerateSitemap: %v", err)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "sitemap.xml"))
+	s := string(data)
+	if !strings.Contains(s, "<loc>https://example.com/posts/hello/</loc>") {
+		t.Errorf("indexable article missing:\n%s", s)
+	}
+	if strings.Contains(s, "https://example.com/ja/posts/hello/") {
+		t.Errorf("noindex translation must not appear as a URL or hreflang alternate:\n%s", s)
+	}
+}
+
+func TestPageIsNoindex(t *testing.T) {
+	cases := []struct {
+		name string
+		head string
+		body string
+		want bool
+	}{
+		{"robots noindex", `<meta name="robots" content="noindex">`, "", true},
+		{"robots noindex follow", `<meta name="robots" content="noindex, follow">`, "", true},
+		{"attribute order reversed", `<meta content="noindex,nofollow" name="robots">`, "", true},
+		{"uppercase none", `<META NAME=ROBOTS CONTENT="NONE">`, "", true},
+		{"googlebot", `<meta name='googlebot' content='noindex'>`, "", true},
+		{"robots index", `<meta name="robots" content="index,follow">`, "", false},
+		{"other meta mentions noindex", `<meta name="description" content="about noindex">`, "", false},
+		{"robots-like name", `<meta name="robotsx" content="noindex">`, "", false},
+		{"meta in body is ignored", "", `<meta name="robots" content="noindex">`, false},
+		{"no meta", "", "", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writePage(t, dir, "/p/", tc.head, tc.body)
+			if got := pageIsNoindex(dir, "/p/"); got != tc.want {
+				t.Errorf("pageIsNoindex = %v, want %v", got, tc.want)
+			}
+		})
+	}
+	if pageIsNoindex(t.TempDir(), "/missing/") {
+		t.Error("a missing page must be treated as indexable")
+	}
+}
+
+func TestPageIsNoindex_ResolvesRootAndFiles(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte(`<html><head><meta name="robots" content="noindex"></head></html>`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "page.html"), []byte(`<html><head><meta name="robots" content="noindex"></head></html>`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !pageIsNoindex(dir, "/") {
+		t.Error("expected / to resolve to index.html")
+	}
+	if !pageIsNoindex(dir, "/page.html?x=1#frag") {
+		t.Error("expected /page.html to resolve to the file, ignoring query and fragment")
+	}
+}

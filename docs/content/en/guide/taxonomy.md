@@ -53,6 +53,8 @@ public/
     └── programming/index.html
 ```
 
+Tag, category, and archive pages are also listed in `sitemap.xml`. A page is left out of the sitemap when its rendered HTML has `<meta name="robots" content="noindex">` (or `none`). If your template noindexes thin pages, such as tags with a single article, those pages stay out of the sitemap too. The same rule applies to articles and plugin pages.
+
 ---
 
 ## Accessing taxonomy in templates
