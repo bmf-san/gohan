@@ -392,7 +392,7 @@ graph TB
 - **HTML files**: Each article and page
 - **List pages**: Index, tags, categories
 - **Feed files**: RSS, Atom
-- **Sitemap**: `sitemap.xml`
+- **Sitemap**: `sitemap.xml` (pages whose HTML has a robots `noindex` meta tag are excluded)
 - **Static assets**: CSS, images
 
 ### 9.3 Component Design
