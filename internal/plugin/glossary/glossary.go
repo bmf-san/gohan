@@ -95,6 +95,14 @@ type Term struct {
 	Articles []ArticleRef
 }
 
+// TermLink points to a term on the glossary page.
+type TermLink struct {
+	// Term is the display name of the term.
+	Term string
+	// URL is the glossary page URL with the term's anchor, such as "/glossary/#term-jwt".
+	URL string
+}
+
 // Group is a set of terms that share an index heading.
 type Group struct {
 	// Key is the heading label: "0-9", "A" to "Z", a kana row such as "あ" or
@@ -188,11 +196,19 @@ func (g *Glossary) VirtualPages(site *model.Site, cfg map[string]interface{}) ([
 
 // SiteData implements plugin.SiteDataProvider. It exposes the glossary page
 // URL and the number of terms per locale on every rendered page, so themes can
-// link to the glossary only when one exists for the current locale.
+// link to the glossary only when one exists for the current locale. It also
+// maps each defining article URL to the terms it defines, so article templates
+// can link to those terms on the glossary page.
 //
 // The returned value has the shape:
 //
-//	{ "urls": { "<locale>": "/glossary/" }, "counts": { "<locale>": 42 } }
+//	{
+//	  "urls":     { "<locale>": "/glossary/" },
+//	  "counts":   { "<locale>": 42 },
+//	  "articles": { "<article URL>": []TermLink },
+//	}
+//
+// The terms of an article follow glossary page order.
 //
 // Returns nil when no article declares glossary entries.
 func (g *Glossary) SiteData(site *model.Site, cfg map[string]interface{}) (interface{}, error) {
@@ -204,13 +220,22 @@ func (g *Glossary) SiteData(site *model.Site, cfg map[string]interface{}) (inter
 		return nil, nil
 	}
 
+	urls := pageURLs(site, cfg, byLocale)
 	counts := make(map[string]int, len(byLocale))
+	articles := map[string][]TermLink{}
 	for locale, entries := range byLocale {
 		counts[locale] = len(entries)
+		for _, e := range entries {
+			link := TermLink{Term: e.term.Term, URL: urls[locale] + "#" + e.term.ID}
+			for _, a := range e.term.Articles {
+				articles[a.URL] = append(articles[a.URL], link)
+			}
+		}
 	}
 	return map[string]interface{}{
-		"urls":   pageURLs(site, cfg, byLocale),
-		"counts": counts,
+		"urls":     urls,
+		"counts":   counts,
+		"articles": articles,
 	}, nil
 }
 

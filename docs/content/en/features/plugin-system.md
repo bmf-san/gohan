@@ -280,8 +280,10 @@ Pages are generated only for locales that have at least one entry, and the theme
 **Site-wide data** (`.SiteData`): every page gets the glossary URL and the number of terms per locale, so themes can link to the glossary only when one exists.
 ```
 .SiteData["glossary"] → nil when no article declares glossary entries; otherwise
-  ["urls"]   map[string]string  # locale → glossary URL
-  ["counts"] map[string]int     # locale → number of terms
+  ["urls"]     map[string]string     # locale → glossary URL
+  ["counts"]   map[string]int        # locale → number of terms
+  ["articles"] map[string][]TermLink # article URL → terms it defines (glossary page order)
+                                     # TermLink: Term, URL ("/glossary/#term-jwt")
 ```
 
 **Template example:**
@@ -308,6 +310,13 @@ Pages are generated only for locales that have at least one entry, and the theme
 {{with index .SiteData "glossary"}}{{with index (index . "urls") $.CurrentLocale}}
   <a href="{{.}}">Glossary</a>
 {{end}}{{end}}
+```
+
+**Terms defined in an article (article template):**
+```html
+{{range .Articles}}{{$url := .URL}}{{with index $.SiteData "glossary"}}{{with index (index . "articles") $url}}
+  <p>Glossary: {{range .}}<a href="{{.URL}}">{{.Term}}</a> {{end}}</p>
+{{end}}{{end}}{{end}}
 ```
 
 ### Adding a New SitePlugin

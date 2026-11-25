@@ -434,3 +434,25 @@ func TestGlossary_SiteData(t *testing.T) {
 		t.Errorf("counts = %#v", got)
 	}
 }
+
+func TestGlossary_SiteDataArticles(t *testing.T) {
+	g := glossary.New()
+	s := site(
+		article("en", "Old", "/posts/old/", day(1), term("PEP", "old"), term("API", "x")),
+		article("en", "New", "/posts/new/", day(2), term("pep", "new")),
+		article("ja", "A", "/ja/posts/a/", day(1), term("認可", "z")),
+	)
+	data, err := g.SiteData(s, enabled())
+	if err != nil {
+		t.Fatalf("SiteData: %v", err)
+	}
+	got := data.(map[string]interface{})["articles"]
+	want := map[string][]glossary.TermLink{
+		"/posts/old/":  {{Term: "API", URL: "/glossary/#term-api"}, {Term: "pep", URL: "/glossary/#term-pep"}},
+		"/posts/new/":  {{Term: "pep", URL: "/glossary/#term-pep"}},
+		"/ja/posts/a/": {{Term: "認可", URL: "/ja/glossary/#term-認可"}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("articles = %#v", got)
+	}
+}
