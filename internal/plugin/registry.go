@@ -6,6 +6,7 @@ import (
 	"github.com/bmf-san/gohan/internal/model"
 	"github.com/bmf-san/gohan/internal/plugin/amazonbooks"
 	"github.com/bmf-san/gohan/internal/plugin/bookshelf"
+	"github.com/bmf-san/gohan/internal/plugin/glossary"
 	"github.com/bmf-san/gohan/internal/plugin/ogp"
 )
 
@@ -24,6 +25,7 @@ func DefaultRegistry() *Registry {
 		},
 		sitePlugins: []SitePlugin{
 			bookshelf.New(),
+			glossary.New(),
 		},
 		assetPlugins: []AssetPlugin{
 			ogp.New(),

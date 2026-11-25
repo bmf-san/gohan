@@ -215,6 +215,101 @@ When `url:` is provided instead of `asin:`, `ImageURL` is empty and `LinkURL` is
 {{end}}
 ```
 
+#### glossary
+
+Aggregates the `glossary:` entries from every article's front-matter and generates one glossary page per locale. Each term links back to the articles that define it, so the glossary works as an index into in-depth articles rather than a set of thin per-term pages.
+
+**config.yaml:**
+```yaml
+plugins:
+  glossary:
+    enabled: true
+    path: "glossary"   # optional URL segment (default "glossary")
+```
+
+**Article front-matter:**
+```yaml
+glossary:
+  - term: "PEP"
+    definition: "A component that enforces authorization decisions."
+  - term: "認可"
+    reading: "にんか"        # optional; shown as the pronunciation and used to sort non-Latin terms
+    definition: "アクセスを許可するかどうかを決めること。"
+    id: "authorization"     # optional; anchor id on the glossary page
+```
+
+`term` and `definition` are required. The build fails, naming the article, when either is missing or when `glossary:` is not a list of mappings. The definition is plain text.
+
+Pages are generated only for locales that have at least one entry, and the theme must provide `glossary.html`.
+
+**Generated URLs:**
+- Default locale (en): `/glossary/`
+- Non-default locale (ja): `/ja/glossary/`
+
+**Sorting and grouping:**
+- Terms that start with a digit or a Latin letter are grouped under `0-9` and `A`–`Z`. Full-width characters count as their half-width forms.
+- Terms that start with kana are grouped by gojūon row (`あ`, `か`, …, `わ`). Katakana sorts as hiragana, and voiced and small kana belong to their base row.
+- Other terms, such as kanji, sort and group by `reading` when one is given, and fall under `#` otherwise. A Latin term keeps its letter group even when it has a kana reading.
+- Groups are ordered `0-9`, `A`–`Z`, the kana rows, then `#`.
+
+**Duplicates:** entries whose terms match after case and full-width folding are merged into one. The newest article supplies the term and definition, a missing reading or id is filled from older articles, and every defining article is listed.
+
+**Anchor ids:** an explicit `id` is used as-is. Otherwise the id is `term-` followed by the term with Latin letters lowercased and other characters collapsed into hyphens (e.g. `OAuth 2.0` → `term-oauth-2-0`, `認可` → `term-認可`). Colliding ids get a `-2`, `-3`, … suffix.
+
+**Template data shape** (`.VirtualPageData`):
+```
+.VirtualPageData["terms"] → []Term   # all terms in display order
+  Term.ID          string        # anchor id
+  Term.Term        string
+  Term.Reading     string        # empty when not given
+  Term.Definition  string
+  Term.Articles    []ArticleRef  # defining articles, newest first
+    ArticleRef.Title  string
+    ArticleRef.URL    string
+    ArticleRef.Date   time.Time
+
+.VirtualPageData["groups"] → []Group  # terms grouped by index heading
+  Group.Key    string   # "0-9", "A"–"Z", "あ"–"わ", or "#"
+  Group.ID     string   # anchor id, e.g. "glossary-a", "glossary-kana-ka", "glossary-other"
+  Group.Terms  []Term
+
+.VirtualPageData["url"]          → string             # URL of this glossary page
+.VirtualPageData["translations"] → map[string]string  # locale → glossary URL in the other locales
+```
+
+**Site-wide data** (`.SiteData`): every page gets the glossary URL and the number of terms per locale, so themes can link to the glossary only when one exists.
+```
+.SiteData["glossary"] → nil when no article declares glossary entries; otherwise
+  ["urls"]   map[string]string  # locale → glossary URL
+  ["counts"] map[string]int     # locale → number of terms
+```
+
+**Template example:**
+```html
+<nav>
+  {{range index .VirtualPageData "groups"}}<a href="#{{.ID}}">{{.Key}}</a>{{end}}
+</nav>
+{{range index .VirtualPageData "groups"}}
+  <h2 id="{{.ID}}">{{.Key}}</h2>
+  <dl>
+    {{range .Terms}}
+      <dt id="{{.ID}}">{{.Term}}{{if .Reading}} ({{.Reading}}){{end}}</dt>
+      <dd>
+        {{.Definition}}
+        {{range .Articles}}<a href="{{.URL}}">{{.Title}}</a>{{end}}
+      </dd>
+    {{end}}
+  </dl>
+{{end}}
+```
+
+**Navigation link (any template):**
+```html
+{{with index .SiteData "glossary"}}{{with index (index . "urls") $.CurrentLocale}}
+  <a href="{{.}}">Glossary</a>
+{{end}}{{end}}
+```
+
 ### Adding a New SitePlugin
 
 1. Create `internal/plugin/<name>/<name>.go` implementing `plugin.SitePlugin`

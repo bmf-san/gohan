@@ -43,6 +43,7 @@ This logo was created by [gopherize.me](https://gopherize.me/gopher/f64aa0974e77
 - **Pagination** — Configurable `per_page` with automatic next/previous page links
 - **GitHub source link** — Per-article link to the source file on GitHub for easy editing
 - **Related articles** — Automatic same-category article recommendations on article pages
+- **Glossary** — A glossary page per locale built from term definitions in article front-matter, with each term linking back to its articles
 
 ---
 

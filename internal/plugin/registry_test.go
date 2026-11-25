@@ -140,3 +140,60 @@ func TestRegistry_GenerateAssets_NoPluginsConfig(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func glossarySite(enabled bool) *model.Site {
+	return &model.Site{
+		Config: model.Config{
+			Site: model.SiteConfig{Language: "en"},
+			Plugins: map[string]interface{}{
+				"glossary": map[string]interface{}{"enabled": enabled},
+			},
+		},
+		Articles: []*model.ProcessedArticle{
+			{
+				Article: model.Article{FrontMatter: model.FrontMatter{
+					Title: "Authorization",
+					Extra: map[string]interface{}{"glossary": []interface{}{
+						map[string]interface{}{"term": "PEP", "definition": "Policy enforcement point."},
+					}},
+				}},
+				URL: "/posts/authz/",
+			},
+		},
+	}
+}
+
+func TestRegistry_EnrichVirtual_Glossary(t *testing.T) {
+	site := glossarySite(true)
+	if err := plugin.DefaultRegistry().EnrichVirtual(site); err != nil {
+		t.Fatalf("EnrichVirtual error: %v", err)
+	}
+
+	var found bool
+	for _, vp := range site.VirtualPages {
+		if vp.Template == "glossary.html" && vp.URL == "/glossary/" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected a glossary virtual page at /glossary/, got %#v", site.VirtualPages)
+	}
+	if _, ok := site.SiteData["glossary"]; !ok {
+		t.Error("expected SiteData[\"glossary\"] to be set")
+	}
+}
+
+func TestRegistry_EnrichVirtual_GlossaryDisabled(t *testing.T) {
+	site := glossarySite(false)
+	if err := plugin.DefaultRegistry().EnrichVirtual(site); err != nil {
+		t.Fatalf("EnrichVirtual error: %v", err)
+	}
+	for _, vp := range site.VirtualPages {
+		if vp.Template == "glossary.html" {
+			t.Errorf("disabled glossary plugin must not generate pages, got %q", vp.URL)
+		}
+	}
+	if _, ok := site.SiteData["glossary"]; ok {
+		t.Error("disabled glossary plugin must not set SiteData")
+	}
+}
