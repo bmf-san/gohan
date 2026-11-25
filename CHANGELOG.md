@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.9.0](https://github.com/bmf-san/gohan/compare/v1.8.0...v1.9.0) (2026-11-25)
+
+
+### Features
+
+* add glossary site plugin ([#212](https://github.com/bmf-san/gohan/issues/212)) ([35d0302](https://github.com/bmf-san/gohan/commit/35d030292d68837f4eb9895fd11d377409b3d95b))
+
+
+### Bug Fixes
+
+* **deps:** bump Go toolchain to 1.26.11 to patch stdlib vulnerabilities ([#210](https://github.com/bmf-san/gohan/issues/210)) ([f1cd1c6](https://github.com/bmf-san/gohan/commit/f1cd1c62eee67a1eabc2bc2cb91f89eb840d0a42))
+
+
+### Build System
+
+* **deps:** bump github.com/yuin/goldmark from 1.8.6 to 1.8.7 ([#208](https://github.com/bmf-san/gohan/issues/208)) ([5ddba18](https://github.com/bmf-san/gohan/commit/5ddba18376c0b4ad1a5e63845c811c4ca6f715ef))
+* **deps:** bump golang.org/x/image from 0.47.0 to 0.48.0 ([#209](https://github.com/bmf-san/gohan/issues/209)) ([0517486](https://github.com/bmf-san/gohan/commit/0517486a6b64a25824ff93ae9947a60d48ff910b))
+
 ## [1.8.0](https://github.com/bmf-san/gohan/compare/v1.7.0...v1.8.0) (2026-11-06)
 
 
