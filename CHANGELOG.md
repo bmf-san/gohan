@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/bmf-san/gohan/compare/v1.9.0...v1.10.0) (2026-11-25)
+
+
+### Features
+
+* expose glossary terms per article in site data ([#213](https://github.com/bmf-san/gohan/issues/213)) ([6b8be4b](https://github.com/bmf-san/gohan/commit/6b8be4b2e112f9d074038ad73607bd716528504a))
+
 ## [1.9.0](https://github.com/bmf-san/gohan/compare/v1.8.0...v1.9.0) (2026-11-25)
 
 
