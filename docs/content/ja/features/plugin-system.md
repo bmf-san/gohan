@@ -268,8 +268,10 @@ glossary:
 **サイト全体のデータ** (`.SiteData`): すべてのページに、ロケールごとの用語集 URL と用語数を渡します。用語集があるときだけリンクを表示できます。
 ```
 .SiteData["glossary"] → どの記事にも用語がなければ nil。あれば次の値
-  ["urls"]   map[string]string  # ロケール → 用語集 URL
-  ["counts"] map[string]int     # ロケール → 用語数
+  ["urls"]     map[string]string     # ロケール → 用語集 URL
+  ["counts"]   map[string]int        # ロケール → 用語数
+  ["articles"] map[string][]TermLink # 記事 URL → その記事で定義している用語（用語集の並び順）
+                                     # TermLink: Term, URL（"/glossary/#term-jwt"）
 ```
 
 **テンプレート例:**
@@ -296,6 +298,13 @@ glossary:
 {{with index .SiteData "glossary"}}{{with index (index . "urls") $.CurrentLocale}}
   <a href="{{.}}">用語集</a>
 {{end}}{{end}}
+```
+
+**記事で定義している用語（記事テンプレート）:**
+```html
+{{range .Articles}}{{$url := .URL}}{{with index $.SiteData "glossary"}}{{with index (index . "articles") $url}}
+  <p>用語集: {{range .}}<a href="{{.URL}}">{{.Term}}</a> {{end}}</p>
+{{end}}{{end}}{{end}}
 ```
 
 ### 新しい SitePlugin の追加方法
