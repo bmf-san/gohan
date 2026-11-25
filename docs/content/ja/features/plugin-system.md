@@ -203,6 +203,101 @@ books:
   CategoryGroup.Books     []BookEntry
 ```
 
+#### glossary
+
+全記事の `glossary:` フロントマターを集約し、ロケールごとに用語集ページを 1 件生成します。各用語から定義元の記事へリンクするため、用語ごとの薄いページを量産せず、詳しい記事への索引として機能します。
+
+**config.yaml:**
+```yaml
+plugins:
+  glossary:
+    enabled: true
+    path: "glossary"   # 省略可: URL のパス（デフォルト "glossary"）
+```
+
+**記事フロントマター:**
+```yaml
+glossary:
+  - term: "PEP"
+    definition: "認可の判定を強制する構成要素。"
+  - term: "認可"
+    reading: "にんか"        # 省略可: 読み方として表示し、漢字などの用語の並べ替えにも使う
+    definition: "アクセスを許可するかどうかを決めること。"
+    id: "authorization"     # 省略可: 用語集ページでのアンカー ID
+```
+
+`term` と `definition` は必須です。どちらかが欠けている場合や、`glossary:` がマッピングのリストでない場合は、記事名を示してビルドが失敗します。定義はプレーンテキストです。
+
+ページは用語が 1 件以上あるロケールにだけ生成されます。テーマには `glossary.html` が必要です。
+
+**生成 URL:**
+- デフォルトロケール (en): `/glossary/`
+- 非デフォルトロケール (ja): `/ja/glossary/`
+
+**並べ替えとグループ分け:**
+- 数字やラテン文字で始まる用語は `0-9` と `A`〜`Z` に分けます。全角文字は半角として扱います。
+- かなで始まる用語は五十音の行（`あ`、`か`、…、`わ`）に分けます。カタカナはひらがなとして並べ、濁音・半濁音・小書きのかなは元の行に入れます。
+- 漢字などで始まる用語は、`reading` があればそれで並べてグループに分け、なければ `#` に入れます。ラテン文字の用語は、かなの読みがあっても英字のグループのままです。
+- グループの順序は `0-9`、`A`〜`Z`、かなの行、`#` です。
+
+**重複:** 大文字・小文字と全角・半角の違いを除いて一致する用語は 1 件にまとめます。用語と定義は最も新しい記事のものを使い、読み方や ID が空なら古い記事の値で補います。定義元の記事はすべて列挙します。
+
+**アンカー ID:** `id` を指定した場合はそのまま使います。指定しない場合は `term-` の後に、ラテン文字を小文字にし、それ以外の記号をハイフンにまとめた用語を続けます（例: `OAuth 2.0` → `term-oauth-2-0`、`認可` → `term-認可`）。ID が重なった場合は `-2`、`-3`、… を付けます。
+
+**テンプレートデータ構造** (`.VirtualPageData`):
+```
+.VirtualPageData["terms"] → []Term   # 表示順の全用語
+  Term.ID          string        # アンカー ID
+  Term.Term        string
+  Term.Reading     string        # 指定がなければ空
+  Term.Definition  string
+  Term.Articles    []ArticleRef  # 定義元の記事（新しい順）
+    ArticleRef.Title  string
+    ArticleRef.URL    string
+    ArticleRef.Date   time.Time
+
+.VirtualPageData["groups"] → []Group  # 見出しごとにグループ化した用語
+  Group.Key    string   # "0-9"、"A"〜"Z"、"あ"〜"わ"、または "#"
+  Group.ID     string   # アンカー ID。例: "glossary-a"、"glossary-kana-ka"、"glossary-other"
+  Group.Terms  []Term
+
+.VirtualPageData["url"]          → string             # この用語集ページの URL
+.VirtualPageData["translations"] → map[string]string  # ロケール → 他ロケールの用語集 URL
+```
+
+**サイト全体のデータ** (`.SiteData`): すべてのページに、ロケールごとの用語集 URL と用語数を渡します。用語集があるときだけリンクを表示できます。
+```
+.SiteData["glossary"] → どの記事にも用語がなければ nil。あれば次の値
+  ["urls"]   map[string]string  # ロケール → 用語集 URL
+  ["counts"] map[string]int     # ロケール → 用語数
+```
+
+**テンプレート例:**
+```html
+<nav>
+  {{range index .VirtualPageData "groups"}}<a href="#{{.ID}}">{{.Key}}</a>{{end}}
+</nav>
+{{range index .VirtualPageData "groups"}}
+  <h2 id="{{.ID}}">{{.Key}}</h2>
+  <dl>
+    {{range .Terms}}
+      <dt id="{{.ID}}">{{.Term}}{{if .Reading}}（{{.Reading}}）{{end}}</dt>
+      <dd>
+        {{.Definition}}
+        {{range .Articles}}<a href="{{.URL}}">{{.Title}}</a>{{end}}
+      </dd>
+    {{end}}
+  </dl>
+{{end}}
+```
+
+**ナビゲーションのリンク（任意のテンプレート）:**
+```html
+{{with index .SiteData "glossary"}}{{with index (index . "urls") $.CurrentLocale}}
+  <a href="{{.}}">用語集</a>
+{{end}}{{end}}
+```
+
 ### 新しい SitePlugin の追加方法
 
 1. `internal/plugin/<name>/<name>.go` を作成し `plugin.SitePlugin` を実装
